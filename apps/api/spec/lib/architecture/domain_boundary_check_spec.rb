@@ -106,6 +106,50 @@ RSpec.describe Architecture::DomainBoundaryCheck do
     expect(violations.first).to have_attributes(from: "shared", to: "goals", reason: :forbidden_dependency)
   end
 
+  it "rejects a polymorphic association, which reaches any context's table" do
+    write("goals/a.rb", "module Goals; class A; belongs_to :source, polymorphic: true; end; end")
+
+    expect(violations.first).to have_attributes(from: "goals", reason: :polymorphic_association, line: 1)
+  end
+
+  it "accepts a false polymorphic option" do
+    write("goals/a.rb", "module Goals; class A; belongs_to :source, polymorphic: false; end; end")
+
+    expect(violations).to eq([])
+  end
+
+  describe "code outside the domains" do
+    let(:outside) { File.join(@root, "outside") }
+
+    def write_outside(path, source)
+      full = File.join(outside, path)
+      FileUtils.mkdir_p(File.dirname(full))
+      File.write(full, source)
+    end
+
+    def outside_violations
+      described_class.new(root: File.join(@root, "domains"), rules:, outside_roots: [ outside ]).violations
+    end
+
+    it "may call a context's public API" do
+      write_outside("controllers/a_controller.rb", "class AController; def x = Goals::Api; end")
+
+      expect(outside_violations).to eq([])
+    end
+
+    it "may not reach a context's internals" do
+      write_outside("jobs/a_job.rb", "class AJob; def x = Goals::Secret; end")
+
+      expect(outside_violations.first).to have_attributes(from: "application", to: "goals", reason: :private_constant)
+    end
+
+    it "may not reopen a context's namespace" do
+      write_outside("services/goals/thing.rb", "module Goals; class Thing; end; end")
+
+      expect(outside_violations.first).to have_attributes(from: "application", to: "goals", reason: :private_constant)
+    end
+  end
+
   it "does not fail on a constant reached through a runtime value" do
     write("nutrition/a.rb", "module Nutrition; class A; def x(klass) = klass::Item; end; end")
 

@@ -3,7 +3,8 @@ require "active_support/core_ext/string/inflections"
 
 module Architecture
   # Enforces docs/architecture/DOMAIN_MODEL.md statically: a context reaches
-  # another only through <Context>::Api, and only if its rules allow it.
+  # another only through <Context>::Api, and only if its rules allow it. Code
+  # outside the domains may call any public API, and nothing else in a context.
   # It cannot see references built at runtime or direct SQL (see ADR 0003).
   class DomainBoundaryCheck
     Violation = Data.define(:file, :line, :from, :to, :constant, :reason)
@@ -12,6 +13,7 @@ module Architecture
     class UnknownContext < StandardError; end
 
     SHARED = "shared".freeze
+    APPLICATION = "application".freeze
     PUBLIC_API = "Api".freeze
     QUALIFIED_CONSTANT = /\A(?:::)?[A-Z]\w*(?:::[A-Z]\w*)+\z/
 
@@ -28,26 +30,36 @@ module Architecture
       found
     end
 
-    def initialize(root:, rules:)
+    def initialize(root:, rules:, outside_roots: [])
       @root = root.to_s
       @rules = rules
+      @outside_roots = outside_roots.map(&:to_s)
       @context_by_constant = (rules.keys + [ SHARED ]).to_h { |context| [ context.camelize, context ] }
     end
 
     def violations
-      Dir.glob(File.join(@root, "**", "*.rb")).sort.flat_map { |file| check_file(file) }
+      inside = ruby_files(@root).flat_map { |file| check_file(file, context_of(file)) }
+      outside = @outside_roots.flat_map(&method(:ruby_files)).flat_map { |file| check_file(file, APPLICATION) }
+      inside + outside
     end
 
     private
 
-    def check_file(file)
-      from = context_of(file)
+    def ruby_files(root)
+      Dir.glob(File.join(root, "**", "*.rb")).sort
+    end
+
+    def check_file(file, from)
       result = Prism.parse_file(file)
       raise UnparseableFile, "#{file}: #{result.errors.first&.message}" unless result.success?
 
       collector = ReferenceCollector.new
       result.value.accept(collector)
-      collector.references.filter_map { |name, line| judge(file, from, name, line) }
+
+      collector.references.filter_map { |name, line| judge(file, from, name, line) } +
+        collector.polymorphic_lines.map do |line|
+          Violation.new(file:, line:, from:, to: nil, constant: nil, reason: :polymorphic_association)
+        end
     end
 
     def context_of(file)
@@ -67,17 +79,18 @@ module Architecture
     end
 
     def reason_for(from, to, parts)
-      return :forbidden_dependency unless @rules.fetch(from, []).include?(to)
+      return :forbidden_dependency unless from == APPLICATION || @rules.fetch(from, []).include?(to)
 
       :private_constant unless parts.size == 2 && parts.last == PUBLIC_API
     end
 
     class ReferenceCollector < Prism::Visitor
-      attr_reader :references
+      attr_reader :references, :polymorphic_lines
 
       def initialize
         super
         @references = []
+        @polymorphic_lines = []
       end
 
       # The outermost path is the whole reference, so its inner parts are skipped.
@@ -93,6 +106,17 @@ module Architecture
 
       def visit_string_node(node)
         @references << [ node.unescaped, node.location.start_line ] if node.unescaped.match?(QUALIFIED_CONSTANT)
+      end
+
+      def visit_assoc_node(node)
+        @polymorphic_lines << node.location.start_line if polymorphic_option?(node)
+        super
+      end
+
+      private
+
+      def polymorphic_option?(node)
+        node.key.is_a?(Prism::SymbolNode) && node.key.unescaped == "polymorphic" && node.value.is_a?(Prism::TrueNode)
       end
     end
     private_constant :ReferenceCollector

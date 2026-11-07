@@ -4,7 +4,7 @@ Doze contextos num só monólito, separados por namespace ([ADR 0003](decisions/
 
 ## Regras de dependência
 
-1. Um contexto só chama outro por sua **API pública**: módulos e serviços expostos em `<Contexto>::Api` ou por eventos.
+1. Um contexto só chama outro por sua **API pública**: módulos e serviços expostos em `<Contexto>::Api` ou por eventos. A `Api` devolve valores, `Data` ou identificadores, nunca modelos nem consultas do ActiveRecord.
 2. Um contexto **nunca** lê ou grava as tabelas de outro, nem usa os modelos de outro em associações. Referência entre contextos é por identificador.
 3. Identity & Access é a única dependência permitida a todos, e somente para: usuário atual, `consent_granted?(user_id, purpose)` e `confirm_deletion(user_id, context)`.
 4. Nenhum contexto depende de Gamification, Notifications ou Progress & Analytics. Gamification só escuta eventos. Notifications escuta eventos e lê preferências em User Profile. Progress & Analytics escuta eventos e pode ler as APIs públicas dos demais, em sentido único.
@@ -13,7 +13,7 @@ Doze contextos num só monólito, separados por namespace ([ADR 0003](decisions/
 7. `UserProfile::Api.time_zone(user_id)` pode ser lido por Nutrition, Activities, Goals e Missions, para calcular `local_date`.
 8. Exportação e exclusão usam um registro compartilhado em `shared/`: cada contexto com dados de usuário inscreve seu exportador e seu apagador. Identity aciona o registro sem conhecer o conteúdo, e os exportadores gravam direto no arquivo final. `shared/` contém também a infraestrutura de eventos e não tem regra de negócio.
 
-O mecanismo que impõe isso é decidido na Fase 01.
+O teste que impõe isso, e o que ele não alcança, estão na [ADR 0003](decisions/0003-domain-boundaries-without-engines.md). As dependências permitidas ficam em `apps/api/config/domain_boundaries.yml`.
 
 ## Mapa de dependências
 
@@ -170,7 +170,7 @@ Setas contínuas são chamadas síncronas permitidas. Setas tracejadas são even
 - **Serviços:** `BuildWeeklyReport`, `ComputeConsistency`, `GenerateInsight`.
 - **Publica:** `report.generated`.
 - **Consome:** `user.registered`, `consent.revoked`, eventos de Nutrition, Activities, Goals, Missions e Gamification, e `user.deletion_requested`. Eventos servem de gatilho.
-- **Permitido:** leitura das APIs públicas dos demais contextos. Projeções podem ser reconstruídas por essas APIs.
+- **Permitido:** leitura das APIs públicas de Identity & Access, User Profile, Nutrition, Activities, Goals e Missions. Projeções podem ser reconstruídas por essas APIs. Food AI e Strava Integration ficam de fora, porque dados do Strava não podem chegar a um provedor de IA ([ADR 0003](decisions/0003-domain-boundaries-without-engines.md)).
 - **Proibido:** diagnóstico; inferências sobre saúde; enviar dados do Strava à IA; expor dados entre usuários.
 
 ## Eventos de domínio

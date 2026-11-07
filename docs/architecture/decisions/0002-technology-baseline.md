@@ -71,8 +71,9 @@ Aplicação mínima executada em 2026-11-06, em diretório temporário depois ap
 | Node 26.13: `openapi-typescript` com TypeScript 5.9 | Tipos gerados |
 | Node 26.13: `tsc -b`, `vite build`, `npm audit --audit-level=high` na web, com TypeScript 6.0 | Código 0 |
 | Node 26.13: `npx expo-doctor` no mobile | 20 de 20 verificações |
+| Node 26.13: `eslint` com `typescript-eslint` 8.72 e ESLint 9.39, na web | Código 0 |
 
-A falha de tipos encontrada no mobile vem dos arquivos de demonstração do template, removidos nesta fase.
+O `tsc` do mobile falhou na validação, com erros só em arquivos de demonstração do template. A causa é provável e ainda não confirmada: a Tarefa 11 remove esses arquivos e registra aqui o resultado.
 
 ## Justificativa
 
@@ -82,7 +83,7 @@ Valkey em vez de Redis: as duas opções funcionam com o Sidekiq, e o Redis a pa
 
 ## Consequências
 
-- Versões usam o container, e não a máquina local.
+- PostgreSQL e Valkey usam container, e não a versão da máquina local. Ruby e Node são fixados por arquivo.
 - O registro de fontes é atualizado.
 - **Risco:** o Rails 8.1 só recebe correções de segurança, e até 2027-10-10. Reavaliar quando sair uma nova linha.
 - **Risco:** a validação não prova o comportamento em produção nem cobre todas as gems futuras.

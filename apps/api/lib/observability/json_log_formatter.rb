@@ -17,7 +17,7 @@ module Observability
       base[:correlation_id] = correlation_id if correlation_id
       base[:context] = context.except(:correlation_id) if context.any?
 
-      message.is_a?(Hash) ? base.merge(message) : base.merge(message: text(message))
+      message.is_a?(Hash) ? message.merge(base) : base.merge(message: text(message))
     end
 
     def text(message)

@@ -5,10 +5,30 @@ RSpec.describe "domain boundaries" do
   let(:root) { Rails.root.join("app/domains") }
   let(:rules) { YAML.load_file(Rails.root.join("config/domain_boundaries.yml")) }
 
-  it "has no violation in the real domains" do
-    violations = Architecture::DomainBoundaryCheck.new(root:, rules:).violations
+  let(:outside_roots) { %w[app/controllers app/jobs app/models app/services].map { |path| Rails.root.join(path) } }
+
+  # A bare constant such as FoodEntry cannot be traced to a context, so business
+  # code placed here would escape the check. New files must be added deliberately.
+  let(:infrastructure_files) do
+    %w[
+      app/jobs/smoke_error_job.rb
+      app/jobs/smoke_job.rb
+      app/models/application_record.rb
+      app/services/health/readiness_check.rb
+    ]
+  end
+
+  it "has no violation in the domains or in the code around them" do
+    violations = Architecture::DomainBoundaryCheck.new(root:, rules:, outside_roots:).violations
 
     expect(violations).to eq([]), violations.map { |v| "#{v.file}:#{v.line} #{v.constant} (#{v.reason})" }.join("\n")
+  end
+
+  it "keeps business code out of app/jobs, app/models and app/services" do
+    found = Dir.glob(%w[app/jobs app/models app/services].map { |path| Rails.root.join(path, "**/*.rb").to_s })
+      .map { |file| Pathname(file).relative_path_from(Rails.root).to_s }
+
+    expect(found).to match_array(infrastructure_files)
   end
 
   it "defines rules for exactly the existing contexts" do

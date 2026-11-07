@@ -1,6 +1,7 @@
 # Which contexts each context may call, always through <Context>::Api.
 # Derived from the "Permitido" line of each context in docs/architecture/DOMAIN_MODEL.md.
-# `shared` holds infrastructure, is available to every context and references none.
+# `shared` holds event and registry infrastructure, is available to every context
+# and references none. External clients stay behind each context's adapters.
 identity: []
 user_profile: [identity]
 nutrition: [food_ai, food_catalog, user_profile]
@@ -12,13 +13,6 @@ goals: [user_profile]
 missions: [user_profile]
 gamification: []
 notifications: [user_profile]
-progress_analytics:
-  - activities
-  - food_ai
-  - food_catalog
-  - goals
-  - identity
-  - missions
-  - nutrition
-  - strava_integration
-  - user_profile
+# Not food_ai or strava_integration: Strava data must never reach an AI provider,
+# and analytics has no documented need for either (ADR 0003).
+progress_analytics: [activities, goals, identity, missions, nutrition, user_profile]

@@ -96,6 +96,20 @@ RSpec.describe "structured logging", type: :request do
       sensitive_values.each { |value| expect(text).not_to include(value) }
     end
 
+    it "keeps a job exception message out of the worker log, recording its class" do
+      SidekiqProcess.with do |log|
+        jid = SmokeErrorJob.perform_async
+
+        lines = wait_for_job_lines(log, "jid", jid)
+        Timeout.timeout(20, nil, "job failure was not logged") do
+          sleep 0.1 until File.read(log.path).include?("Internal::SmokeError")
+        end
+
+        expect(lines.first.dig("context", "class")).to eq("SmokeErrorJob")
+        expect(File.read(log.path)).not_to include("provoked job error")
+      end
+    end
+
     it "keeps an exception message out of the log" do
       allow_any_instance_of(HealthController).to receive(:live).and_raise(RuntimeError, "failed for tok-secret-value")
 

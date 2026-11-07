@@ -62,6 +62,29 @@ RSpec.describe "central error format" do
     end
   end
 
+  {
+    ActionController::UnknownFormat => [ 406, "not_acceptable" ],
+    ActionController::BadRequest => [ 400, "bad_request" ],
+    ActionController::MethodNotAllowed => [ 405, "method_not_allowed" ],
+    ActiveRecord::RecordNotFound => [ 404, "not_found" ]
+  }.each do |exception, (status, code)|
+    it "keeps #{exception} as #{status} #{code}" do
+      arguments = exception == ActionController::MethodNotAllowed ? [ "GET" ] : []
+      allow_any_instance_of(HealthController).to receive(:live).and_raise(exception.new(*arguments))
+
+      get "/health/live"
+
+      expect(response).to have_http_status(status)
+      expect(response.parsed_body.dig("error", "code")).to eq(code)
+    end
+  end
+
+  it "returns the correlation identifier on an error response" do
+    get "/nao/existe", headers: { "X-Correlation-Id" => "corr-error-1" }
+
+    expect(response.headers["x-correlation-id"]).to eq("corr-error-1")
+  end
+
   it "does not let a client request an error page directly" do
     get "/500"
 

@@ -21,5 +21,13 @@ module Observability
         Observability::Correlation.with(job["correlation_id"], &block)
       end
     end
+
+    # Replaces Sidekiq's default handler, which logs the exception message and,
+    # through its context, the job arguments. Either can carry user data.
+    ERROR_LOG = lambda do |exception, context, config = Sidekiq.default_configuration|
+      config.logger.warn do
+        { message: "job failed", error: exception.class.name, jid: context.dig(:job, "jid") }.compact
+      end
+    end
   end
 end

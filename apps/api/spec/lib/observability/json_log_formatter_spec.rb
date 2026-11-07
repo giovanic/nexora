@@ -19,6 +19,14 @@ RSpec.describe Observability::JsonLogFormatter do
     expect(line(status: 200, duration_ms: 1.5)).to include("status" => 200, "duration_ms" => 1.5)
   end
 
+  it "does not let a structured message replace the base fields" do
+    Observability::Correlation.with("corr-real") do
+      parsed = line(level: "FORGED", timestamp: "FORGED", correlation_id: "FORGED", status: 200)
+
+      expect(parsed).to include("level" => "INFO", "timestamp" => "2026-11-06T12:00:00.000Z", "correlation_id" => "corr-real", "status" => 200)
+    end
+  end
+
   it "keeps a line break inside the message from splitting the line" do
     expect(formatter.call("INFO", time, nil, "one\ntwo").count("\n")).to eq(1)
   end

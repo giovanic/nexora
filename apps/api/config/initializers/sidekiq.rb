@@ -15,6 +15,9 @@ Sidekiq.configure_server do |config|
   # including the "start" and "done" lines written outside the middleware chain.
   config[:logged_job_attributes] += [ "correlation_id" ]
 
+  config.error_handlers.delete(Sidekiq::Config::ERROR_HANDLER)
+  config.error_handlers << Observability::SidekiqCorrelation::ERROR_LOG
+
   config.client_middleware { |chain| chain.add Observability::SidekiqCorrelation::Client }
   config.server_middleware { |chain| chain.add Observability::SidekiqCorrelation::Server }
 end
