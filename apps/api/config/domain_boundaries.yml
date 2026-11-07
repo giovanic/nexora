@@ -1,0 +1,24 @@
+# Which contexts each context may call, always through <Context>::Api.
+# Derived from the "Permitido" line of each context in docs/architecture/DOMAIN_MODEL.md.
+# `shared` holds infrastructure, is available to every context and references none.
+identity: []
+user_profile: [identity]
+nutrition: [food_ai, food_catalog, user_profile]
+food_ai: [identity]
+food_catalog: []
+activities: [identity, user_profile]
+strava_integration: [activities, identity]
+goals: [user_profile]
+missions: [user_profile]
+gamification: []
+notifications: [user_profile]
+progress_analytics:
+  - activities
+  - food_ai
+  - food_catalog
+  - goals
+  - identity
+  - missions
+  - nutrition
+  - strava_integration
+  - user_profile
