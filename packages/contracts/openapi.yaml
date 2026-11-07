@@ -60,7 +60,7 @@ components:
       properties:
         status:
           type: string
-          enum: [ok, unavailable]
+          enum: [ok, degraded]
         checks:
           type: object
           additionalProperties: false
