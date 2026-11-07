@@ -48,7 +48,7 @@ module Backend
     config.log_formatter = Observability::JsonLogFormatter.new
     config.log_tags = []
     # Rails logs the full exception at this level. Keep it below the default, as
-    # its message can carry user data; the error tracker receives the details.
+    # its message can carry user data; the error tracker receives class and stack.
     config.action_dispatch.debug_exception_log_level = :debug
 
     # Local defaults match docker-compose.yml. Production requires REDIS_URL,
