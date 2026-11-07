@@ -20,7 +20,7 @@ function message(state: ApiStatusState): string {
     case "ready":
       return "API pronta";
     case "degraded":
-      return `API com problema: ${failingDependencies(state.checks)}`;
+      return ["API com problema", failingDependencies(state.checks)].filter(Boolean).join(": ");
     case "unreachable":
       return "Não foi possível falar com a API";
   }

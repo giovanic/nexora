@@ -7,10 +7,19 @@ export function scrubEvent(event: ErrorEvent): ErrorEvent {
   delete event.user;
   delete event.breadcrumbs;
   delete event.message;
+  delete event.extra;
+  delete event.tags;
+  delete event.contexts;
+  delete event.fingerprint;
+  delete event.transaction;
   delete event.request;
 
   event.exception?.values?.forEach((exception) => {
     delete exception.value;
+    delete exception.mechanism?.data;
+    exception.stacktrace?.frames?.forEach((frame) => {
+      delete frame.vars;
+    });
   });
 
   return event;
@@ -25,7 +34,10 @@ export function initMonitoring(dsn: string | undefined, init: Init = Sentry.init
   init({
     dsn,
     sendDefaultPii: false,
+    // The native SDK sends its crash reports without passing through beforeSend.
+    enableNativeCrashHandling: false,
     beforeSend: scrubEvent,
+    beforeBreadcrumb: () => null,
   });
 
   return true;

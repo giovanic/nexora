@@ -14,7 +14,7 @@ describe("fetchReadiness", () => {
 
     await fetchReadiness("http://api.test", fetchFn);
 
-    expect(fetchFn).toHaveBeenCalledWith("http://api.test/health/ready");
+    expect(fetchFn).toHaveBeenCalledWith("http://api.test/health/ready", expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
   it("returns ready for a valid 200", async () => {
@@ -61,6 +61,24 @@ describe("fetchReadiness", () => {
     const result = await fetchReadiness("http://api.test", respondWith(500, body));
 
     expect(result).toEqual({ kind: "unreachable" });
+  });
+
+  it("returns unreachable when the API never answers", async () => {
+    const fetchFn = vi.fn(() => new Promise<Response>(() => {}));
+
+    expect(await fetchReadiness("http://api.test", fetchFn, 10)).toEqual({ kind: "unreachable" });
+  });
+
+  it("aborts the request when the API never answers", async () => {
+    let signal: AbortSignal | undefined;
+    const fetchFn = vi.fn((_url: string, init?: RequestInit) => {
+      signal = init?.signal ?? undefined;
+      return new Promise<Response>(() => {});
+    });
+
+    await fetchReadiness("http://api.test", fetchFn, 10);
+
+    expect(signal?.aborted).toBe(true);
   });
 
   it("returns unreachable when the network fails", async () => {

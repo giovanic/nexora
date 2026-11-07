@@ -33,6 +33,12 @@ describe("ApiStatusView", () => {
     expect(screen.getByRole("status")).toHaveProperty("textContent", "API com problema: banco de dados, fila");
   });
 
+  it("does not leave the failing dependency blank when no check failed", () => {
+    render(<ApiStatusView state={{ kind: "degraded", checks: { database: "ok", queue: "ok" } }} />);
+
+    expect(screen.getByRole("status")).toHaveProperty("textContent", "API com problema");
+  });
+
   it("shows the unreachable state", () => {
     render(<ApiStatusView state={{ kind: "unreachable" }} />);
 

@@ -7,7 +7,7 @@ function respondWith(status: number, body: string) {
   return jest.fn(async () => ({
     status,
     json: async () => JSON.parse(body),
-  })) as unknown as (url: string) => Promise<Response>;
+  })) as unknown as (url: string, init?: RequestInit) => Promise<Response>;
 }
 
 describe("fetchReadiness", () => {
@@ -16,7 +16,7 @@ describe("fetchReadiness", () => {
 
     await fetchReadiness("http://api.test", fetchFn);
 
-    expect(fetchFn).toHaveBeenCalledWith("http://api.test/health/ready");
+    expect(fetchFn).toHaveBeenCalledWith("http://api.test/health/ready", expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
   it("returns ready for a valid 200", async () => {
@@ -55,6 +55,24 @@ describe("fetchReadiness", () => {
     const body = JSON.stringify({ error: { code: "internal_error", message: "x", request_id: "1" } });
 
     expect(await fetchReadiness("http://api.test", respondWith(500, body))).toEqual({ kind: "unreachable" });
+  });
+
+  it("returns unreachable when the API never answers", async () => {
+    const fetchFn = jest.fn(() => new Promise<Response>(() => {}));
+
+    expect(await fetchReadiness("http://api.test", fetchFn, 10)).toEqual({ kind: "unreachable" });
+  });
+
+  it("aborts the request when the API never answers", async () => {
+    let signal: AbortSignal | null | undefined;
+    const fetchFn = jest.fn((_url: string, init?: RequestInit) => {
+      signal = init?.signal;
+      return new Promise<Response>(() => {});
+    });
+
+    await fetchReadiness("http://api.test", fetchFn, 10);
+
+    expect(signal?.aborted).toBe(true);
   });
 
   it("returns unreachable when the network fails", async () => {

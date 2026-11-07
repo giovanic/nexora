@@ -8,7 +8,9 @@ export type ReadinessResult =
   | { kind: "degraded"; checks: Checks }
   | { kind: "unreachable" };
 
-export type FetchFn = (url: string) => Promise<Response>;
+export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
+
+const DEFAULT_TIMEOUT_MS = 5000;
 
 const CHECK_VALUES: readonly unknown[] = ["ok", "error"];
 
@@ -24,12 +26,26 @@ function isHealthReady(body: unknown): body is HealthReady {
   );
 }
 
-export async function fetchReadiness(baseUrl: string | undefined, fetchFn: FetchFn = fetch): Promise<ReadinessResult> {
+export async function fetchReadiness(
+  baseUrl: string | undefined,
+  fetchFn: FetchFn = fetch,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<ReadinessResult> {
   if (!baseUrl) return { kind: "unreachable" };
 
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  // Raced as well as aborted, so a request that ignores the signal cannot hang the screen.
+  const timedOut = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error("timed out"));
+    }, timeoutMs);
+  });
+
   try {
-    const response = await fetchFn(`${baseUrl}/health/ready`);
-    const body: unknown = await response.json();
+    const response = await Promise.race([fetchFn(`${baseUrl}/health/ready`, { signal: controller.signal }), timedOut]);
+    const body: unknown = await Promise.race([response.json(), timedOut]);
 
     if (!isHealthReady(body)) return { kind: "unreachable" };
     if (response.status === 200 && body.status === "ok") return { kind: "ready", checks: body.checks };
@@ -38,5 +54,7 @@ export async function fetchReadiness(baseUrl: string | undefined, fetchFn: Fetch
     return { kind: "unreachable" };
   } catch {
     return { kind: "unreachable" };
+  } finally {
+    clearTimeout(timer);
   }
 }

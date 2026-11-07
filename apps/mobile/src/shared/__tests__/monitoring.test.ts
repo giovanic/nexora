@@ -21,6 +21,9 @@ describe("initMonitoring", () => {
     expect(options.dsn).toBe("https://key@sentry.test/1");
     expect(options.sendDefaultPii).toBe(false);
     expect(options.beforeSend).toBe(scrubEvent);
+    expect(options.beforeBreadcrumb()).toBeNull();
+    // The native SDK sends its crash reports without passing through beforeSend.
+    expect(options.enableNativeCrashHandling).toBe(false);
   });
 });
 
@@ -39,5 +42,34 @@ describe("scrubEvent", () => {
     expect(serialized).not.toContain("person@example.test");
     expect(serialized).not.toContain("tok-secret");
     expect(serialized).toContain('"type":"Error"');
+  });
+
+  it("keeps only known fields", () => {
+    const event = {
+      type: undefined,
+      extra: { meal: "rice-secret-item" },
+      tags: { email: "person@example.test" },
+      contexts: { meal: { items: "rice-secret-item" } },
+      fingerprint: ["person@example.test"],
+      transaction: "/users/person@example.test",
+      exception: {
+        values: [
+          {
+            type: "Error",
+            mechanism: { type: "generic", data: { detail: "rice-secret-item" } },
+            stacktrace: {
+              frames: [{ filename: "app.js", function: "run", lineno: 1, vars: { token: "tok-secret" } }],
+            },
+          },
+        ],
+      },
+    } as unknown as ErrorEvent;
+
+    const serialized = JSON.stringify(scrubEvent(event));
+
+    expect(serialized).not.toContain("person@example.test");
+    expect(serialized).not.toContain("rice-secret-item");
+    expect(serialized).not.toContain("tok-secret");
+    expect(serialized).toContain('"filename":"app.js"');
   });
 });
