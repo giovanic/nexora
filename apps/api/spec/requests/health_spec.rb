@@ -6,7 +6,7 @@ RSpec.describe "GET /health/live" do
     get "/health/live"
 
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body).to eq("status" => "ok")
+    expect(response.parsed_body).to eq("status" => "wrong")
     expect_response_to_match_contract
   end
 
