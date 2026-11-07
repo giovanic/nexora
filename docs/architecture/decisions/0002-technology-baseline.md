@@ -73,7 +73,7 @@ Aplicação mínima executada em 2026-11-06, em diretório temporário depois ap
 | Node 26.13: `npx expo-doctor` no mobile | 20 de 20 verificações |
 | Node 26.13: `eslint` com `typescript-eslint` 8.72 e ESLint 9.39, na web | Código 0 |
 
-O `tsc` do mobile falhou na validação, com erros só em arquivos de demonstração do template. A causa é provável e ainda não confirmada: a Tarefa 11 remove esses arquivos e registra aqui o resultado.
+O `tsc` do mobile falhou na primeira validação, com erros só em arquivos de demonstração do template. Removidos esses arquivos, `tsc --noEmit` passa com TypeScript 6.0, assim como `npx expo install --check` e `npx expo export --platform android`, com o Metro empacotando dentro dos workspaces do npm.
 
 ## Justificativa
 
