@@ -22,7 +22,7 @@ module Middleware
     private
 
     def resolve(incoming)
-      incoming&.match?(VALID) ? incoming : Observability::Correlation.generate
+      incoming&.b&.match?(VALID) ? incoming : Observability::Correlation.generate
     end
   end
 end

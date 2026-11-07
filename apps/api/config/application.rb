@@ -44,7 +44,9 @@ module Backend
     config.exceptions_app = ApiErrorApp.new
     config.middleware.insert_before Rails::Rack::Logger, Middleware::CorrelationId
 
-    config.log_level = ENV.fetch("LOG_LEVEL", "info")
+    # Debug records exception messages (see below), so production never uses it.
+    log_level = ENV.fetch("LOG_LEVEL", "info")
+    config.log_level = Rails.env.production? && log_level == "debug" ? "info" : log_level
     config.log_formatter = Observability::JsonLogFormatter.new
     config.log_tags = []
     # Rails logs the full exception at this level. Keep it below the default, as

@@ -33,7 +33,8 @@ RSpec.describe Middleware::CorrelationId do
     [ "line break", "abc12345\nforged" ],
     [ "JSON", '{"x":1}' ],
     [ "10 KB", "a" * 10_240 ],
-    [ "too short", "abc" ]
+    [ "too short", "abc" ],
+    [ "invalid UTF-8", "abc12345\xFF" ]
   ].each do |description, hostile|
     it "replaces a hostile identifier: #{description}" do
       response = perform(hostile)

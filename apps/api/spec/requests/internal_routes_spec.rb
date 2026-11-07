@@ -25,5 +25,12 @@ RSpec.describe "internal routes" do
       expect(response).to have_http_status(:not_found)
       expect(response.parsed_body.dig("error", "code")).to eq("not_found")
     end
+
+    it "does not expose the smoke error route" do
+      post "/internal/smoke_errors"
+
+      expect(response).to have_http_status(:not_found)
+      expect(response.parsed_body.dig("error", "code")).to eq("not_found")
+    end
   end
 end

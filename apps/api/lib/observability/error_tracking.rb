@@ -1,4 +1,5 @@
 require "sentry-ruby"
+require "sidekiq"
 require "observability/error_scrubber"
 
 module Observability
@@ -10,7 +11,12 @@ module Observability
 
       Sentry.init do |config|
         config.dsn = dsn
+        # A role, not the hostname, which can identify a person's machine.
+        config.server_name = Sidekiq.server? ? "worker" : "api"
+        config.send_modules = false
         config.before_send = ErrorScrubber
+        # Performance events would bypass the scrubber, and nothing uses them.
+        config.before_send_transaction = ->(_event, _hint) { nil }
         collect_no_personal_data(config.data_collection)
       end
       true

@@ -65,6 +65,52 @@ RSpec.describe "error tracking", type: :request do
       expect(sentry_events.first.user).to be_empty
     end
 
+    it "does not send this machine's name, paths or installed gems" do
+      provoke_request_error
+
+      event = sentry_events.first.to_json_compatible
+      frames = event["exception"]["values"].flat_map { |single| single.dig("stacktrace", "frames") || [] }
+
+      expect(event["server_name"]).to eq("api")
+      expect(event["modules"]).to be_blank
+      expect(frames).not_to be_empty
+      expect(frames.filter_map { |frame| frame["abs_path"] }).to eq([])
+    end
+
+    it "keeps only known tags and contexts, and drops a custom fingerprint" do
+      Sentry.set_tags(email: "person@example.test")
+      Sentry.set_context("meal", { items: "rice-secret-item" })
+
+      Sentry.capture_exception(RuntimeError.new("x"), fingerprint: [ "person@example.test" ])
+
+      expect(serialized_events.first).not_to include("person@example.test")
+      expect(serialized_events.first).not_to include("rice-secret-item")
+    end
+
+    it "does not use a URL as the transaction name" do
+      event = Sentry.get_current_client.event_from_exception(RuntimeError.new("x"))
+      event.transaction = "/users/person@example.test"
+      event.transaction_info = { source: :url }
+
+      Observability::ErrorScrubber.call(event, {})
+
+      expect(event.transaction).to eq("unrouted")
+    end
+
+    it "keeps a controller as the transaction name" do
+      event = Sentry.get_current_client.event_from_exception(RuntimeError.new("x"))
+      event.transaction = "HealthController#live"
+      event.transaction_info = { source: :view }
+
+      Observability::ErrorScrubber.call(event, {})
+
+      expect(event.transaction).to eq("HealthController#live")
+    end
+
+    it "drops performance events" do
+      expect(Sentry.configuration.before_send_transaction.call(:event, {})).to be_nil
+    end
+
     it "captures a job error without its arguments" do
       job = { "class" => "SmokeJob", "jid" => "jid-1", "args" => [ "arg-secret-value" ], "correlation_id" => "corr-job-1" }
 

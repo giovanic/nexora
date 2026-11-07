@@ -35,6 +35,19 @@ RSpec.describe Observability::JsonLogFormatter do
     expect(line("bad \xFF byte")["message"]).to include("bad")
   end
 
+  it "does not fail on invalid UTF-8 inside a structured message" do
+    expect(line(path: "/x\xFF", nested: { value: "y\xFF" })["path"]).to start_with("/x")
+  end
+
+  it "keeps only known job fields from the Sidekiq context" do
+    Sidekiq::Context.with(jid: "jid-1", class: "AnyJob", elapsed: 1.5, job: { "args" => [ "arg-secret" ] }, tags: [ "tag-secret" ]) do
+      output = formatter.call("INFO", time, nil, "hello")
+
+      expect(JSON.parse(output)["context"]).to eq("jid" => "jid-1", "class" => "AnyJob", "elapsed" => 1.5)
+      expect(output).not_to include("arg-secret", "tag-secret")
+    end
+  end
+
   it "includes the current correlation identifier" do
     Observability::Correlation.with("corr-test-1") do
       expect(line("hello")).to include("correlation_id" => "corr-test-1")

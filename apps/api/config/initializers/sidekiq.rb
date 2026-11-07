@@ -3,6 +3,7 @@ require "observability/sidekiq_correlation"
 
 Sidekiq.configure_client do |config|
   config.redis = { url: Rails.configuration.x.queue_url }
+  config.logger.formatter = Observability::JsonLogFormatter.new
 
   config.client_middleware { |chain| chain.add Observability::SidekiqCorrelation::Client }
 end
