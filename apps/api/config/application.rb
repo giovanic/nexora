@@ -39,5 +39,10 @@ module Backend
 
     require "api_error_app"
     config.exceptions_app = ApiErrorApp.new
+
+    # Local defaults match docker-compose.yml. Production requires REDIS_URL,
+    # the name Sidekiq reads, even though the service is Valkey.
+    local_queue_urls = { "development" => "redis://127.0.0.1:6380/0", "test" => "redis://127.0.0.1:6380/1" }
+    config.x.queue_url = ENV.fetch("REDIS_URL") { local_queue_urls[Rails.env] }
   end
 end
