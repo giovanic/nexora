@@ -40,22 +40,54 @@ Quais versões adotar, sem assumir compatibilidade não confirmada?
 
 ## Decisão
 
-**Já vale:** a stack de referência do Master Prompt como direção, com versões fixadas em arquivo (`.ruby-version`, `.nvmrc` ou `.tool-versions`) e em imagens Docker, e sem depender das versões da máquina.
+A stack de referência do Master Prompt vale como direção, com versões fixadas em `apps/api/.ruby-version`, `.nvmrc`, lockfiles e tags exatas de imagem, sem depender das versões da máquina.
 
-**Fica para a Fase 01:** as versões exatas, depois de executar uma aplicação mínima com cada combinação candidata, com testes e consulta de novo às fontes.
+| Item | Versão |
+|---|---|
+| Ruby | 4.0.9 |
+| Rails | 8.1.4.1 |
+| Sidekiq | 8.1.7 |
+| Node | 26.13 (LTS) |
+| PostgreSQL | 18.6 |
+| Serviço de fila | Valkey 9.1.3, decisão do responsável em 2026-11-06 |
+| Expo | SDK 58 |
+| React / Vite | 19.3 / 8.3 |
+| TypeScript | 6.0 nos clientes; 5.9 só em `packages/contracts`, porque o `openapi-typescript` declara `^5.x` |
+| ESLint | 9.39, a versão que `expo install` resolve para o SDK 58, nos dois clientes |
 
-**Proposta a validar:** Ruby 4.0, com 3.4 como alternativa se a validação falhar; Rails 8.1.x; PostgreSQL 18; Node 22 ou o LTS mais recente aceito pelo Expo; Redis ou Valkey após verificar a licença.
+## Evidência
+
+Aplicação mínima executada em 2026-11-06, em diretório temporário depois apagado, com `postgres:18.6` e `valkey/valkey:9.1.3` em containers.
+
+| Verificação | Resultado |
+|---|---|
+| `bundle install` em Ruby 4.0.9, com Rails 8.1.4.1, Sidekiq, rspec-rails 8.1.0, openapi_first 4.3.0, lograge, sentry-rails, rack-cors | Código 0 |
+| `rails db:prepare`, e `show server_version` | Código 0, `18.6` |
+| RSpec com processo `sidekiq` real, processando job no Valkey | Passou; `valkey_version:9.1.3` |
+| `openapi_first` com contrato 3.1.1 | Aprova a resposta conforme e reprova a divergente |
+| Brakeman `-w3` e `bundle-audit check --update` | Código 0, sem achados |
+| Inicialização em produção sem `credentials.yml.enc` | Inicia |
+| RuboCop 1.92.2 em Ruby 4.0 | Código 0. Com Packwerk no Gemfile, a resolução trava o RuboCop em 1.74, que recusa Ruby 4.0 |
+| Node 26.13: `openapi-typescript` com TypeScript 5.9 | Tipos gerados |
+| Node 26.13: `tsc -b`, `vite build`, `npm audit --audit-level=high` na web, com TypeScript 6.0 | Código 0 |
+| Node 26.13: `npx expo-doctor` no mobile | 20 de 20 verificações |
+
+A falha de tipos encontrada no mobile vem dos arquivos de demonstração do template, removidos nesta fase.
 
 ## Justificativa
 
-Fixar versões em papel, sem executar, criaria uma decisão hipotética. A verificação custa pouco na Fase 01.
+Fixar versões em papel, sem executar, criaria uma decisão hipotética. A execução acima substitui a compatibilidade que as fontes não afirmavam, como Rails 8.1 com Ruby 4.0.
+
+Valkey em vez de Redis: as duas opções funcionam com o Sidekiq, e o Redis a partir da versão 8 é RSALv2, SSPLv1 ou AGPLv3, enquanto o Valkey é BSD-3-Clause.
 
 ## Consequências
 
-- A Fase 01 atualiza esta ADR para `Aceita`, com a evidência da verificação.
 - Versões usam o container, e não a máquina local.
 - O registro de fontes é atualizado.
+- **Risco:** o Rails 8.1 só recebe correções de segurança, e até 2027-10-10. Reavaliar quando sair uma nova linha.
+- **Risco:** a validação não prova o comportamento em produção nem cobre todas as gems futuras.
+- O nome da variável segue `REDIS_URL`, que é o que o Sidekiq lê, mesmo com Valkey.
 
 ## Estado da decisão
 
-Proposta
+Aceita
