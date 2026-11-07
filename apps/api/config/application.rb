@@ -38,7 +38,18 @@ module Backend
     config.api_only = true
 
     require "api_error_app"
+    require "middleware/correlation_id"
+    require "observability/json_log_formatter"
+
     config.exceptions_app = ApiErrorApp.new
+    config.middleware.insert_before Rails::Rack::Logger, Middleware::CorrelationId
+
+    config.log_level = ENV.fetch("LOG_LEVEL", "info")
+    config.log_formatter = Observability::JsonLogFormatter.new
+    config.log_tags = []
+    # Rails logs the full exception at this level. Keep it below the default, as
+    # its message can carry user data; the error tracker receives the details.
+    config.action_dispatch.debug_exception_log_level = :debug
 
     # Local defaults match docker-compose.yml. Production requires REDIS_URL,
     # the name Sidekiq reads, even though the service is Valkey.
