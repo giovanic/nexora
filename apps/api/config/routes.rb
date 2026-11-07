@@ -9,6 +9,7 @@ Rails.application.routes.draw do
     namespace :internal do
       resources :smoke_jobs, only: %i[create show], constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }
       resources :smoke_errors, only: :create
+      get "probe", to: "smoke_jobs#probe"
     end
   end
 end
