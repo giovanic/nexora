@@ -1,0 +1,170 @@
+# Desenho da API
+
+Contrato entre o backend e os clientes. **Nenhum endpoint é implementado na Fase 00.** A lista abaixo é o desenho inicial; cada fase confirma o seu trecho no contrato OpenAPI.
+
+## Princípios
+
+- **REST com JSON**, descrita em OpenAPI, que é a fonte dos tipos dos clientes. A versão atual da especificação é a 3.2.1 ([fontes](EXTERNAL_SOURCES.md)). Ferramentas e versão adotada são decididas na [ADR 0014](decisions/0014-api-contract-tooling.md). `rswag` não é adotado sem avaliação, pois declara compatibilidade com OpenAPI 3.0 e busca mantenedores.
+- **Versionamento** no caminho: `/api/v1`. Mudança incompatível cria nova versão.
+- **O backend decide regra de negócio.** A API devolve resultados prontos, como progresso, XP e faixas.
+- **Controllers enxutos:** autenticar, autorizar, chamar um serviço, serializar.
+
+## Autenticação e autorização
+
+- Estratégia de sessão e tokens decidida na [ADR 0005](decisions/0005-authentication-strategy.md). Mobile e web têm necessidades diferentes de armazenamento.
+- Toda rota, salvo cadastro, login, recuperação de senha, webhook, callback OAuth (validado pelo `state`) e saúde, exige autenticação.
+- Exportação e exclusão de conta exigem reautenticação recente, porque uma sessão roubada não pode levar todo o histórico.
+- **Isolamento:** consultas partem sempre do usuário autenticado, pela API do contexto, como `Nutrition::Api.find_entry(user_id: current_user.id, id:)`. Recurso de outra pessoa responde `404`, nunca `403`, para não confirmar a existência.
+- Rotas que dependem de consentimento respondem `403` com o código `consent_required`.
+
+## Formato de erro
+
+Único em toda a API, tratado centralmente:
+
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "Mensagem para exibir ao usuário",
+    "details": [{ "field": "target", "code": "unsupported_goal_type" }],
+    "request_id": "01J..."
+  }
+}
+```
+
+| Status | Uso |
+|---|---|
+| 400 | Requisição malformada |
+| 401 | Sem autenticação válida |
+| 403 | Falta consentimento |
+| 404 | Inexistente ou de outra pessoa |
+| 409 | Conflito de estado |
+| 422 | Falha de validação de negócio |
+| 429 | Limite excedido, com `Retry-After` |
+| 5xx | Erro interno, sem detalhes |
+
+## Paginação, filtros e datas
+
+- **Paginação por cursor** em todas as listagens: `?cursor=...&limit=50`, com limite máximo definido. A resposta traz `next_cursor`.
+- **Filtros** explícitos: `?from=2026-11-01&to=2026-11-07&type=run`.
+- **Datas:** instantes em ISO 8601 UTC. O "dia da pessoa" aparece em `local_date`.
+
+## Idempotência
+
+Rotas de criação que podem ser repetidas aceitam `Idempotency-Key` ou `client_request_id`. A mesma chave devolve o mesmo resultado, sem nova criação.
+
+## Estimativas
+
+Estimativa nunca aparece como número único:
+
+```json
+{
+  "calories": { "min": 550, "likely": 650, "max": 750, "unit": "kcal", "is_estimate": true },
+  "confidence": "medium",
+  "sources": [{ "name": "USDA FoodData Central", "version": "2026-10" }]
+}
+```
+
+Os valores acima são apenas ilustrativos.
+
+## Recursos por contexto
+
+### Identity & Access (Fase 02)
+
+| Método e rota | Função |
+|---|---|
+| `POST /api/v1/registrations` | Criar conta, exigindo confirmação de maioridade |
+| `POST /api/v1/sessions`, `DELETE /api/v1/sessions/:id` | Entrar, sair, revogar dispositivo |
+| `POST /api/v1/sessions/refresh` | Renovar sessão, conforme a ADR 0005 |
+| `POST /api/v1/password_resets` | Recuperar senha |
+| `GET`/`POST /api/v1/consents`, `DELETE /api/v1/consents/:purpose` | Consultar, conceder, revogar |
+| `POST /api/v1/account/export` | Solicitar exportação |
+| `DELETE /api/v1/account` | Solicitar exclusão |
+
+### User Profile (Fase 02)
+
+| Método e rota | Função |
+|---|---|
+| `GET`/`PATCH /api/v1/profile` | Perfil e preferências |
+| `GET`/`POST`/`PATCH`/`DELETE /api/v1/sport_profiles` | Esportes e níveis |
+
+### Nutrition e Food AI (Fase 03)
+
+| Método e rota | Função |
+|---|---|
+| `POST /api/v1/food_entries/uploads` | Verificar consentimento e limite; devolver URL assinada |
+| `POST /api/v1/food_entries/:id/analysis` | Confirmar envio e enfileirar análise |
+| `GET /api/v1/food_entries/:id` | Estado e resultado |
+| `POST /api/v1/food_entries` | Registro manual |
+| `POST /api/v1/food_entries/:id/confirmation` | Confirmar |
+| `PATCH`/`POST`/`DELETE /api/v1/food_entries/:id/items` | Corrigir itens e porções |
+| `GET /api/v1/food_entries?local_date=` | Histórico |
+| `DELETE /api/v1/food_entries/:id` | Apagar refeição e foto |
+| `POST /api/v1/foods/search` | Busca no catálogo, com o termo no corpo, para que o que a pessoa comeu não vá para logs de URL |
+
+### Goals (Fase 05)
+
+| Método e rota | Função |
+|---|---|
+| `GET /api/v1/goal_types` | Tipos permitidos |
+| `GET`/`POST`/`PATCH`/`DELETE /api/v1/goals` | Metas |
+| `POST /api/v1/goals/:id/check_ins` | Check-in manual |
+| `GET /api/v1/goals/history` | Histórico |
+| `GET`/`PUT /api/v1/weekly_plans/:week_start` | Planejamento (etapa 05.2) |
+
+### Activities e Strava (Fase 04)
+
+| Método e rota | Função |
+|---|---|
+| `GET`/`POST`/`PATCH`/`DELETE /api/v1/activities` | Histórico e registro manual |
+| `POST /api/v1/integrations/strava/authorization` | Iniciar OAuth |
+| `GET /api/v1/integrations/strava/callback` | Concluir OAuth |
+| `GET /api/v1/integrations/strava` | Estado da integração e sincronização |
+| `DELETE /api/v1/integrations/strava` | Desconectar e apagar |
+| `GET`/`POST /webhooks/strava` | Validação e eventos ([detalhes](STRAVA_INTEGRATION.md)) |
+
+### Gamification e Missions (Fase 06)
+
+| Método e rota | Função |
+|---|---|
+| `GET /api/v1/progression` | XP, nível, sequências |
+| `GET /api/v1/xp_transactions` | Histórico, com motivo |
+| `GET /api/v1/missions` | Missões da pessoa |
+| `GET /api/v1/achievements` | Conquistas |
+
+Não existe rota para o cliente conceder XP ou concluir missão.
+
+### Notifications e Progress (Fase 08)
+
+| Método e rota | Função |
+|---|---|
+| `GET`/`PATCH /api/v1/notifications` | Caixa de mensagens |
+| `POST /api/v1/device_tokens` | Registrar aparelho para push |
+| `GET /api/v1/progress/summary` | Evolução |
+| `GET /api/v1/reports/weekly/:week_start` | Relatório semanal |
+
+### Operação (Fase 01)
+
+| Rota | Função |
+|---|---|
+| `GET /health/live` | Processo vivo |
+| `GET /health/ready` | Banco e Redis acessíveis |
+
+O calendário das Fases 07 e 08 é composto pelos clientes a partir de refeições, metas e atividades, com filtros por período. Um endpoint próprio só existirá com medição que o justifique.
+
+## Uploads
+
+1. O app chama `POST /food_entries/uploads`. O backend verifica consentimento e limite de análises.
+2. A resposta traz uma URL assinada de prazo curto, restrita a tipo e tamanho.
+3. O app envia a foto direto ao armazenamento privado.
+4. O app confirma, e o backend verifica a existência, o tipo e o tamanho reais do objeto, remove EXIF substituindo o objeto, e só então enfileira.
+
+O servidor nunca recebe a foto pela API, o que reduz custo e superfície de ataque. Tipos e tamanho máximo levam em conta os limites dos provedores ([fontes](EXTERNAL_SOURCES.md)).
+
+## Limites de uso
+
+Limite de tentativas em autenticação, de requisições por usuário e de análises por período. Excedido, responde `429` com `Retry-After` e, no caso de análises, com o código `analysis_quota_exceeded`.
+
+## Compatibilidade entre clientes
+
+O app móvel não atualiza junto com o servidor. Campos novos são adicionais, remoções passam por uma nova versão, e o contrato OpenAPI é verificado no CI contra a implementação.

@@ -1,0 +1,40 @@
+# 0004 — Eventos de domínio com outbox transacional
+
+- **Data:** 2026-11-05
+- **Requisitos relacionados:** FR-GAME-001, FR-GAME-002, FR-STRAVA-008, FR-GOALS-007
+
+## Contexto
+
+Gamification, Goals, Notifications e Progress & Analytics reagem a fatos de outros domínios sem depender deles diretamente. Se um evento for perdido, a pessoa perde XP ou uma meta fica errada. Se enfileirarmos um job e a transação falhar, um evento pode descrever algo que não aconteceu.
+
+## Problema
+
+Como comunicar fatos entre domínios sem perder eventos, sem eventos fantasmas e sem efeito duplicado?
+
+## Alternativas
+
+1. **Chamadas síncronas diretas:** simples, mas acoplam os domínios, e uma falha em Gamification derrubaria o registro de refeição.
+2. **Enfileirar o job direto do serviço:** simples, mas sem atomicidade com a transação.
+3. **Outbox transacional com Sidekiq:** evento gravado na mesma transação, publicado depois, com consumidores idempotentes. Exige tabela e job publicador.
+4. **Broker externo (Kafka, RabbitMQ):** recursos avançados, sem necessidade e com alta carga operacional.
+
+## Decisão
+
+**Já vale:** atomicidade entre mudança e evento, entrega pelo menos uma vez e idempotência em cada consumidor. **Fica para a Fase 01, com a [ADR 0002](0002-technology-baseline.md):** a fila usada, Sidekiq ou outra que dispense o Redis.
+
+Outbox transacional em `outbox_events`. Entrega pelo menos uma vez. Cada consumidor registra `(consumer, event_id)` em `consumed_events`, na mesma transação do efeito. O formato está no [modelo de domínio](../DOMAIN_MODEL.md).
+
+## Justificativa
+
+É a menor solução que dá atomicidade e reprocessamento, usando só o banco e a fila da stack. Todo evento de domínio passa por ela, por simplicidade. Implementar uma biblioteca própria mínima ou adotar uma pronta é escolha da Fase 02, dona da implementação.
+
+## Consequências
+
+- Consistência eventual: XP pode aparecer segundos depois da ação.
+- Consumidores não podem depender de ordem global.
+- Precisa de alerta para eventos mortos e rotina de limpeza.
+- Testes de idempotência tornam-se obrigatórios para cada consumidor.
+
+## Estado da decisão
+
+Proposta

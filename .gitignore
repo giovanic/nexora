@@ -1,0 +1,30 @@
+# Segredos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Configuração local do Claude Code
+.claude/settings.local.json
+
+# Espaço de trabalho temporário do Superpowers
+.superpowers/
+
+# Dependências e artefatos
+node_modules/
+tmp/
+log/
+coverage/
+
+# Worktrees
+.claude/worktrees/
+.worktrees/
+
+# Credenciais móveis e cópias de dados
+*.keystore
+*.jks
+credentials.json
+*.dump
+/backups/
+/evaluation/images/
