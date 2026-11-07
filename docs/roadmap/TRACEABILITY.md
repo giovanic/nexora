@@ -129,7 +129,7 @@ Requisitos: [FUNCTIONAL_REQUIREMENTS.md](../product/FUNCTIONAL_REQUIREMENTS.md).
 | NFR-OPS-004 | M1 | 0015 | — | — | AC-M1-01 |
 | NFR-OPS-005 | M1 | 0016 | — | — | AC-M1-05 |
 | NFR-OPS-006 | 09 | — | — | — | AC-09-04 |
-| NFR-HARNESS-001 | 00 | — | `scripts/verify_harness.py`, `scripts/verify-harness.sh` | `scripts/test-verify-harness.sh` | AC-00-01 |
+| NFR-HARNESS-001 | 00 | — | `scripts/verify_harness.py`, `scripts/verify-harness.sh`, Lacuna aceita em 2026-11-06 | `scripts/test-verify-harness.sh`, Lacuna aceita em 2026-11-06 | AC-00-01 |
 | NFR-HARNESS-002 | 00 | — | `CLAUDE.md` | `docs/roadmap/reports/PHASE_00_REPORT.md` | AC-00-02 |
 | NFR-HARNESS-003 | 00 | 0016 | `docs/roadmap/STATUS.md`, `.claude/skills/phase-kickoff/SKILL.md`, `.claude/skills/phase-closeout/SKILL.md` | `scripts/test-verify-harness.sh`, `docs/roadmap/reports/PHASE_00_REPORT.md` | AC-00-03 |
 | NFR-HARNESS-004 | 00 | — | `docs/roadmap/TRACEABILITY.md` | `scripts/test-verify-harness.sh` | AC-00-04 |
