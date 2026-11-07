@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  harness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Test the verifier
+        run: bash scripts/test-verify-harness.sh
+      - name: Verify the harness
+        run: bash scripts/verify-harness.sh
+
+  secrets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Install Gitleaks
+        run: |
+          curl -sSfLO https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks_8.30.1_linux_x64.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/gitleaks"
+          tar -xzf gitleaks_8.30.1_linux_x64.tar.gz -C "$RUNNER_TEMP/gitleaks" gitleaks
+          rm gitleaks_8.30.1_linux_x64.tar.gz
+      - name: Scan the history
+        run: '"$RUNNER_TEMP/gitleaks/gitleaks" git --redact --no-banner'
+
+  api:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app_dev
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 30
+      valkey:
+        image: valkey/valkey:9.1.3
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 30
+    env:
+      RAILS_ENV: test
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1.338.0
+        with:
+          working-directory: apps/api
+          bundler-cache: true
+      - name: Lint
+        run: bundle exec rubocop
+      - name: Static security analysis
+        run: bundle exec brakeman -q --no-pager -w3
+      - name: Audit gems
+        run: bundle exec bundle-audit check --update
+      - name: Prepare the database
+        run: bin/rails db:prepare
+      - name: Test, including contract and domain boundaries
+        run: bundle exec rspec
+
+  contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Generated types match the contract
+        run: npm run check -w @app/contracts
+
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Audit JavaScript dependencies
+        run: npm audit --audit-level=high
+      - name: Types
+        run: npm run typecheck -w apps/web
+      - name: Lint
+        run: npm run lint -w apps/web
+      - name: Test
+        run: npm test -w apps/web
+      - name: Build
+        run: npm run build -w apps/web
+
+  mobile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Types
+        run: npm run typecheck -w apps/mobile
+      - name: Lint
+        run: npm run lint -w apps/mobile
+      - name: Test
+        run: npm test -w apps/mobile
