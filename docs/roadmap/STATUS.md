@@ -8,8 +8,8 @@ A linha `05` é um resumo de `05.1` e `05.2`.
 
 | Linha | Estado | Desde | Evidência |
 |---|---|---|---|
-| 00 | Em revisão | 2026-11-05 | [Relatório](reports/PHASE_00_REPORT.md) |
-| 01 | Não iniciada | 2026-11-05 | — |
+| 00 | Concluída | 2026-11-06 | [Relatório](reports/PHASE_00_REPORT.md) e mensagem do responsável de 2026-11-06, com a lacuna do check `scope` aceita |
+| 01 | Em desenvolvimento | 2026-11-06 | [Plano](../superpowers/plans/2026-11-06-foundation.md) aprovado pelo responsável em 2026-11-06 |
 | 02 | Não iniciada | 2026-11-05 | — |
 | 03 | Não iniciada | 2026-11-05 | — |
 | 04 | Não iniciada | 2026-11-05 | — |
@@ -28,3 +28,6 @@ A linha `05` é um resumo de `05.1` e `05.2`.
 |---|---|---|---|---|
 | 2026-11-05 | 00 | Não iniciada | Em desenvolvimento | [Design aprovado](../superpowers/specs/2026-11-05-engineering-harness-design.md) e [plano](../superpowers/plans/2026-11-05-engineering-harness.md) aprovados pelo responsável |
 | 2026-11-05 | 00 | Em desenvolvimento | Em revisão | [Relatório](reports/PHASE_00_REPORT.md), com a lacuna do check `scope` aguardando decisão do responsável |
+| 2026-11-06 | 00 | Em revisão | Concluída | [Relatório](reports/PHASE_00_REPORT.md) e mensagem do responsável de 2026-11-06: "Aprovo a Fase 00, aceitando a lacuna do check scope." Lacuna aceita: `FALHA scope` em `apps` e `packages` enquanto a linha 01 não estiver em desenvolvimento |
+| 2026-11-06 | 01 | Não iniciada | Em planejamento | Mensagem do responsável de 2026-11-06: "Vamos iniciar a fase 01." |
+| 2026-11-06 | 01 | Em planejamento | Em desenvolvimento | [Plano](../superpowers/plans/2026-11-06-foundation.md) e mensagem do responsável de 2026-11-06: "Aprovo o plano da Fase 01, com execução na sessão." |

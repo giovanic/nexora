@@ -2,7 +2,7 @@
 
 Toda decisão que depende de informação externa aponta para este registro. Regra da seção 11 do [Master Prompt](../product/MASTER_PROMPT.md): fonte oficial, versão confirmada, data da consulta e nada inventado.
 
-- **Consulta:** todas as entradas foram lidas em **2026-11-05**, salvo indicação.
+- **Consulta:** as entradas foram lidas em **2026-11-05**, salvo indicação na seção.
 - **Estados:** `verificado` (lido na fonte oficial), `verificado em parte` (lido em parte, com a lacuna descrita), `não verificado` (não usar como base de decisão sem nova consulta).
 - **Validade:** versões, preços e termos mudam. Toda fase confere de novo as entradas de que depende, no início, e atualiza a data aqui.
 
@@ -52,21 +52,54 @@ Toda decisão que depende de informação externa aponta para este registro. Reg
 
 ## Versões
 
+Reconsultadas em **2026-11-06**, no início da Fase 01. Datas e versões de gems e pacotes vêm das APIs de `rubygems.org` e `registry.npmjs.org`.
+
 | Ferramenta | Fato | Fonte | Estado |
 |---|---|---|---|
-| Ruby | Estável 4.0.9. 4.0 e 3.4 em manutenção normal. 3.3 só segurança, fim esperado em 2027-03-31 | https://www.ruby-lang.org/en/downloads/ e https://www.ruby-lang.org/en/downloads/branches/ | verificado |
-| Rails | 8.1.4.1 (2026-11-04). 8.1 com segurança até 2027-10-10. Rails 8.0 e 8.1 exigem Ruby ≥ 3.2.0 | https://rubyonrails.org/ , https://rubyonrails.org/maintenance , https://guides.rubyonrails.org/upgrading_ruby_on_rails.html | verificado |
-| Rails + Ruby 4.0 | Compatibilidade não confirmada nas páginas lidas | n/a | não verificado |
+| Ruby | Estável 4.0.9; 3.4.12 também listada como estável. 4.0 e 3.4 em manutenção normal. 3.3 só segurança, fim esperado em 2027-03-31 | https://www.ruby-lang.org/en/downloads/ e https://www.ruby-lang.org/en/downloads/branches/ | verificado |
+| Rails | 8.1.4.1 (2026-11-04). 8.1: correção de bugs até 2026-10-10, já encerrada, e segurança até 2027-10-10. 8.0: segurança até 2026-11-07. Rails 8.0 e 8.1 exigem Ruby ≥ 3.2.0 | https://rubyonrails.org/ , https://rubyonrails.org/maintenance , https://guides.rubyonrails.org/upgrading_ruby_on_rails.html | verificado |
+| Rails + Ruby 4.0 | `rails.gemspec` da 8-1-stable exige `>= 3.2.0`; as notas da 8.1 e o guia de atualização não citam Ruby 4.0. Compatibilidade não afirmada pelas fontes lidas: depende de execução | https://raw.githubusercontent.com/rails/rails/8-1-stable/rails.gemspec , https://guides.rubyonrails.org/8_1_release_notes.html | não verificado |
 | React | 19.3 (2026-09-09) | https://react.dev/versions | verificado |
 | Vite | 8.3.6; exige Node 20.19+ ou 22.12+ | https://vite.dev/releases , https://vite.dev/guide/ | verificado |
-| Expo | SDK 58 (React Native 0.88, React 19.3.0, Node ≥ 22.13.x; iOS 16.4+, Xcode 26.4+; Android compileSdk 37, targetSdk 36) | https://docs.expo.dev/versions/latest/ , https://expo.dev/changelog | verificado |
-| Expo | Janela de suporte dos SDKs | https://docs.expo.dev/versions/latest/ | não verificado |
+| Expo | SDK 58 (React Native 0.88, React 19.3.0, Node ≥ 22.13.x; iOS 16.4+, Xcode 26.4+; Android compileSdk 37, targetSdk 36). Três SDKs por ano | https://docs.expo.dev/versions/latest/ , https://expo.dev/changelog | verificado |
+| Expo | Janela de suporte dos SDKs: não declarada nas páginas lidas | https://docs.expo.dev/versions/latest/ , https://docs.expo.dev/more/release-statuses.md | não verificado |
+| Expo | Aparelho real recomendado para desenvolver. Expo Go é *"a playground app"*; development build é o caminho para produção. `expo.dev/go` exibe o SDK 58 como atual, sem afirmar suporte em frase | https://docs.expo.dev/get-started/set-up-your-environment/ , https://expo.dev/go | verificado em parte |
 | Node.js | LTS mais recente v26.13.0; 22, 24 e 26 em LTS; 20 em fim de vida | https://nodejs.org/en/about/previous-releases | verificado |
-| PostgreSQL | 18.6; fim de suporte: 14 em 2026-11-12, 15 em 2027-11-11, 16 em 2028-11-09, 17 em 2029-11-08, 18 em 2030-11-14 | https://www.postgresql.org/support/versioning/ | verificado |
-| Sidekiq | 8.1.7. Redis ≥ 7.0 ou Valkey ≥ 7.2; Ruby ≥ 3.2 e Rails ≥ 7.0 (entrada da 8.0.0, não repetida na 8.1) | https://github.com/sidekiq/sidekiq/blob/main/Changes.md | verificado em parte |
-| Redis | Versão atual e licença | https://redis.io/docs/latest/ (retornou 404) | não verificado |
+| PostgreSQL | 18.6 e 17.11; fim de suporte: 14 em 2026-11-12, 15 em 2027-11-11, 16 em 2028-11-09, 17 em 2029-11-08, 18 em 2030-11-14 | https://www.postgresql.org/support/versioning/ | verificado |
+| Sidekiq | 8.1.7 (2026-08-17), licença LGPL-3.0, Ruby ≥ 3.2. Redis ≥ 7.0 (entrada da 8.0.1) ou Valkey ≥ 7.2, e Rails ≥ 7.0 (entrada da 8.0.0, não repetida na 8.1) | https://github.com/sidekiq/sidekiq/blob/main/Changes.md , https://raw.githubusercontent.com/sidekiq/sidekiq/main/sidekiq.gemspec | verificado |
+| Redis | 8.10.3 (2026-10-26). Licença: até 7.2, BSD-3-Clause; 7.4, RSALv2 ou SSPLv1; a partir de 8.0, RSALv2, SSPLv1 ou AGPLv3, à escolha de quem usa | https://github.com/redis/redis/releases , https://redis.io/legal/licenses/ | verificado |
+| Valkey | 9.1.3 (2026-10-26), licença BSD-3-Clause. Fork do Redis anterior à mudança de licença | https://github.com/valkey-io/valkey/releases , https://github.com/valkey-io/valkey | verificado |
 | OpenAPI | 3.2.1 (2026-09-10) | https://spec.openapis.org/oas/latest.html | verificado |
 | rswag | README declara *"OpenApi 3.0 compatible!"* e *"Seeking maintainers!"*. Última versão não confirmada | https://github.com/rswag/rswag | verificado em parte |
+
+## Ferramentas candidatas da Fase 01
+
+Consultadas em **2026-11-06**. Licenças não têm parecer jurídico.
+
+| Ferramenta | Fato | Fonte | Estado |
+|---|---|---|---|
+| openapi_first | 4.3.0 (2026-11-03), MIT, Ruby ≥ 3.3. Valida contra OpenAPI 3.0 ou 3.1, com teste de contrato em rack-test e relatório de cobertura. 3.2 não é citada | https://github.com/ahx/openapi_first , https://rubygems.org/gems/openapi_first | verificado |
+| committee | 5.6.4 (2026-09-21), MIT. OpenAPI 3.0 e 3.1, sem `if`/`then`/`else`, `unevaluatedProperties`, `patternProperties` e `$dynamicRef`. 3.2 não é citada | https://github.com/interagent/committee , https://rubygems.org/gems/committee | verificado |
+| openapi-typescript | 7.13.0 (2026-02-11), MIT. OpenAPI 3.0 e 3.1. Declara `typescript` `^5.x` como dependência par | https://openapi-ts.dev/introduction , https://registry.npmjs.org/openapi-typescript | verificado |
+| Packwerk | 3.3.1 (2026-08-26), MIT, Ruby ≥ 3.3. *"Packwerk ships with dependency boundary checking only."* A verificação de visibilidade não vem no núcleo. Exige Zeitwerk | https://github.com/Shopify/packwerk/blob/main/USAGE.md , https://rubygems.org/gems/packwerk | verificado |
+| Gitleaks | v8.30.1 (2026-03-21), MIT, repositório ativo em 2026-10-28. *"Future releases will be security patches only."* Sai com código 1 ao achar vazamento. `gitleaks git` varre o histórico | https://github.com/gitleaks/gitleaks | verificado |
+| gitleaks-action | Licença própria desde a v2. Chave exigida para organizações, não para contas pessoais | https://github.com/gitleaks/gitleaks-action/blob/master/LICENSE.txt | verificado |
+| Betterleaks | v1.10.0 (2026-11-04), MIT, dos autores do Gitleaks. v2 em release candidate; arquivos de configuração do Gitleaks não são declarados compatíveis | https://github.com/betterleaks/betterleaks | verificado em parte |
+| Brakeman | 8.1.0 (2026-10-01). "Brakeman Public Use License": uso comercial exige licença paga, mas *"Using the Software to analyze Licensee's software."* consta como exemplo de uso não comercial. O texto não trata do CI de empresa com fins lucrativos, e manda consultar o mantenedor em caso de dúvida | https://raw.githubusercontent.com/presidentbeef/brakeman/main/LICENSE.md | verificado (o enquadramento do nosso caso é questão jurídica) |
+| bundler-audit | 0.9.3 (2025-11-28), GPL-3.0-or-later | https://rubygems.org/gems/bundler-audit | verificado |
+| rspec-rails | 8.1.0 (2026-11-06), MIT. A linha 8.x cobre Rails 8.1, 8.0 e 7.2 | https://github.com/rspec/rspec-rails , https://rubygems.org/gems/rspec-rails | verificado |
+| lograge | 0.15.1 (2026-09-29), MIT. Rails 8.1 e MRI 4.0 declarados verdes no CI | https://github.com/roidrage/lograge | verificado |
+| rails_semantic_logger | 5.2.0 (2026-09-05), Apache-2.0, Ruby ≥ 3.2 | https://rubygems.org/gems/rails_semantic_logger | verificado |
+| rack-cors | 3.0.0 (2025-05-16), MIT | https://rubygems.org/gems/rack-cors | verificado |
+| TypeScript | 7.0.2 (2026-07-08). `typescript-eslint` 8.72.1 aceita `>=4.8.4 <6.1.0`, portanto não aceita a 7 | https://registry.npmjs.org/typescript , https://registry.npmjs.org/typescript-eslint | verificado |
+| Testes dos clientes | vitest 5.1.0 (Node `^22.12 \|\| ^24 \|\| >=26`); jsdom 31.0.0 (Node `^22.22.2 \|\| ^24.15 \|\| >=26`); @testing-library/react 16.3.3; @testing-library/react-native 14.1.0; jest-expo 58.0.14, que no SDK 58 exige Jest 30; eslint 10.14.0; eslint-config-expo 58.0.4 | https://registry.npmjs.org/ , https://docs.expo.dev/develop/unit-testing/ , https://docs.expo.dev/guides/using-eslint/ | verificado |
+| Sentry: plano | Developer gratuito: um usuário, 5 mil erros, retenção de 30 dias. A seção 17 dos termos limita "No-Charge Products" e não diz se o plano entra nela. Uso limitado a *"internal business purposes"* | https://sentry.io/pricing/ , https://sentry.io/terms/ | verificado em parte |
+| Sentry: dados | Armazenamento em US (Iowa) ou EU (Frankfurt), escolhido ao criar a organização e sem troca posterior; contas e configurações ficam nos EUA. DPA disponível. Escolha da região no plano gratuito não confirmada | https://docs.sentry.io/organization/data-storage-location/ , https://sentry.io/legal/dpa/ | verificado em parte |
+| Sentry: SDKs | sentry-ruby, sentry-rails e sentry-sidekiq 7.2.0; @sentry/react 11.11.0; @sentry/react-native 8.34.0, para Expo SDK 50 ou superior. Rails não envia identidade por padrão; React envia, e desliga com `dataCollection`; o exemplo do Expo traz `sendDefaultPii: true` | https://docs.sentry.io/platforms/ruby/guides/rails/ , https://docs.sentry.io/platforms/javascript/guides/react/ , https://docs.sentry.io/platforms/react-native/manual-setup/expo/ | verificado |
+| GitHub Actions | Plano Free inclui US$ 12 por mês de computação em repositório privado (cerca de 2.000 minutos Linux, por cálculo nosso, a US$ 0,006 por minuto); runners padrão são gratuitos em repositório público | https://docs.github.com/en/billing/managing-billing-for-your-products/managing-billing-for-github-actions/about-billing-for-github-actions | verificado |
+| GitHub: proteção de branch | *Protected branches* em repositório privado aparece a partir do plano Pro. "Required status checks" e regras de repositório no plano Free não são citados | https://docs.github.com/en/get-started/learning-about-github/githubs-plans | verificado em parte |
+| `gh` | Instalação oficial por pacote Debian, com repositório próprio. Pacote comunitário do Ubuntu `2.45.x`/`2.46.x` declarado quebrado. WSL não é citado | https://github.com/cli/cli/blob/trunk/docs/install_linux.md | verificado |
+| setup-ruby | Suporta MRI até 4.1.0-preview1; recomenda versão curta, como `'4.0'` | https://github.com/ruby/setup-ruby | verificado |
 
 ## Provedores de IA
 

@@ -1,8 +1,8 @@
 # Relatório da Fase 00 — Engineering Harness
 
 - **Data:** 2026-11-05
-- **Estado:** `Em revisão`, aguardando aprovação do responsável
-- **Commits:** nenhum, como pedido
+- **Estado:** `Concluída`, por aprovação do responsável em 2026-11-06, aceitando a lacuna do check `scope`
+- **Commits:** nenhum durante a execução, como pedido. O commit `873c7a6` foi feito depois deste relatório
 
 ## A. Resumo executivo
 
@@ -108,7 +108,7 @@ Rodaram `software-architect`, `security-reviewer`, `qa-reviewer` e uma revisão 
 
 **Decisões suas**
 
-1. Aprovar esta fase, aceitando a lacuna do check `scope` em `apps/` e `packages/`.
+1. Aprovar esta fase, aceitando a lacuna do check `scope` em `apps/` e `packages/`. **Decidido em 2026-11-06:** aprovada, com a lacuna aceita. O check `scope` segue reprovando nessas pastas enquanto a linha 01 não estiver em desenvolvimento.
 2. Decidir o primeiro commit e o repositório remoto, necessários para worktree e CI.
 3. Na Fase 01, decidir o que aproveitar das pastas geradas. Elas usam Ruby 3.3.4, Solid Queue e Minitest, em vez de Sidekiq, Redis e RSpec.
 
