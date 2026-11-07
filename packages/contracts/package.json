@@ -1,0 +1,20 @@
+{
+  "name": "@app/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "types": "./generated/api.d.ts",
+  "exports": {
+    ".": {
+      "types": "./generated/api.d.ts"
+    }
+  },
+  "scripts": {
+    "generate": "openapi-typescript openapi.yaml -o generated/api.d.ts",
+    "check": "node check-generated.mjs"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "~5.9.3"
+  }
+}

@@ -1,4 +1,5 @@
 require "rails_helper"
+require "support/contract"
 
 RSpec.describe "GET /health/ready" do
   def use_check(database: Health::ReadinessCheck.database_probe, queue: Health::ReadinessCheck.queue_probe(Rails.configuration.x.queue_url))
@@ -14,6 +15,7 @@ RSpec.describe "GET /health/ready" do
       "status" => "ok",
       "checks" => { "database" => "ok", "queue" => "ok" }
     )
+    expect_response_to_match_contract
   end
 
   it "responds 503 naming the queue when it is down" do
@@ -26,6 +28,7 @@ RSpec.describe "GET /health/ready" do
       "status" => "unavailable",
       "checks" => { "database" => "ok", "queue" => "error" }
     )
+    expect_response_to_match_contract
   end
 
   it "responds 503 naming the database when it is down" do

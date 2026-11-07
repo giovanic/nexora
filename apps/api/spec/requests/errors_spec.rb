@@ -1,4 +1,5 @@
 require "rails_helper"
+require "support/contract"
 
 RSpec.describe "central error format" do
   shared_examples "a central error" do |status, code|
@@ -46,6 +47,12 @@ RSpec.describe "central error format" do
     let(:perform) { get "/health/live" }
 
     it_behaves_like "a central error", 500, "internal_error"
+
+    it "matches the error format in the contract" do
+      perform
+
+      expect_response_to_match_contract
+    end
 
     it "does not expose the exception" do
       perform

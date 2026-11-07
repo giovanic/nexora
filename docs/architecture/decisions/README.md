@@ -36,7 +36,7 @@ Toda decisão técnica relevante fica aqui, no formato do [modelo](TEMPLATE.md).
 | [0011](0011-no-calorie-goals.md) | Sem meta de calorias | Proposta | Após o M1 |
 | [0012](0012-monetization-options.md) | Opções de monetização | Proposta | Após o M1 |
 | [0013](0013-sport-ranking.md) | Ranking por esporte | Proposta | Fora das nove fases |
-| [0014](0014-api-contract-tooling.md) | Ferramentas de contrato da API | Proposta | Fase 01 |
+| [0014](0014-api-contract-tooling.md) | Ferramentas de contrato da API | Aceita | n/a |
 | [0015](0015-hosting-and-deployment.md) | Hospedagem e deploy | Proposta | M1 |
 | [0016](0016-closed-beta-milestone.md) | Marco de beta fechado | Aceita | n/a |
 | [0017](0017-derived-data-after-source-removal.md) | Dados derivados após remover a origem | Proposta | Fase 04 |

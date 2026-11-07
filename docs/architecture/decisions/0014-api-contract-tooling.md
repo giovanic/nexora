@@ -23,21 +23,43 @@ Como manter o contrato verdadeiro, sem retrabalho, e como os clientes obtêm os 
 
 ## Decisão
 
-**Já vale:** existe um contrato OpenAPI, verificado no CI contra a implementação. Os tipos dos clientes vêm dele, sem duplicação manual.
+**Alternativa 1, contrato primeiro,** em `packages/contracts/openapi.yaml`, escrito em **OpenAPI 3.1.1**. Os tipos dos clientes vêm dele, sem duplicação manual, e ficam versionados em `packages/contracts/generated/api.d.ts`.
 
-**Fica para a Fase 01:** a ferramenta e a versão de OpenAPI. Critério: validar uma requisição e resposta reais no CI, gerar tipos para web e mobile, e ter manutenção ativa, confirmada na fonte.
+| Função | Ferramenta | Manutenção, confirmada em 2026-11-06 |
+|---|---|---|
+| Validar respostas reais nos request specs | `openapi_first` 4.3, só em teste | Release de 2026-11-03 |
+| Gerar tipos | `openapi-typescript` 7.13, com TypeScript 5.9 isolado em `packages/contracts` | Release de 2026-02-11 |
 
-**Proposta a validar:** alternativa 1.
+Por que não a 3.2.1, a mais recente: `openapi_first`, `committee` e `openapi-typescript` declaram suporte só a 3.0 e 3.1.
+
+Por que `openapi_first`, e não `committee`: foi feito para teste de contrato e não declara as restrições de JSON Schema que o `committee` lista para 3.x.
+
+O teste de rotas compara as rotas públicas do Rails com os caminhos do contrato, nos dois sentidos, porque a validação de resposta só alcança o que os testes exercitam.
+
+## Evidência
+
+Execução de 2026-11-06:
+
+| Verificação | Resultado |
+|---|---|
+| Mudar `status` de `unavailable` para `degraded` no contrato | `health_ready_spec` falha; restaurado, passa |
+| Erro 500 validado contra o esquema `Error` | Passa |
+| Rotas públicas contra `paths` do contrato (`spec/contract/routes_spec.rb`) | Passa nos dois sentidos |
+| `npm run generate -w @app/contracts` | Tipos gerados |
+| Alterar `generated/api.d.ts` e rodar `npm run check -w @app/contracts` | Falha; regenerado, passa |
 
 ## Justificativa
 
-Contrato primeiro independe de uma biblioteca específica, e funciona bem com vários clientes. A confirmação depende de um teste real.
+Contrato primeiro independe de uma biblioteca específica, e funciona bem com vários clientes. Os testes acima confirmaram que a validação reprova divergência real.
 
 ## Consequências
 
-- `packages/contracts` é justificado se a geração de tipos for adotada.
+- `packages/contracts` se justifica pela geração de tipos.
 - Cada fase atualiza o contrato antes dos clientes.
+- **Risco:** a última release do `openapi-typescript` tem 9 meses, e ele declara `typescript` `^5.x`. O custo de troca é baixo, porque ele só gera um arquivo.
+- **Limite:** a validação cobre respostas exercitadas em request specs que chamam `expect_response_to_match_contract`. Cabe a cada fase chamá-la nas rotas novas.
+- Rotas `/internal` ficam fora do contrato, porque não existem em produção.
 
 ## Estado da decisão
 
-Proposta
+Aceita
