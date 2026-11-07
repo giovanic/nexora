@@ -18,7 +18,7 @@ function message(state: ApiStatusState): string {
 
   switch (state.kind) {
     case "ready":
-      return "API pronta";
+      return "API ok";
     case "degraded":
       return ["API com problema", failingDependencies(state.checks)].filter(Boolean).join(": ");
     case "unreachable":
