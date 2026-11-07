@@ -10,19 +10,19 @@
 
 ## Níveis
 
-| Nível | Ferramenta proposta | O que cobre | Roda |
+| Nível | Ferramenta | O que cobre | Roda |
 |---|---|---|---|
-| Unidade | RSpec, Vitest ou Jest | Serviços, cálculos, regras, componentes de apresentação | Sempre |
+| Unidade | RSpec; Vitest na web; `jest-expo` no mobile | Serviços, cálculos, regras, componentes de apresentação | Sempre |
 | Requisição | RSpec request specs | Rotas, autorização, formato de erro, contrato | Sempre |
-| Integração | RSpec + Sidekiq | Pipeline e eventos ponta a ponta no backend | Sempre |
+| Integração | RSpec com um processo `sidekiq` real (`spec/support/sidekiq_process.rb`) | Pipeline e eventos ponta a ponta no backend | Sempre |
 | Componentes | Testing Library | Estados, interação, acessibilidade | Sempre |
-| Limites de domínio | A definir ([ADR 0003](../architecture/decisions/0003-domain-boundaries-without-engines.md)) | Violações de dependência | Sempre |
-| Contrato | A definir ([ADR 0014](../architecture/decisions/0014-api-contract-tooling.md)) | Implementação contra o OpenAPI | Sempre |
+| Limites de domínio | `spec/architecture`, com o Prism ([ADR 0003](../architecture/decisions/0003-domain-boundaries-without-engines.md)) | Violações de dependência | Sempre |
+| Contrato | `openapi_first` em request specs, e `expect_response_to_match_contract` ([ADR 0014](../architecture/decisions/0014-api-contract-tooling.md)) | Implementação contra o OpenAPI | Sempre |
 | End-to-end | A definir nas Fases 07 e 09 | Fluxos principais em web e mobile | Antes de liberar |
 | Avaliação de IA | Script próprio | Qualidade, custo e latência | Ao mudar prompt, modelo ou provedor |
 | Carga | A definir na Fase 09 | Capacidade de lançamento | Fase 09 |
 
-As ferramentas são confirmadas na Fase 01.
+As ferramentas foram confirmadas por execução na Fase 01. A suíte da API precisa de PostgreSQL e Valkey reais, inclusive no CI.
 
 ## Testes obrigatórios por risco
 

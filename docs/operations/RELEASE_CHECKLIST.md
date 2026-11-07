@@ -31,6 +31,13 @@ Antes de convidar as pessoas. Detalhes no [documento do marco](../roadmap/phases
 - [ ] Limite de análises por usuário e alerta de gasto configurados.
 - [ ] Procedimento de incidente preparado.
 - [ ] Armazenamento privado confirmado por tentativa de acesso sem assinatura.
+- [ ] `RAILS_ENV=production` fixado na imagem. Sem ele, as rotas `/internal` existem e `RequiredEnv` não verifica nada.
+- [ ] `config.hosts` definido pelo domínio de deploy, com exclusão de `/health/*`.
+- [ ] TLS terminado no proxy, premissa de `assume_ssl` em `production.rb`, e sondas de saúde testadas.
+- [ ] `SECRET_KEY_BASE`, `REDIS_URL` e `DATABASE_URL` validados em formato, com TLS onde o tráfego sair da rede privada.
+- [ ] Retenção de logs definida, e também a de `error_message`, que o Sidekiq grava no Valkey ao falhar um job.
+- [ ] `/health/ready` com limite de requisições ou resultado em cache, e resposta pública avaliada, por revelar qual dependência caiu.
+- [ ] Captura de crash nativo avaliada no mobile, com filtragem nativa.
 
 ### Beta
 

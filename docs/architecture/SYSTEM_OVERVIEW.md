@@ -1,6 +1,6 @@
 # Visão geral do sistema
 
-Descreve a arquitetura pretendida. **Nada disto existe ainda em código.** Versões e ferramentas são confirmadas na Fase 01 ([ADR 0002](decisions/0002-technology-baseline.md)).
+Descreve a arquitetura pretendida. **Em código, por ora, só existe o esqueleto da Fase 01:** API com saúde, logs e erro central, Sidekiq, contrato, CI e uma tela de estado em cada cliente. Os domínios são diretórios reservados, sem código. Versões em [ADR 0002](decisions/0002-technology-baseline.md).
 
 ## Decisão central
 
@@ -18,7 +18,7 @@ flowchart LR
     OB --> J
   end
   D --> PG[(PostgreSQL)]
-  J --> R[(Redis)]
+  J --> R[(Valkey)]
   J -->|adaptador| IA[Provedor de IA]
   J -->|adaptador| NB[Bases nutricionais]
   J --> STV[API do Strava]
@@ -32,14 +32,14 @@ flowchart LR
 apps/api          Rails API: toda a regra de negócio
 apps/web          Painel React
 apps/mobile       App Expo
-packages/contracts  OpenAPI e tipos gerados, se a Fase 01 justificar (ADR 0014)
+packages/contracts  OpenAPI e tipos gerados (ADR 0014)
 docs/             Documentação e planejamento
 scripts/          Verificações do harness e automações
-docker/           Imagens e configuração de containers (a partir da Fase 01)
+docker-compose.yml  PostgreSQL e Valkey para desenvolvimento
 .claude/          Rules, agents e skills do projeto
 ```
 
-O verificador falha se `apps/`, `packages/` ou `docker-compose.yml` existirem antes do início da Fase 01. Pastas `apps/` e `packages/` geradas por ferramentas existem no repositório desde 2026-11-05, fora do processo do harness e sem código de negócio. O responsável decidiu mantê-las. Com a Fase 01 em `Não iniciada`, o check `scope` do verificador reprova por causa delas. Veja a [Fase 01](../roadmap/phases/PHASE_01_FOUNDATION.md).
+Sem pasta `docker/` por enquanto: os serviços usam imagens oficiais, e a imagem da API entra com o deploy, no M1.
 
 ## Responsabilidades
 
