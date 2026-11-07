@@ -30,10 +30,10 @@ docker compose up -d --wait
 cd apps/api
 bundle install
 bin/rails db:prepare
-bin/rails server -b 0.0.0.0
+bin/rails server -p 3010 -b 0.0.0.0
 ```
 
-O `-b 0.0.0.0` é necessário só para o emulador alcançar a API.
+O `-p 3010` é obrigatório: `bin/rails server` ignora a porta do `puma.rb` e tentaria a 3000. O `-b 0.0.0.0` é necessário só para o emulador alcançar a API.
 
 **Sidekiq:**
 
