@@ -1,0 +1,60 @@
+=== 20:51:12 clone
+cc22fb3 docs: pass the api port explicitly when starting rails
+=== 20:51:13 versoes
+ruby 4.0.9 (2026-10-23 revision 3e93b23afc) +PRISM [x86_64-linux]
+v26.13.0
+=== 20:51:13 docker compose up -d --wait
+ Network nexoraclean_default  Creating
+ Network nexoraclean_default  Created
+ Volume "nexoraclean_valkey_data"  Creating
+ Volume "nexoraclean_valkey_data"  Created
+ Volume "nexoraclean_postgres_data"  Creating
+ Volume "nexoraclean_postgres_data"  Created
+ Container nexoraclean-postgres-1  Creating
+ Container nexoraclean-valkey-1  Creating
+ Container nexoraclean-valkey-1  Created
+ Container nexoraclean-postgres-1  Created
+ Container nexoraclean-valkey-1  Starting
+ Container nexoraclean-postgres-1  Starting
+ Container nexoraclean-valkey-1  Started
+ Container nexoraclean-postgres-1  Started
+ Container nexoraclean-valkey-1  Waiting
+ Container nexoraclean-postgres-1  Waiting
+ Container nexoraclean-valkey-1  Healthy
+ Container nexoraclean-postgres-1  Healthy
+exit=0
+=== 20:51:19 API: bundle install, db:prepare
+bundle exit=0
+Created database 'app_development'
+Created database 'app_test'
+db exit=0
+=== 20:51:24 API: server
+=== 20:51:24 Sidekiq
+=== 20:51:25 conferir
+HTTP/1.1 200 OK
+HTTP/1.1 200 OK
+{"status":"ok","checks":{"database":"ok","queue":"ok"}}job id=6a57173b-791d-4f25-a1a5-b3c3de60a501
+job: {"status":"done"}
+=== 20:51:26 web: npm ci, dev
+npm ci exit=0
+web http=200
+=== 20:52:20 mobile: expo start
+ip=172.24.38.65
+packager-status:running expo http=200
+=== 20:52:26 encerrar
+ Container nexoraclean-postgres-1  Stopping
+ Container nexoraclean-valkey-1  Stopping
+ Container nexoraclean-valkey-1  Stopped
+ Container nexoraclean-valkey-1  Removing
+ Container nexoraclean-valkey-1  Removed
+ Container nexoraclean-postgres-1  Stopped
+ Container nexoraclean-postgres-1  Removing
+ Container nexoraclean-postgres-1  Removed
+ Volume nexoraclean_valkey_data  Removing
+ Volume nexoraclean_postgres_data  Removing
+ Network nexoraclean_default  Removing
+ Volume nexoraclean_valkey_data  Removed
+ Volume nexoraclean_postgres_data  Removed
+ Network nexoraclean_default  Removed
+dir=<scratchpad>/clone.jWeP
+FIM

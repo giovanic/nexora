@@ -37,7 +37,7 @@ Ter o esqueleto real do monorepo, com API, web e mobile subindo localmente, serv
 
 ## Dependências
 
-- **Fase 00** concluída, com relatório e `verify-harness.sh` aprovado, salvo a falha conhecida: `FALHA scope` em `apps` e `packages`, enquanto a linha 01 não estiver em desenvolvimento, por decisão do responsável de 2026-11-05. Qualquer outra falha bloqueia.
+- **Fase 00** concluída, com relatório e `verify-harness.sh` aprovado, com a lacuna do check `scope` aceita pelo responsável em 2026-11-06. A lacuna deixou de existir quando esta fase entrou em desenvolvimento.
 - **Decisão do responsável:** primeiro commit, repositório remoto e instalação do `gh`, ou outra forma de operar o GitHub.
 - **Pastas geradas já existentes:** `apps/api`, `apps/web`, `apps/mobile` e `packages/contracts` foram criadas em 2026-11-05 por geradores, fora do processo, e o responsável decidiu mantê-las. O plano desta fase decide, item por item, reaproveitar, ajustar ou gerar de novo. Divergências já observadas em relação à baseline: `apps/api` usa Ruby 3.3.4, Solid Queue, Solid Cache, Solid Cable, Kamal e Minitest, em vez de Sidekiq, Redis e RSpec, em modo API (`config.api_only = true`); `apps/web` usa oxlint e TypeScript 7; `apps/mobile` traz `.claude/settings.json` e `AGENTS.md` próprios, que habilitam o plugin do Expo e precisam ser avaliados. Trocar Sidekiq por Solid Queue exigiria decisão na ADR 0002, porque Sidekiq é a stack de referência.
 - **Fontes a consultar de novo:** todas as versões em [EXTERNAL_SOURCES.md](../../architecture/EXTERNAL_SOURCES.md), incluindo a licença do Redis, ainda não verificada.
