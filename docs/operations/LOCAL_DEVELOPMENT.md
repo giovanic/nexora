@@ -97,7 +97,7 @@ Na primeira abertura, o Expo Go mostra o menu de desenvolvedor sobre o app. Bast
 cd apps/api
 bundle exec rspec
 bundle exec rubocop
-bundle exec brakeman -q --no-pager -w3
+bundle exec brakeman -q --no-pager -w2
 bundle exec bundle-audit check --update
 
 # Web, mobile e contrato, a partir da raiz

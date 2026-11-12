@@ -18,6 +18,13 @@ RSpec.describe "production boot" do
     end
   end
 
+  it "does not accept the debug log level in any letter case" do
+    output, status = boot(complete.merge("LOG_LEVEL" => "DEBUG"), "puts Rails.logger.level")
+
+    expect(status).to be_success, output
+    expect(output.lines.last.strip).to eq(Logger::INFO.to_s)
+  end
+
   it "does not accept the debug log level, which records exception messages" do
     output, status = boot(complete.merge("LOG_LEVEL" => "debug"), "puts Rails.logger.level")
 

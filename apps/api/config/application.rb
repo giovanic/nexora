@@ -45,7 +45,7 @@ module Backend
     config.middleware.insert_before Rails::Rack::Logger, Middleware::CorrelationId
 
     # Debug records exception messages (see below), so production never uses it.
-    log_level = ENV.fetch("LOG_LEVEL", "info")
+    log_level = ENV.fetch("LOG_LEVEL", "info").strip.downcase
     config.log_level = Rails.env.production? && log_level == "debug" ? "info" : log_level
     config.log_formatter = Observability::JsonLogFormatter.new
     config.log_tags = []

@@ -75,7 +75,7 @@ jobs:
       - name: Lint
         run: bundle exec rubocop
       - name: Static security analysis
-        run: bundle exec brakeman -q --no-pager -w3
+        run: bundle exec brakeman -q --no-pager -w2
       - name: Audit gems
         run: bundle exec bundle-audit check --update
       - name: Prepare the database

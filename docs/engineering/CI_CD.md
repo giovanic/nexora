@@ -15,7 +15,7 @@ Roda em todo pull request e na branch principal. O CI executa verificações rea
 | `harness` | Harness | `scripts/test-verify-harness.sh` e `scripts/verify-harness.sh` | Sim |
 | `secrets` | Segredos | Gitleaks 8.30.1, com checksum conferido, no histórico de **todas** as branches | Sim |
 | `api` | Lint | RuboCop | Sim |
-| `api` | Segurança | Brakeman `-w3` e `bundle-audit` | Sim, em achado alto |
+| `api` | Segurança | Brakeman `-w2` (confiança média ou alta) e `bundle-audit` | Sim, em qualquer aviso do Brakeman ou vulnerabilidade conhecida |
 | `api` | Testes | RSpec com PostgreSQL e Valkey reais em serviço, e um processo `sidekiq` real | Sim |
 | `api` | Limites | `spec/architecture`, dentro do RSpec | Sim |
 | `api` | Contrato | Respostas reais contra o OpenAPI, e rotas contra `paths`, dentro do RSpec | Sim |
