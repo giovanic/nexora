@@ -1,0 +1,13 @@
+# Loaded by sidekiq-cron when a worker starts (config/initializers/sidekiq_cron.rb).
+# Jobs removed from this file are removed from the schedule.
+outbox_publish:
+  cron: "* * * * *"
+  class: "Shared::Outbox::PublishJob"
+  queue: default
+  description: "Safety net for the enqueue after commit: delivers pending outbox events."
+
+outbox_reconcile:
+  cron: "0 * * * *"
+  class: "Shared::Outbox::ReconcileJob"
+  queue: default
+  description: "Alerts on events older than an hour that a consumer has not applied."

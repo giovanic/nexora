@@ -46,5 +46,7 @@ Rails.application.configure do
   config.active_record.encryption.deterministic_key = ENV.fetch("ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY", "local-test-public-deterministic-key-0001")
   config.active_record.encryption.key_derivation_salt = ENV.fetch("ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT", "local-test-public-key-derivation-salt-0001")
   config.x.audit_ip_hmac_key = ENV.fetch("AUDIT_IP_HMAC_KEY", "local-test-public-audit-ip-hmac-key-0001")
+  # Specs decide when the outbox publisher runs, instead of a queued job.
+  config.x.outbox_enqueue_after_commit = false
   config.x.app_web_url = ENV.fetch("APP_WEB_URL", "http://localhost:5173")
 end
