@@ -91,7 +91,7 @@ Consultado em **2026-11-11**, no início da Fase 02. Guias do Rails 8.1.4.1 e do
 | `bcrypt` (gem): 3.1.22 (2026-03-18) é a última | https://rubygems.org/gems/bcrypt | verificado |
 | `sidekiq-cron`: 2.4.0 (2026-05-06), MIT; depende de `sidekiq >= 6.5.0`, `fugit`, `cronex` e `globalid`. Mantida: commits em 2026-11-06 (repositório sidekiq-cron/sidekiq-cron), não arquivado, versões 2.1.0 a 2.4.0 entre 2025-01-20 e 2026-05-06. Os commits após 2.4.0 ainda não têm release | https://rubygems.org/gems/sidekiq-cron e https://github.com/sidekiq-cron/sidekiq-cron | verificado |
 | Gem `redis` (redis-rb): 6.0.0 (2026-07-31), MIT, exige Ruby 3.2+ e servidor Redis 6.0+ (declarado pela fonte), com dependência exata em `redis-client = 0.30.1`. Mantida: commits em 2026-11-06, não arquivada. A 6.0 passa a usar RESP3 por padrão; a anterior, 5.4.1, é de 2025-07-17 | https://rubygems.org/gems/redis e https://github.com/redis/redis-rb/releases/tag/v6.0.0 | verificado |
-| Compatibilidade da `redis` 6.0.0 com Valkey 9.1 e com o Sidekiq 8.1.7 (que usa `redis-client`) | Não consultada | não verificado (conferir com execução real na tarefa que adicionar a gem) |
+| Compatibilidade da `redis` 6.0.0 com Valkey 9.1 e com o Sidekiq 8.1.7 (que usa `redis-client`) | Execução real em 2026-11-11: `bundle install` resolveu `redis 6.0.0` + `redis-client 0.30.1` + `sidekiq 8.1.7` + `sidekiq-cron 2.4.0` sem conflito; no Valkey 9.1.3 do docker compose, `Rails.cache` (`:redis_cache_store`) gravou e leu uma chave e o Sidekiq respondeu `PING` | verificado (por execução em desenvolvimento, 2026-11-11) |
 
 ## Ferramentas candidatas da Fase 01
 

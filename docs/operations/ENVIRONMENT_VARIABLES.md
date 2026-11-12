@@ -16,12 +16,16 @@ Lista sem valores. As da Fase 01 estão em uso; as demais são planejadas, e cad
 |---|---|---|---|
 | `SIDEKIQ_CONCURRENCY` | 01 | Não | Threads do Sidekiq; também dimensiona o pool do banco, padrão 5 |
 | `DATABASE_URL` | 01 | Sim | PostgreSQL. Obrigatória em produção |
-| `REDIS_URL` | 01 | Sim em produção | Valkey para o Sidekiq. O nome é o que o Sidekiq lê. Obrigatória em produção |
+| `REDIS_URL` | 01 | Sim em produção | Valkey para o Sidekiq e para o `Rails.cache` (`:redis_cache_store`, namespace `cache`; em teste o cache é em memória). O nome é o que o Sidekiq lê. Obrigatória em produção |
 | `SECRET_KEY_BASE` | 01 | Sim | Base criptográfica do Rails. Obrigatória em produção. Sem credenciais do Rails, portanto sem `RAILS_MASTER_KEY` |
 | `ALLOWED_ORIGINS` | 01 | Não | Origens do painel web, separadas por vírgula. `*` é descartado. Obrigatória em produção |
 | `ERROR_TRACKING_DSN` | 01 | Sim | Monitoramento de erros. Sem ela, fica inativo |
 | `LOG_LEVEL` | 01 | Não | Nível de log. Padrão `info`. Produção não aceita `debug` |
-| `ENCRYPTION_PRIMARY_KEY` e afins | 02 | Sim | Cifragem em nível de aplicação; nomes conforme a ferramenta |
+| `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY` | 02 | Sim | Chave primária do Active Record Encryption (tokens e dados cifrados em nível de aplicação). Obrigatória em produção. Em desenvolvimento e teste há um valor fixo e público, sem valor de segurança |
+| `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` | 02 | Sim | Chave da cifragem determinística (consulta por igualdade). Obrigatória em produção; mesmo tratamento em desenvolvimento e teste |
+| `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT` | 02 | Sim | Sal da derivação de chaves do Active Record Encryption. Obrigatória em produção; mesmo tratamento em desenvolvimento e teste |
+| `AUDIT_IP_HMAC_KEY` | 02 | Sim | Chave do HMAC que pseudonimiza o IP nos eventos de auditoria. Obrigatória em produção; em desenvolvimento e teste há um valor fixo e público |
+| `APP_WEB_URL` | 02 | Sim | URL base do painel web, para links de e-mail. Obrigatória em produção; padrão `http://localhost:5173` em desenvolvimento e teste |
 | `MAIL_*` | 02 | Sim | Serviço de e-mail |
 | `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT` | 03 | Não | Armazenamento privado |
 | `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` | 03 | Sim | Credenciais do armazenamento |

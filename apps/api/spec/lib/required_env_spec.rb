@@ -2,14 +2,7 @@ require "rails_helper"
 require "required_env"
 
 RSpec.describe RequiredEnv do
-  let(:complete) do
-    {
-      "DATABASE_URL" => "postgres://example",
-      "REDIS_URL" => "redis://example",
-      "SECRET_KEY_BASE" => "value",
-      "ALLOWED_ORIGINS" => "https://example.test"
-    }
-  end
+  let(:complete) { described_class::NAMES.to_h { |name| [ name, "value" ] } }
 
   it "returns nothing when every variable is present" do
     expect(described_class.missing(complete)).to eq([])
