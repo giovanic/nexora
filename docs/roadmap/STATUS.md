@@ -10,7 +10,7 @@ A linha `05` é um resumo de `05.1` e `05.2`.
 |---|---|---|---|
 | 00 | Concluída | 2026-11-06 | [Relatório](reports/PHASE_00_REPORT.md) e mensagem do responsável de 2026-11-06, com a lacuna do check `scope` aceita |
 | 01 | Concluída | 2026-11-11 | [Relatório](reports/PHASE_01_REPORT.md) e mensagem do responsável de 2026-11-11: "Aprovo a Fase 01." Lacuna aceita: AC-01-07 sem envio real ao Sentry, pendente antes do M1 |
-| 02 | Em planejamento | 2026-11-11 | Mensagem do responsável de 2026-11-11: "Vamos iniciar a fase 02." |
+| 02 | Em desenvolvimento | 2026-11-11 | [Plano](../superpowers/plans/2026-11-11-identity-security.md) e mensagem do responsável de 2026-11-11: "nova sessao com subagentes" (execução por subagent-driven-development, em sessão nova) |
 | 03 | Não iniciada | 2026-11-05 | — |
 | 04 | Não iniciada | 2026-11-05 | — |
 | 05 | Não iniciada | 2026-11-05 | — |
@@ -34,3 +34,4 @@ A linha `05` é um resumo de `05.1` e `05.2`.
 | 2026-11-11 | 01 | Em desenvolvimento | Em revisão | [Relatório](reports/PHASE_01_REPORT.md), com o AC-01-07 parcial por decisão do responsável |
 | 2026-11-11 | 01 | Em revisão | Concluída | [Relatório](reports/PHASE_01_REPORT.md) e mensagem do responsável de 2026-11-11: "Aprovo a Fase 01." Lacuna aceita: AC-01-07 sem envio real ao Sentry, pendente antes do M1 |
 | 2026-11-11 | 02 | Não iniciada | Em planejamento | Mensagem do responsável de 2026-11-11: "Vamos iniciar a fase 02." |
+| 2026-11-11 | 02 | Em planejamento | Em desenvolvimento | [Plano](../superpowers/plans/2026-11-11-identity-security.md) e mensagem do responsável de 2026-11-11: "nova sessao com subagentes" (execução por subagent-driven-development, em sessão nova) |
