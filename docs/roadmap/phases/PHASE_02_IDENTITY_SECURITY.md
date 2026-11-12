@@ -39,7 +39,7 @@ Cada pessoa acessa sua conta e somente seus dados, com consentimento por finalid
 ## Arquivos e módulos esperados
 
 ```text
-apps/api/app/domains/identity_access/
+apps/api/app/domains/identity/
 apps/api/app/domains/user_profile/
 apps/api/app/domains/shared/            Outbox e registro de exportadores e apagadores
 apps/api/db/migrate/                     users, sessions, consent_records, audit_events, account_deletions, user_profiles, sport_profiles, outbox_events, consumed_events

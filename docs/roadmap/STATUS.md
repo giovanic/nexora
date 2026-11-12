@@ -9,7 +9,7 @@ A linha `05` é um resumo de `05.1` e `05.2`.
 | Linha | Estado | Desde | Evidência |
 |---|---|---|---|
 | 00 | Concluída | 2026-11-06 | [Relatório](reports/PHASE_00_REPORT.md) e mensagem do responsável de 2026-11-06, com a lacuna do check `scope` aceita |
-| 01 | Em desenvolvimento | 2026-11-06 | [Plano](../superpowers/plans/2026-11-06-foundation.md) aprovado pelo responsável em 2026-11-06 |
+| 01 | Concluída | 2026-11-11 | [Relatório](reports/PHASE_01_REPORT.md) e mensagem do responsável de 2026-11-11: "Aprovo a Fase 01." Lacuna aceita: AC-01-07 sem envio real ao Sentry, pendente antes do M1 |
 | 02 | Não iniciada | 2026-11-05 | — |
 | 03 | Não iniciada | 2026-11-05 | — |
 | 04 | Não iniciada | 2026-11-05 | — |
@@ -31,3 +31,5 @@ A linha `05` é um resumo de `05.1` e `05.2`.
 | 2026-11-06 | 00 | Em revisão | Concluída | [Relatório](reports/PHASE_00_REPORT.md) e mensagem do responsável de 2026-11-06: "Aprovo a Fase 00, aceitando a lacuna do check scope." Lacuna aceita: `FALHA scope` em `apps` e `packages` enquanto a linha 01 não estiver em desenvolvimento |
 | 2026-11-06 | 01 | Não iniciada | Em planejamento | Mensagem do responsável de 2026-11-06: "Vamos iniciar a fase 01." |
 | 2026-11-06 | 01 | Em planejamento | Em desenvolvimento | [Plano](../superpowers/plans/2026-11-06-foundation.md) e mensagem do responsável de 2026-11-06: "Aprovo o plano da Fase 01, com execução na sessão." |
+| 2026-11-11 | 01 | Em desenvolvimento | Em revisão | [Relatório](reports/PHASE_01_REPORT.md), com o AC-01-07 parcial por decisão do responsável |
+| 2026-11-11 | 01 | Em revisão | Concluída | [Relatório](reports/PHASE_01_REPORT.md) e mensagem do responsável de 2026-11-11: "Aprovo a Fase 01." Lacuna aceita: AC-01-07 sem envio real ao Sentry, pendente antes do M1 |

@@ -82,7 +82,6 @@ bash scripts/test-verify-harness.sh
 
 Rode ao mudar a documentação, e sempre no encerramento de fase. Código de saída diferente de zero significa problema real.
 
-**Falha conhecida:** `FALHA scope` em `apps` e `packages`, enquanto a linha 01 não estiver em desenvolvimento. As pastas foram geradas fora do processo, e o responsável decidiu mantê-las em 2026-11-05. Elas não são base aprovada. Qualquer outra falha é problema real.
 
 ## Convenções
 

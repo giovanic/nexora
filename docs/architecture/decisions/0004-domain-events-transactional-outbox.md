@@ -20,7 +20,7 @@ Como comunicar fatos entre domínios sem perder eventos, sem eventos fantasmas e
 
 ## Decisão
 
-**Já vale:** atomicidade entre mudança e evento, entrega pelo menos uma vez e idempotência em cada consumidor. **Fica para a Fase 01, com a [ADR 0002](0002-technology-baseline.md):** a fila usada, Sidekiq ou outra que dispense o Redis.
+**Já vale:** atomicidade entre mudança e evento, entrega pelo menos uma vez e idempotência em cada consumidor. **Fila, decidida na Fase 01 ([ADR 0002](0002-technology-baseline.md)):** Sidekiq com Valkey 9.1, por decisão do responsável em 2026-11-06, com job real processado na validação. A implementação da outbox continua com a Fase 02.
 
 Outbox transacional em `outbox_events`. Entrega pelo menos uma vez. Cada consumidor registra `(consumer, event_id)` em `consumed_events`, na mesma transação do efeito. O formato está no [modelo de domínio](../DOMAIN_MODEL.md).
 

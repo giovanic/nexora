@@ -1,6 +1,6 @@
 # Variáveis de ambiente
 
-Lista **planejada**, sem valores. Nenhuma é usada ainda. Cada fase confirma as suas, e os nomes finais vão para `.env.example`, sem valores reais.
+Lista sem valores. As da Fase 01 estão em uso; as demais são planejadas, e cada fase confirma as suas. Os nomes finais vão para `.env.example`, sem valores reais. No desenvolvimento, as variáveis da API são opcionais, porque os padrões batem com o `docker-compose.yml`.
 
 ## Regras
 
@@ -14,12 +14,13 @@ Lista **planejada**, sem valores. Nenhuma é usada ainda. Cada fase confirma as 
 
 | Variável | Fase | Segredo | Finalidade |
 |---|---|---|---|
-| `DATABASE_URL` | 01 | Sim | PostgreSQL |
-| `REDIS_URL` | 01 | Sim em produção | Redis para Sidekiq e cache |
-| `RAILS_MASTER_KEY` | 01 | Sim | Credenciais do Rails, se usadas |
-| `ALLOWED_ORIGINS` | 01 | Não | Origens do painel web |
-| `ERROR_TRACKING_DSN` | 01 | Sim | Monitoramento de erros |
-| `LOG_LEVEL` | 01 | Não | Nível de log |
+| `SIDEKIQ_CONCURRENCY` | 01 | Não | Threads do Sidekiq; também dimensiona o pool do banco, padrão 5 |
+| `DATABASE_URL` | 01 | Sim | PostgreSQL. Obrigatória em produção |
+| `REDIS_URL` | 01 | Sim em produção | Valkey para o Sidekiq. O nome é o que o Sidekiq lê. Obrigatória em produção |
+| `SECRET_KEY_BASE` | 01 | Sim | Base criptográfica do Rails. Obrigatória em produção. Sem credenciais do Rails, portanto sem `RAILS_MASTER_KEY` |
+| `ALLOWED_ORIGINS` | 01 | Não | Origens do painel web, separadas por vírgula. `*` é descartado. Obrigatória em produção |
+| `ERROR_TRACKING_DSN` | 01 | Sim | Monitoramento de erros. Sem ela, fica inativo |
+| `LOG_LEVEL` | 01 | Não | Nível de log. Padrão `info`. Produção não aceita `debug` |
 | `ENCRYPTION_PRIMARY_KEY` e afins | 02 | Sim | Cifragem em nível de aplicação; nomes conforme a ferramenta |
 | `MAIL_*` | 02 | Sim | Serviço de e-mail |
 | `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT` | 03 | Não | Armazenamento privado |

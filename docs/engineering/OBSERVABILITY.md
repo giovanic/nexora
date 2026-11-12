@@ -1,6 +1,6 @@
 # Observabilidade
 
-O desenvolvedor é único, então os sinais precisam apontar o problema sem exigir plantão ou investigação longa. Implementação inicial na Fase 01, com ampliação em cada fase. As ferramentas são escolhidas na Fase 01.
+O desenvolvedor é único, então os sinais precisam apontar o problema sem exigir plantão ou investigação longa. A base veio da Fase 01: `lograge` e formatador JSON próprio nos logs, e Sentry nos erros. Cada fase amplia o que precisar.
 
 ## Regra central
 
@@ -11,30 +11,35 @@ Filtros de parâmetros e de erro ficam configurados em todas as aplicações. Um
 ## Logs
 
 - **Estruturados** em JSON.
-- **Campos:** `timestamp`, `level`, `message`, `request_id`, `correlation_id`, `user_ref`, `context`, `duration_ms`.
-- **Correlação:** `correlation_id` atravessa requisição, job e evento (NFR-OBS-001).
-- **Retenção curta,** definida na Fase 01.
+- **Campos:** `timestamp`, `level`, `message`, `request_id`, `correlation_id`, `user_ref`, `context`, `duration_ms`. `user_ref` entra com a autenticação, na Fase 02.
+- **Correlação:** `correlation_id` atravessa requisição e job, e chega ao evento com a outbox (NFR-OBS-001). Vem do cabeçalho `X-Correlation-Id` quando válido, ou é gerado, e volta na resposta. O cliente pode escolhê-lo, então ele não serve como prova de origem.
+- **Exceções:** logs guardam só a classe. A mensagem pode trazer dados de usuário. Por isso, produção nunca usa o nível `debug`, mesmo com `LOG_LEVEL=debug`.
+- **Retenção:** definida no M1, junto com a hospedagem, porque hoje não há logs de produção.
 
 ## Erros
 
-Uma ferramenta de monitoramento recebe erros de backend, jobs, web e mobile (NFR-OBS-002). Exigências: filtro de dados sensíveis e agrupamento. Ela é avaliada como operador na [política de privacidade](../security/PRIVACY_AND_LGPD.md).
+O Sentry recebe erros de backend, jobs, web e mobile (NFR-OBS-002), somente com DSN configurado. Ele é avaliado como operador na [política de privacidade](../security/PRIVACY_AND_LGPD.md), com retenção de 30 dias no plano gratuito.
+
+Cada aplicação tem um filtro antes do envio, que mantém o tipo e a pilha, e remove mensagem, usuário, parâmetros, cabeçalhos, cookies e campos desconhecidos.
+
+**Limite no mobile:** o SDK nativo envia relatórios de crash sem passar pelo filtro, então a captura de crash nativo fica desligada. Reavaliar com a filtragem nativa quando houver build de distribuição, no M1.
 
 ## Saúde
 
 | Rota | Verifica | Uso |
 |---|---|---|
 | `/health/live` | Processo responde | Reinício do processo |
-| `/health/ready` | PostgreSQL e Redis | Deploy e balanceador |
+| `/health/ready` | PostgreSQL e Valkey, com prazo de 2 segundos | Deploy e balanceador |
 
-Sidekiq também tem verificação própria, confirmada na Fase 01.
+A verificação própria do Sidekiq entra no M1, com o deploy.
 
 ## Métricas e alertas
 
 | Sinal | Métrica | Alerta inicial | A partir de |
 |---|---|---|---|
-| API | Taxa de erro 5xx, p95 | Erro acima do normal | Fase 01 |
-| Filas | Tamanho e tempo de espera por fila | Espera acima de um limite | Fase 01 |
-| Jobs mortos | Contagem | Qualquer novo em fila crítica | Fase 01 |
+| API | Taxa de erro 5xx, p95 | Erro acima do normal | M1 |
+| Filas | Tamanho e tempo de espera por fila | Espera acima de um limite | M1 |
+| Jobs mortos | Contagem | Qualquer novo em fila crítica | M1 |
 | Outbox | Pendentes mais antigos; mortos | Atraso acima de 5 minutos; qualquer morto | Primeira fase que usar a outbox |
 | Food AI | Duração, taxa de falha, schema inválido | Falha acima de um limite | Fase 03 |
 | **Custo de IA** | Custo por dia e por usuário | **Gasto acima do valor configurado** | Fase 03 |

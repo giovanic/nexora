@@ -4,7 +4,7 @@ Plataforma de bem-estar e evolução pessoal: registro de refeições por foto, 
 
 ## Estado atual
 
-O projeto está na construção do **Engineering Harness**. Ainda não há aplicação validada. As pastas `apps/` e `packages/` contêm só o que os geradores criaram, sem aprovação do processo. Veja o estado de cada fase em [STATUS.md](docs/roadmap/STATUS.md).
+O projeto tem o esqueleto técnico da Fase 01: API Rails, Sidekiq, painel web e app Expo, ligados por contrato OpenAPI, com CI. Ainda não há funcionalidade de produto. Veja o estado de cada fase em [STATUS.md](docs/roadmap/STATUS.md), e como subir tudo em [LOCAL_DEVELOPMENT.md](docs/operations/LOCAL_DEVELOPMENT.md).
 
 O harness é o sistema de engenharia que governa o desenvolvimento: documentos, regras, agentes revisores, skills e verificações que permitem a qualquer nova sessão do Claude Code entender o projeto e continuar de onde parou.
 

@@ -84,7 +84,12 @@ A estrutura final é confirmada na Fase 01.
 
 ### Ferramentas
 
-ESLint, Prettier (ou equivalente), checagem de tipos e testes de componente. Versões decididas na Fase 01.
+ESLint 9 e TypeScript 6 nos dois clientes; Vitest na web; `jest-expo` no mobile; Testing Library nos dois. Sem Prettier por enquanto.
+
+### Expo
+
+- A Expo muda APIs a cada SDK. Antes de usar uma, consulte a documentação da versão do SDK em `apps/mobile/package.json`.
+- Instale dependências do mobile com `npx expo install <pacote>`, que resolve a versão compatível com o SDK. React segue a versão que o SDK define, também na web, porque o monorepo precisa de uma só cópia.
 
 ## Mudanças arquiteturais
 

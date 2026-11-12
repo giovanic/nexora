@@ -7,7 +7,7 @@ Estado atual em [STATUS.md](STATUS.md). Como executar em [PHASE_EXECUTION_PROTOC
 | Linha | Nome | Depende de | Critério de aceite resumido | Documento |
 |---|---|---|---|---|
 | 00 | Engineering Harness | Nenhuma | Uma sessão nova entende como desenvolver lendo o harness | [Fase 00](phases/PHASE_00_HARNESS.md) |
-| 01 | Foundation & DX | 00 (ver a falha conhecida do verificador no documento da fase) | Aplicações sobem localmente, os serviços se comunicam e o CI faz verificações reais | [Fase 01](phases/PHASE_01_FOUNDATION.md) |
+| 01 | Foundation & DX | 00 | Aplicações sobem localmente, os serviços se comunicam e o CI faz verificações reais | [Fase 01](phases/PHASE_01_FOUNDATION.md) |
 | 02 | Identity, Security & Privacy | 01 | Cada pessoa acessa só os próprios dados, com fluxos de privacidade testados | [Fase 02](phases/PHASE_02_IDENTITY_SECURITY.md) |
 | 03 | Food AI | 02 | Uma foto percorre o pipeline, gera estimativa estruturada, e pode ser registrada e corrigida | [Fase 03](phases/PHASE_03_FOOD_AI.md) |
 | 04 | Strava Integration | 02 | Atividades importadas sem duplicar, com todo o ciclo de vida da integração | [Fase 04](phases/PHASE_04_STRAVA.md) |
@@ -80,7 +80,6 @@ As telas acompanham cada fase, e a Fase 07 consolida a experiência:
 
 | Pendência | Bloqueia | Responsável |
 |---|---|---|
-| Decidir o primeiro commit e criar o repositório remoto | 01 | Responsável |
 | Autorização da TBCA | Melhor qualidade na Fase 03; não bloqueia o caminho alternativo | Responsável |
 | Revisão jurídica | M1 | Responsável, com advogado |
 | Assinatura e aplicação do Strava | 04 | Responsável |

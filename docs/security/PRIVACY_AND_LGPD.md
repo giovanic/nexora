@@ -25,7 +25,7 @@ As bases legais são **propostas**, sujeitas à revisão jurídica.
 | Tokens do Strava | Tokens cifrados | Manter a integração | Consentimento específico | Nenhum | Até desconectar |
 | Metas, XP, missões | Progresso | Experiência do produto | Consentimento (saúde) | Nenhum | Até a exclusão |
 | Métricas de uso | Eventos de uso | Melhorar o produto | Consentimento próprio | Ferramenta de análise, se houver | A definir no M1 |
-| Logs e erros | Identificadores técnicos, sem conteúdo de saúde | Segurança e operação | Legítimo interesse (a confirmar) | Ferramenta de monitoramento | Prazo curto, a definir na Fase 01 |
+| Logs e erros | Identificadores técnicos, sem conteúdo de saúde | Segurança e operação | Legítimo interesse (a confirmar) | Ferramenta de monitoramento | Sentry: 30 dias, no plano gratuito. Logs: a definir no M1, junto com a hospedagem |
 | Consentimentos e auditoria | Histórico de ações | Comprovar conformidade | Obrigação legal e exercício de direitos (a confirmar) | Nenhum | A confirmar |
 
 ## Consentimento
@@ -93,6 +93,8 @@ Enviar fotos a um provedor de IA em outro país é transferência internacional.
 ## Operadores
 
 Provedor de IA, hospedagem, armazenamento, e-mail, monitoramento e serviço de push são operadores. Antes do M1: lista pública e revisão dos termos de cada um. Nenhum deles pode usar os dados para fins próprios, como treinamento.
+
+**Monitoramento: Sentry,** decidido em 2026-11-06, no plano gratuito. Recebe tipo e pilha do erro, um identificador de correlação e o papel do processo, sem mensagem da exceção, usuário, parâmetros, cabeçalhos ou cookies. Pendências para a revisão jurídica: se a seção 17 dos termos, sobre produtos sem custo, alcança o plano Developer; a região de armazenamento escolhida, e a transferência internacional do que fica nos EUA; e se identificadores técnicos enviados ao operador se enquadram como dados pessoais.
 
 ## Registro e governança
 

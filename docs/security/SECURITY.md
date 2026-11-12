@@ -67,10 +67,10 @@ As regras `deny` de `Read` bloqueiam as ferramentas de arquivo, mas a documenta�
 
 | Ferramenta | Uso | Fase |
 |---|---|---|
-| Brakeman | Análise estática do Rails | 01 |
-| Auditoria de gems (`bundler-audit` ou equivalente) | Dependências Ruby | 01 |
-| `npm audit` ou equivalente | Dependências JavaScript | 01 |
-| Varredura de segredos | Repositório e CI | 01 |
+| Brakeman | Análise estática do Rails, no CI. A [licença](../architecture/EXTERNAL_SOURCES.md) trata uso comercial à parte e cita analisar o próprio software como não comercial: enquadramento pendente na revisão jurídica | 01 |
+| `bundler-audit` | Dependências Ruby, no CI | 01 |
+| `npm audit --audit-level=high` | Dependências JavaScript, no CI | 01 |
+| Gitleaks 8.30.1 | Varredura de segredos no histórico, no CI. Só recebe correção de segurança: reavaliar no M1 | 01 |
 | `security-reviewer` | Revisão a cada fase com superfície nova | Todas |
 
 As ferramentas são confirmadas na Fase 01. Achado alto reprova o CI, e uma exceção exige justificativa registrada.
