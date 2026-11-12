@@ -26,7 +26,8 @@ Lista sem valores. As da Fase 01 estão em uso; as demais são planejadas, e cad
 | `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT` | 02 | Sim | Sal da derivação de chaves do Active Record Encryption. Obrigatória em produção; mesmo tratamento em desenvolvimento e teste |
 | `AUDIT_IP_HMAC_KEY` | 02 | Sim | Chave do HMAC que pseudonimiza o IP nos eventos de auditoria. Obrigatória em produção; em desenvolvimento e teste há um valor fixo e público |
 | `APP_WEB_URL` | 02 | Sim | URL base do painel web, para links de e-mail. Obrigatória em produção; padrão `http://localhost:5173` em desenvolvimento e teste |
-| `MAIL_*` | 02 | Sim | Serviço de e-mail |
+| `MAIL_FROM` | 02 | Não | Remetente dos e-mails da conta, como o link de recuperação de senha. Padrão `no-reply@localhost`. Em desenvolvimento os e-mails vão para arquivos em `apps/api/tmp/mails`, e em teste ficam em memória |
+| `MAIL_*` (demais) | M1 | Sim | Credenciais do provedor de e-mail, escolhido no M1 |
 | `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT` | 03 | Não | Armazenamento privado |
 | `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` | 03 | Sim | Credenciais do armazenamento |
 | `SIGNED_URL_TTL_SECONDS` | 03 | Não | No máximo 900 |

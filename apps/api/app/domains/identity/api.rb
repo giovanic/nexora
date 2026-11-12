@@ -62,6 +62,23 @@ module Identity
         User.active.find_by(id: user_id)&.authenticate(password).present?
       end
 
+      # The account's own normalization, for callers that key on the e-mail,
+      # such as the rate limit per e-mail.
+      def normalize_email(email)
+        User.normalize_value_for(:email, email.to_s)
+      end
+
+      # Always nil, whether the e-mail has an account or not.
+      def request_password_reset(email:)
+        RequestPasswordReset.call(email:)
+      end
+
+      # true, :invalid for a used, expired or unknown token, or Errors when the
+      # new password breaks the rules.
+      def reset_password(token:, password:, ip: nil)
+        ResetPassword.call(token:, password:, ip:)
+      end
+
       def export_user_data(user_id)
         UserData.export(user_id)
       end

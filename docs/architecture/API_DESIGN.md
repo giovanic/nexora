@@ -76,7 +76,8 @@ Os valores acima são apenas ilustrativos.
 | `POST /api/v1/registrations` | Criar conta, exigindo confirmação de maioridade |
 | `POST /api/v1/sessions`, `DELETE /api/v1/sessions/:id` | Entrar, sair, revogar dispositivo |
 | `POST /api/v1/sessions/refresh` | Renovar sessão, conforme a ADR 0005 |
-| `POST /api/v1/password_resets` | Recuperar senha |
+| `POST /api/v1/password_resets` | Pedir o link de recuperação de senha; responde sempre `202` |
+| `PATCH /api/v1/password_resets/:token` | Trocar a senha com o token do link; encerra todas as sessões |
 | `GET`/`POST /api/v1/consents`, `DELETE /api/v1/consents/:purpose` | Consultar, conceder, revogar |
 | `POST /api/v1/account/export` | Solicitar exportação |
 | `DELETE /api/v1/account` | Solicitar exclusão |

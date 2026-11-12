@@ -5,7 +5,16 @@ module Identity
     MIN_PASSWORD_LENGTH = 12
     MAX_EMAIL_LENGTH = 254
 
-    has_secure_password
+    PASSWORD_RESET_EXPIRES_IN = 15.minutes
+
+    # The reset token embeds the end of the password salt, so changing the
+    # password ends every token issued before (design 4.1).
+    has_secure_password reset_token: { expires_in: PASSWORD_RESET_EXPIRES_IN }
+    # URL-safe, so the token travels in the link fragment and in the request
+    # path without escaping. Its own key, apart from other signed messages.
+    self.generated_token_verifier = ActiveSupport::MessageVerifier.new(
+      Rails.application.key_generator.generate_key("identity/user token_for"), digest: "SHA256", serializer: JSON, url_safe: true
+    )
     has_many :sessions, class_name: "Identity::Session"
 
     # Normalized before encryption, so the same address always gives the same

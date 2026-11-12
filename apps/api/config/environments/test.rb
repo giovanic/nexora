@@ -49,4 +49,6 @@ Rails.application.configure do
   # Specs decide when the outbox publisher runs, instead of a queued job.
   config.x.outbox_enqueue_after_commit = false
   config.x.app_web_url = ENV.fetch("APP_WEB_URL", "http://localhost:5173")
+  # Mails stay in ActionMailer::Base.deliveries.
+  config.action_mailer.delivery_method = :test
 end

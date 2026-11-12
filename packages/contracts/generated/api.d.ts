@@ -138,6 +138,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/password_resets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sends a password reset link, valid for 15 minutes and for one use.
+         * @description Always answers 202 with no body, whether the e-mail has an account or not, so the answer
+         *     never tells if an account exists. The link points to the web page at APP_WEB_URL and carries
+         *     the token in the fragment (#token=...), which browsers do not send to servers.
+         */
+        post: operations["requestPasswordReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/password_resets/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Sets a new password with the token from the reset link.
+         * @description Ends every session of the account and does not sign in; the person signs in again with the
+         *     new password. A used, expired or unknown token answers 422 invalid_token. A password that
+         *     breaks the rules answers 422 validation_failed, and the token stays usable.
+         */
+        patch: operations["resetPassword"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -163,6 +207,13 @@ export interface components {
             password: string;
             client: components["schemas"]["Client"];
             device_label?: string | null;
+        };
+        PasswordResetRequest: {
+            email: string;
+        };
+        PasswordResetConfirmation: {
+            /** @description From 12 characters to 72 bytes, the bcrypt limit. */
+            password: string;
         };
         SessionGrant: {
             /** Format: uuid */
@@ -427,6 +478,60 @@ export interface operations {
             401: components["responses"]["Error"];
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    requestPasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted. A link is sent only if the e-mail has an account. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token from the link fragment. It only has URL-safe characters. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetConfirmation"];
+            };
+        };
+        responses: {
+            /** @description The password was changed and every session revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
             default: components["responses"]["Error"];
         };
     };

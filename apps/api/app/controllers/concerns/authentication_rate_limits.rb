@@ -1,4 +1,4 @@
-# Limits for sign up, sign in and refresh (design 4.1 and ruling R7). Keys are
+# Limits for sign up, sign in, refresh and password reset (design 4.1 and ruling R7). Keys are
 # keyed hashes, so the cache never holds an IP or an e-mail in clear.
 module AuthenticationRateLimits
   extend ActiveSupport::Concern
@@ -14,7 +14,7 @@ module AuthenticationRateLimits
 
     def limit_attempts_by_email(action)
       rate_limit(**BY_EMAIL, name: "#{action}_email", only: action,
-                 by: -> { rate_limit_key(params[:email].to_s.strip.downcase) }, with: -> { refuse_attempt(BY_EMAIL[:within]) })
+                 by: -> { rate_limit_key(Identity::Api.normalize_email(params[:email])) }, with: -> { refuse_attempt(BY_EMAIL[:within]) })
     end
   end
 

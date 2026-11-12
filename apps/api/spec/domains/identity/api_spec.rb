@@ -285,6 +285,73 @@ RSpec.describe Identity::Api do
     end
   end
 
+  describe ".normalize_email" do
+    it "normalizes as the account does, so limits and lookups agree" do
+      expect(described_class.normalize_email(" Ana@X.com ")).to eq("ana@x.com")
+      expect(described_class.normalize_email(nil)).to eq("")
+      expect(described_class.normalize_email(Identity::User.normalize_value_for(:email, " B@Y.com"))).to eq("b@y.com")
+    end
+  end
+
+  describe ".request_password_reset" do
+    let!(:user_id) { register.user_id }
+
+    before { allow(Identity::PasswordResetJob).to receive(:perform_async) }
+
+    it "returns nil whether the account exists or not" do
+      expect(described_class.request_password_reset(email: " ANA@example.test")).to be_nil
+      expect(described_class.request_password_reset(email: "nobody@example.test")).to be_nil
+      expect(described_class.request_password_reset(email: nil)).to be_nil
+
+      expect(Identity::PasswordResetJob).to have_received(:perform_async).with(user_id).once
+      expect(Identity::PasswordResetJob).to have_received(:perform_async).with(nil).twice
+    end
+
+    it "writes nothing" do
+      expect { described_class.request_password_reset(email: "ana@example.test") }.not_to(change { nothing_written })
+    end
+  end
+
+  describe ".reset_password" do
+    let!(:user_id) { register.user_id }
+    let(:token) { Identity::User.find(user_id).password_reset_token }
+    let(:new_password) { "a brand new passphrase" }
+
+    it "changes the password once and revokes every session" do
+      authenticate
+
+      expect(described_class.reset_password(token:, password: new_password, ip: "203.0.113.7")).to be(true)
+
+      expect(described_class.verify_password(user_id:, password: new_password)).to be(true)
+      expect(Identity::Session.where(user_id:, revoked_at: nil)).to be_empty
+      expect(described_class.reset_password(token:, password: "yet another passphrase")).to eq(:invalid)
+    end
+
+    it "answers :invalid for anything that is not a valid token" do
+      [ nil, "", "garbage", [ token ], { token: } ].each do |value|
+        expect(described_class.reset_password(token: value, password: new_password)).to eq(:invalid)
+      end
+    end
+
+    it "answers :invalid for the account of a deleted user" do
+      issued = token
+      Identity::User.find(user_id).update_columns(deleted_at: Time.current)
+
+      expect(described_class.reset_password(token: issued, password: new_password)).to eq(:invalid)
+    end
+
+    it "refuses a weak password with the field and the reason, never the value" do
+      result = described_class.reset_password(token:, password: "short")
+
+      expect(result).to have_attributes(ok?: false, code: "validation_failed", details: [ { field: "password", code: "too_short" } ])
+      [ nil, "", 123 ].each do |value|
+        expect(described_class.reset_password(token:, password: value)).to have_attributes(code: "validation_failed", details: [ { field: "password", code: "blank" } ])
+      end
+      expect(described_class.verify_password(user_id:, password:)).to be(true)
+      expect(Identity::Session.where(user_id:, revoked_at: nil).count).to eq(1)
+    end
+  end
+
   describe "data of the user" do
     let!(:ana) { register }
     let!(:bia) { register(email: "bia@example.test") }

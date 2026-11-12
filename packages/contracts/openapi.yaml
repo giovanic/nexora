@@ -162,6 +162,63 @@ paths:
           $ref: "#/components/responses/Error"
         default:
           $ref: "#/components/responses/Error"
+  /api/v1/password_resets:
+    post:
+      operationId: requestPasswordReset
+      summary: Sends a password reset link, valid for 15 minutes and for one use.
+      description: |
+        Always answers 202 with no body, whether the e-mail has an account or not, so the answer
+        never tells if an account exists. The link points to the web page at APP_WEB_URL and carries
+        the token in the fragment (#token=...), which browsers do not send to servers.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequest"
+      responses:
+        "202":
+          description: Accepted. A link is sent only if the e-mail has an account.
+        "403":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/password_resets/{token}:
+    patch:
+      operationId: resetPassword
+      summary: Sets a new password with the token from the reset link.
+      description: |
+        Ends every session of the account and does not sign in; the person signs in again with the
+        new password. A used, expired or unknown token answers 422 invalid_token. A password that
+        breaks the rules answers 422 validation_failed, and the token stays usable.
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: The token from the link fragment. It only has URL-safe characters.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetConfirmation"
+      responses:
+        "204":
+          description: The password was changed and every session revoked.
+        "403":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     bearerSession:
@@ -245,6 +302,23 @@ components:
         device_label:
           type: [string, "null"]
           maxLength: 100
+    PasswordResetRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          maxLength: 254
+    PasswordResetConfirmation:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 12
+          description: From 12 characters to 72 bytes, the bcrypt limit.
     SessionGrant:
       type: object
       additionalProperties: false

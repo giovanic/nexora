@@ -7,6 +7,9 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       resources :registrations, only: :create
+      resources :password_resets, only: :create
+      # Any segment reaches the controller, which answers invalid_token for one it does not know.
+      patch "password_resets/:token", to: "password_resets#update", as: :password_reset, constraints: { token: %r{[^/]+} }, format: false
       resources :sessions, only: %i[index create destroy], constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ } do
         collection do
           post :refresh

@@ -8,7 +8,8 @@ module Identity
       "sign_in" => { "client" => Session::CLIENTS },
       "sign_in_failed" => {},
       "session_revoked" => {},
-      "all_sessions_revoked" => {}
+      "all_sessions_revoked" => {},
+      "password_reset" => {}
     }.freeze
 
     def self.call(action:, ip:, user_ref: nil, metadata: {})

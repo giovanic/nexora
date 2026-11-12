@@ -4,7 +4,8 @@ module ErrorRendering
   MESSAGES = {
     "invalid_credentials" => "E-mail ou senha incorretos.",
     "email_taken" => "Já existe uma conta com este e-mail. Você pode entrar com ele.",
-    "invalid_time_zone" => "Não reconhecemos o fuso horário do aparelho."
+    "invalid_time_zone" => "Não reconhecemos o fuso horário do aparelho.",
+    "invalid_token" => "Este link de redefinição não vale mais. Peça um novo."
   }.freeze
 
   private

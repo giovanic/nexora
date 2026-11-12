@@ -61,4 +61,8 @@ Rails.application.configure do
   config.active_record.encryption.key_derivation_salt = ENV.fetch("ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT", "local-dev-public-key-derivation-salt-0001")
   config.x.audit_ip_hmac_key = ENV.fetch("AUDIT_IP_HMAC_KEY", "local-dev-public-audit-ip-hmac-key-0001")
   config.x.app_web_url = ENV.fetch("APP_WEB_URL", "http://localhost:5173")
+
+  # Mails are written to files instead of sent (design 4.1).
+  config.action_mailer.delivery_method = :file
+  config.action_mailer.file_settings = { location: Rails.root.join("tmp/mails") }
 end
