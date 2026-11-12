@@ -26,6 +26,7 @@ Os valores numéricos de desempenho são metas iniciais de engenharia, a validar
 | FR-PROFILE-001 | A pessoa mantém dados de perfil e preferências de fuso horário, unidades e notificações. | M1 |
 | FR-PROFILE-002 | A pessoa informa um ou mais esportes, com nível de experiência em cada um: iniciante, intermediário ou avançado. | M1 |
 | FR-PROFILE-003 | Alterar esporte ou nível vale daí em diante e não reescreve o histórico de metas e XP. | Lançamento |
+| FR-PROFILE-004 | A pessoa informa, de forma opcional, o que a trouxe ao app, a partir de uma lista fechada, e pode mudar ou apagar a resposta. | M1 |
 
 ## Alimentação por foto
 

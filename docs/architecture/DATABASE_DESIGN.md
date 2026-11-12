@@ -12,7 +12,7 @@ PostgreSQL. Versão decidida na [ADR 0002](decisions/0002-technology-baseline.md
 - **Estimativas:** toda grandeza estimada usa colunas `_min`, `_likely` e `_max`, mais `confidence`. Nunca há coluna única que pareça medição.
 - **Soft delete:** só onde indicado. O padrão é apagar de verdade, conforme a [política de privacidade](../security/PRIVACY_AND_LGPD.md).
 - **Índices:** cada um precisa de uma consulta que o justifique.
-- **Exclusão de conta:** cada contexto trata `user.deletion_requested`. A coluna `users.id` sofre anonimização ou remoção apenas no fim do processo.
+- **Exclusão de conta:** um job de Identity percorre o registro compartilhado de apagadores (`shared/data_registry`), no qual cada contexto inscreve o seu `eraser`. A linha de `users` permanece, anonimizada, ao fim do processo.
 
 ## Mapa de relacionamentos
 
@@ -47,10 +47,10 @@ erDiagram
 
 Conta e autenticação.
 
-- **Colunas:** `id`, `email`, `password_digest`, `adult_confirmed_at`, `deletion_requested_at`, `deleted_at`.
+- **Colunas:** `id`, `email`, `password_digest` (nulo após a exclusão), `adult_confirmed_at`, `deletion_requested_at`, `deleted_at`.
 - **Constraints:** `email` único e sem diferença entre maiúsculas e minúsculas; `adult_confirmed_at NOT NULL`, o que impede criar conta sem a declaração de maioridade. A declaração não comprova a idade.
 - **Índices:** único em `lower(email)`; parcial em `deletion_requested_at` para a rotina de exclusão.
-- **Soft delete:** sim, curto, apenas durante o processo de exclusão (`deleted_at`). Ao final, o registro é anonimizado.
+- **Soft delete:** `deleted_at` marca a conta excluída. Ao final do processo a linha permanece com o mesmo UUID, o e-mail trocado por um valor aleatório (mantém o `NOT NULL` e o índice único), sem senha. `consent_records` e `audit_events` seguem ligados a esse UUID, sem conteúdo de saúde. O mesmo e-mail pode criar outra conta.
 
 ### `sessions`
 
@@ -78,8 +78,8 @@ Trilha de ações sensíveis, de inclusão apenas.
 
 Acompanha a exclusão de conta até a conclusão.
 
-- **Colunas:** `id`, `user_id`, `requested_at`, `pending_contexts`, `completed_at`.
-- **Fluxo:** cada contexto chama `IdentityAccess::Api.confirm_deletion`. Sem conclusão no prazo, dispara alerta. A anonimização final de `users` só ocorre com tudo confirmado. Mantém-se um registro mínimo de exclusões para reaplicar após restauração de backup.
+- **Colunas:** `id`, `user_id`, `requested_at`, `due_at` (`requested_at` + 24 horas), `pending_contexts`, `completed_at`.
+- **Fluxo:** um job de Identity percorre os `erasers` do registro compartilhado (`shared/data_registry`), sem que os contextos chamem Identity. Cada apagador concluído sai de `pending_contexts`, e uma falha repete só o que falta. Sem conclusão em 24 horas, dispara alerta. A anonimização final de `users` só ocorre com tudo concluído. Mantém-se um registro mínimo (só o UUID e a data) para reaplicar exclusões após restauração de backup.
 
 ## User Profile
 
@@ -87,15 +87,16 @@ Acompanha a exclusão de conta até a conclusão.
 
 Dados pessoais e preferências.
 
-- **Colunas:** `user_id` (PK e FK), `display_name`, `time_zone`, `units`, `notification_preferences` (JSONB), `quiet_hours`.
+- **Colunas:** `user_id` (PK e FK), `display_name`, `time_zone`, `units`, `notification_preferences` (JSONB), `quiet_hours`, `motivations` (lista fechada de 0 a 4 itens, opcional, sem texto livre).
 - **Constraints:** `time_zone NOT NULL`.
 
 ### `sport_profiles`
 
 Nível por esporte.
 
-- **Colunas:** `id`, `user_id` (FK), `sport`, `level`, `started_at`.
-- **Constraints:** único em `(user_id, sport)`; `level` em `beginner`, `intermediate` ou `advanced`.
+- **Colunas:** `id`, `user_id` (FK), `sport`, `level`, `started_at`, `ended_at` (nulo na linha vigente).
+- **Histórico:** mudar o nível encerra a linha atual (`ended_at`) e cria outra, preservando o histórico.
+- **Constraints:** único em `(user_id, sport)` com `ended_at` nulo; `level` em `beginner`, `intermediate` ou `advanced`.
 
 ## Nutrition
 

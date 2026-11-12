@@ -17,6 +17,7 @@ Requisitos: [FUNCTIONAL_REQUIREMENTS.md](../product/FUNCTIONAL_REQUIREMENTS.md).
 | FR-PROFILE-001 | 02 | — | — | — | AC-02-08 |
 | FR-PROFILE-002 | 02 | — | — | — | AC-02-08 |
 | FR-PROFILE-003 | 02 | — | — | — | AC-02-08 |
+| FR-PROFILE-004 | 02 | — | — | — | AC-02-08 |
 | FR-FOOD-001 | 03 | — | — | — | AC-03-01 |
 | FR-FOOD-002 | 03 | — | — | — | AC-03-01 |
 | FR-FOOD-003 | 03 | 0006 | — | — | AC-03-02 |

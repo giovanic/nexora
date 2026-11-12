@@ -77,12 +77,12 @@ Gratuitos (§5).
 Fluxo por eventos, com estado acompanhado:
 
 1. A pessoa confirma, com reautenticação. Sessões são revogadas, `account_deletions` é criado, e `user.deletion_requested` é publicado.
-2. Cada contexto apaga os próprios dados e confirma com `IdentityAccess::Api.confirm_deletion`. Eventos que cheguem depois são descartados. Sem conclusão no prazo, dispara alerta.
+2. Um job de Identity percorre o registro compartilhado de apagadores (`shared/data_registry`), no qual cada contexto com dados de usuário inscreve o seu `eraser` ao iniciar. Os contextos não chamam Identity, e nem Identity nem `shared/` citam constantes de outros contextos. Cada apagador concluído é marcado em `account_deletions.pending_contexts`, e uma falha repete só o que falta. Eventos de usuário que cheguem depois são descartados. O prazo é de 24 horas, e passado o prazo dispara alerta.
 3. Fotos são removidas do armazenamento. A integração com o Strava é revogada.
-4. Os registros necessários para comprovar conformidade permanecem, sem conteúdo de saúde e com referência anonimizada.
+4. Os registros necessários para comprovar conformidade permanecem, sem conteúdo de saúde. O que sobra da conta: a linha de `users` com o mesmo UUID, o e-mail trocado por um valor aleatório, sem senha e com `deleted_at`; `consent_records` e `audit_events` seguem ligados a esse UUID. Para reaplicar exclusões após restaurar backup, guarda-se só o UUID e a data. O mesmo e-mail pode criar outra conta. A revisão jurídica ainda precisa confirmar que esse resíduo é o mínimo necessário.
 5. Backups: os dados expiram com a rotação, cujo prazo fica na política. Qualquer restauração reaplica a lista de exclusões antes de voltar ao ar. Operadores: registros do provedor de IA, monitoramento e e-mail seguem a política de cada um, informada na lista de operadores.
 
-O prazo de conclusão é definido na Fase 02. Um teste automático semeia cada tabela, inclusive campos JSON, com um marcador, e confirma que nada de usuário permanece, salvo os registros mínimos do passo 4.
+O prazo de conclusão é de 24 horas, definido na Fase 02. Um teste automático semeia cada tabela, inclusive campos JSON, com um marcador, e confirma que nada de usuário permanece, salvo os registros mínimos do passo 4.
 
 ## Transferência internacional (art. 33)
 
