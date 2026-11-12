@@ -4,6 +4,18 @@ Rails.application.routes.draw do
     get :ready
   end
 
+  namespace :api do
+    namespace :v1 do
+      resources :registrations, only: :create
+      resources :sessions, only: %i[index create destroy], constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ } do
+        collection do
+          post :refresh
+          delete :current, action: :destroy_current
+        end
+      end
+    end
+  end
+
   # Operational probes for local development and tests. They never exist in production.
   if Rails.env.local?
     namespace :internal do

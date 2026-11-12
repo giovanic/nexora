@@ -38,10 +38,158 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/registrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates an account and its first session. Requires the adult declaration.
+         * @description With client "mobile" the body carries the token. With client "web" the session goes in the
+         *     __Host-session cookie (HttpOnly, Secure, SameSite=Lax) and the body has no token; the request
+         *     then needs an allowed Origin. An existing e-mail answers 422 email_taken.
+         */
+        post: operations["createRegistration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists the active sessions of the signed-in person, one per device. */
+        get: operations["listSessions"];
+        put?: never;
+        /**
+         * Signs in with e-mail and password.
+         * @description Same transport rules as the registration. A wrong password and an unknown e-mail both
+         *     answer 401 invalid_credentials, with the same message.
+         */
+        post: operations["createSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Swaps the current session token for a new one and revokes the old one.
+         * @description Of two refreshes with the same token, only one succeeds; the other answers 401. The new
+         *     session keeps the absolute deadline of the old one. The token comes from the Bearer header
+         *     (the new token is in the body) or from the cookie (a new cookie is set).
+         */
+        post: operations["refreshSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Signs out of this device. */
+        delete: operations["deleteCurrentSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Signs another device out. Another person's session answers 404. */
+        delete: operations["deleteSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description Decides the transport, the token in the body (mobile) or the cookie (web).
+         * @enum {string}
+         */
+        Client: "web" | "mobile";
+        RegistrationRequest: {
+            email: string;
+            /** @description From 12 characters to 72 bytes, the bcrypt limit. */
+            password: string;
+            /** @description Must be true. The declaration does not prove age. */
+            adult_confirmed: boolean;
+            /** @description IANA time zone of the device, such as America/Sao_Paulo. Unknown zones answer 422 invalid_time_zone. */
+            time_zone: string;
+            client: components["schemas"]["Client"];
+            device_label?: string | null;
+        };
+        SignInRequest: {
+            email: string;
+            password: string;
+            client: components["schemas"]["Client"];
+            device_label?: string | null;
+        };
+        SessionGrant: {
+            /** Format: uuid */
+            user_id: string;
+            /**
+             * Format: date-time
+             * @description Absolute deadline of the session. Inactivity for 30 days ends it sooner.
+             */
+            expires_at: string;
+            /** @description Only for the mobile client. Send it as Authorization Bearer. */
+            token?: string;
+        };
+        SessionList: {
+            sessions: components["schemas"]["DeviceSession"][];
+        };
+        DeviceSession: {
+            /** Format: uuid */
+            id: string;
+            client: components["schemas"]["Client"];
+            device_label: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            last_used_at: string;
+            /** @description True for the session that made this request. */
+            current: boolean;
+        };
         HealthLive: {
             /** @enum {string} */
             status: "ok";
@@ -69,6 +217,27 @@ export interface components {
         };
     };
     responses: {
+        /** @description A session was opened. Mobile gets the token in the body; web gets the cookie. */
+        SessionGranted: {
+            headers: {
+                /** @description Only for the web client, __Host-session with HttpOnly, Secure, SameSite=Lax and Path=/. */
+                "Set-Cookie"?: string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["SessionGrant"];
+            };
+        };
+        /** @description Too many attempts. Retry after the given number of seconds. */
+        TooManyRequests: {
+            headers: {
+                "Retry-After": number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Any error, in the central format. */
         Error: {
             headers: {
@@ -134,6 +303,130 @@ export interface operations {
                     "application/json": components["schemas"]["HealthReady"];
                 };
             };
+            default: components["responses"]["Error"];
+        };
+    };
+    createRegistration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationRequest"];
+            };
+        };
+        responses: {
+            201: components["responses"]["SessionGranted"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    listSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The active sessions, most recently used first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionList"];
+                };
+            };
+            401: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    createSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignInRequest"];
+            };
+        };
+        responses: {
+            201: components["responses"]["SessionGranted"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    refreshSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["SessionGranted"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteCurrentSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The session was revoked, and the cookie, if any, cleared. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The session was revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
     };

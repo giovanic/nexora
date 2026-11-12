@@ -45,8 +45,16 @@ RSpec.describe Shared::Outbox do
       expect(publish(payload:).reload.payload).to eq(payload)
     end
 
+    it "accepts an IANA time zone, which has capitals and a slash" do
+      payload = { "time_zone" => "America/Sao_Paulo" }
+
+      expect(publish(payload:).reload.payload).to eq(payload)
+    end
+
     [
       [ "an e-mail", { "email" => "ana@example.test" } ],
+      [ "a made-up time zone", { "time_zone" => "Marte/Base" } ],
+      [ "a path disguised as a time zone", { "time_zone" => "../../etc/passwd" } ],
       [ "a name", { "name" => "Ana" } ],
       [ "free text", { "note" => "comi arroz no almoço" } ],
       [ "a nested object", { "profile" => { "id" => "x" } } ],

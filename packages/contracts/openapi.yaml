@@ -3,10 +3,14 @@ info:
   title: Product API
   version: 0.1.0
   description: Source of truth for the API. Change this file first, then the implementation and clients.
+security:
+  - bearerSession: []
+  - cookieSession: []
 paths:
   /health/live:
     get:
       operationId: getHealthLive
+      security: []
       summary: Confirms the process responds, without touching dependencies.
       responses:
         "200":
@@ -20,6 +24,7 @@ paths:
   /health/ready:
     get:
       operationId: getHealthReady
+      security: []
       summary: Reports whether the database and the queue service are reachable.
       responses:
         "200":
@@ -36,8 +41,161 @@ paths:
                 $ref: "#/components/schemas/HealthReady"
         default:
           $ref: "#/components/responses/Error"
+  /api/v1/registrations:
+    post:
+      operationId: createRegistration
+      summary: Creates an account and its first session. Requires the adult declaration.
+      description: |
+        With client "mobile" the body carries the token. With client "web" the session goes in the
+        __Host-session cookie (HttpOnly, Secure, SameSite=Lax) and the body has no token; the request
+        then needs an allowed Origin. An existing e-mail answers 422 email_taken.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistrationRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/SessionGranted"
+        "403":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/sessions:
+    get:
+      operationId: listSessions
+      summary: Lists the active sessions of the signed-in person, one per device.
+      responses:
+        "200":
+          description: The active sessions, most recently used first.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionList"
+        "401":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createSession
+      summary: Signs in with e-mail and password.
+      description: |
+        Same transport rules as the registration. A wrong password and an unknown e-mail both
+        answer 401 invalid_credentials, with the same message.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/SessionGranted"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/sessions/refresh:
+    post:
+      operationId: refreshSession
+      summary: Swaps the current session token for a new one and revokes the old one.
+      description: |
+        Of two refreshes with the same token, only one succeeds; the other answers 401. The new
+        session keeps the absolute deadline of the old one. The token comes from the Bearer header
+        (the new token is in the body) or from the cookie (a new cookie is set).
+      responses:
+        "200":
+          $ref: "#/components/responses/SessionGranted"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/sessions/current:
+    delete:
+      operationId: deleteCurrentSession
+      summary: Signs out of this device.
+      responses:
+        "204":
+          description: The session was revoked, and the cookie, if any, cleared.
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/sessions/{id}:
+    delete:
+      operationId: deleteSession
+      summary: Signs another device out. Another person's session answers 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: The session was revoked.
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
 components:
+  securitySchemes:
+    bearerSession:
+      type: http
+      scheme: bearer
+      description: Session token of the mobile app.
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+      description: Session cookie of the web app. State-changing requests need an allowed Origin.
   responses:
+    SessionGranted:
+      description: A session was opened. Mobile gets the token in the body; web gets the cookie.
+      headers:
+        Set-Cookie:
+          description: Only for the web client, __Host-session with HttpOnly, Secure, SameSite=Lax and Path=/.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SessionGrant"
+    TooManyRequests:
+      description: Too many attempts. Retry after the given number of seconds.
+      headers:
+        Retry-After:
+          required: true
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     Error:
       description: Any error, in the central format.
       content:
@@ -45,6 +203,94 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
   schemas:
+    Client:
+      type: string
+      enum: [web, mobile]
+      description: Decides the transport, the token in the body (mobile) or the cookie (web).
+    RegistrationRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, adult_confirmed, time_zone, client]
+      properties:
+        email:
+          type: string
+          maxLength: 254
+        password:
+          type: string
+          minLength: 12
+          description: From 12 characters to 72 bytes, the bcrypt limit.
+        adult_confirmed:
+          type: boolean
+          description: Must be true. The declaration does not prove age.
+        time_zone:
+          type: string
+          description: IANA time zone of the device, such as America/Sao_Paulo. Unknown zones answer 422 invalid_time_zone.
+        client:
+          $ref: "#/components/schemas/Client"
+        device_label:
+          type: [string, "null"]
+          maxLength: 100
+    SignInRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, client]
+      properties:
+        email:
+          type: string
+          maxLength: 254
+        password:
+          type: string
+        client:
+          $ref: "#/components/schemas/Client"
+        device_label:
+          type: [string, "null"]
+          maxLength: 100
+    SessionGrant:
+      type: object
+      additionalProperties: false
+      required: [user_id, expires_at]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+          description: Absolute deadline of the session. Inactivity for 30 days ends it sooner.
+        token:
+          type: string
+          description: Only for the mobile client. Send it as Authorization Bearer.
+    SessionList:
+      type: object
+      additionalProperties: false
+      required: [sessions]
+      properties:
+        sessions:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/DeviceSession"
+    DeviceSession:
+      type: object
+      additionalProperties: false
+      required: [id, client, device_label, created_at, last_used_at, current]
+      properties:
+        id:
+          type: string
+          format: uuid
+        client:
+          $ref: "#/components/schemas/Client"
+        device_label:
+          type: [string, "null"]
+        created_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
+        current:
+          type: boolean
+          description: True for the session that made this request.
     HealthLive:
       type: object
       additionalProperties: false
