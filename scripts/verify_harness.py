@@ -277,7 +277,7 @@ class Verifier:
         if not text:
             return
         for entry in re.split(r"[,;]", text.replace("`", "")):
-            entry = re.sub(r":\d+(-\d+)?$", "", entry.strip(" .")).strip()
+            entry = re.sub(r":\d+(-\d+)?$", "", entry.strip().rstrip(".")).strip()
             if entry and not os.path.exists(self.path(entry)):
                 self.fail("traceability", rel, f"caminho inexistente em {req}: {entry}")
 

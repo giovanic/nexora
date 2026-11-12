@@ -176,6 +176,7 @@ close_03() {
 m_done_fake_path() { close_03 "$1"; sed -i 's#^| FR-FOOD-001 | 03 | — | — | — |#| FR-FOOD-001 | 03 | — | apps/nao_existe.rb | spec/nao_existe.rb |#' "$1/$MX"; }
 m_done_x_cells() { close_03 "$1"; sed -i 's#^| FR-FOOD-001 | 03 | — | — | — |#| FR-FOOD-001 | 03 | — | x | y |#' "$1/$MX"; }
 m_done_real_path_ok() { close_03 "$1"; sed -i 's#^| FR-FOOD-001 | 03 | — | — | — |#| FR-FOOD-001 | 03 | — | `README.md` | `CLAUDE.md`, `README.md:3` |#' "$1/$MX"; }
+m_done_dotfile_ok() { close_03 "$1"; sed -i 's#^| FR-FOOD-001 | 03 | — | — | — |#| FR-FOOD-001 | 03 | — | `.gitignore` | `.claude/settings.json`. |#' "$1/$MX"; }
 m_done_gap_ok() { close_03 "$1"; sed -i 's#^| FR-FOOD-001 | 03 | — | — | — |#| FR-FOOD-001 | 03 | — | Lacuna aceita em 2026-11-06 | `README.md`. Lacuna aceita em 2026-11-06 |#' "$1/$MX"; }
 m_done_no_report() { set_state "$1/$ST" 00 'Concluída' 'relatório'; }
 m_done_not_review() { set_state "$1/$ST" 09 'Em desenvolvimento' 'plano'; set_state "$1/$ST" 09 'Concluída' 'relatório'; add_report "$1" PHASE_09_REPORT.md; }
@@ -305,6 +306,7 @@ run_case done_fake_path_rejected 1 traceability m_done_fake_path 'caminho inexis
 run_case done_any_text_rejected 1 traceability m_done_x_cells 'caminho inexistente'
 run_case done_real_path_ok 0 '' m_done_real_path_ok
 run_case done_accepted_gap_ok 0 '' m_done_gap_ok
+run_case done_dotfile_path_ok 0 '' m_done_dotfile_ok
 run_case done_requires_report 1 status m_done_no_report 'sem relatório'
 run_case done_only_from_review 1 status m_done_not_review 'em revisão'
 run_case done_ascii_dash_is_empty 1 status m_done_dash_ev 'concluída sem evidência'
