@@ -114,8 +114,8 @@ Requisitos: [FUNCTIONAL_REQUIREMENTS.md](../product/FUNCTIONAL_REQUIREMENTS.md).
 | NFR-PERF-002 | 03 | — | — | — | AC-03-14 |
 | NFR-PERF-003 | 03 | — | — | — | AC-03-05 |
 | NFR-PERF-004 | 09 | — | — | — | AC-09-01 |
-| NFR-OBS-001 | 01 | — | `apps/api/lib/observability/json_log_formatter.rb`, `apps/api/lib/observability/correlation.rb`, `apps/api/lib/observability/sidekiq_correlation.rb` | `apps/api/spec/integration/logging_spec.rb` | AC-01-07 |
-| NFR-OBS-002 | 01 | — | `apps/api/lib/observability/error_tracking.rb`, `apps/api/lib/observability/error_scrubber.rb`, `apps/web/src/shared/monitoring.ts`, `apps/mobile/src/shared/monitoring.ts` | `apps/api/spec/integration/sentry_spec.rb`, `apps/web/src/shared/monitoring.test.ts`, `apps/mobile/src/shared/__tests__/monitoring.test.ts` | AC-01-07 |
+| NFR-OBS-001 | 01 | — | `apps/api/lib/observability/json_log_formatter.rb`, `apps/api/lib/observability/correlation.rb`, `apps/api/lib/observability/sidekiq_correlation.rb` | `apps/api/spec/integration/logging_spec.rb`. Lacuna aceita em 2026-11-11 | AC-01-07 |
+| NFR-OBS-002 | 01 | — | `apps/api/lib/observability/error_tracking.rb`, `apps/api/lib/observability/error_scrubber.rb`, `apps/web/src/shared/monitoring.ts`, `apps/mobile/src/shared/monitoring.ts` | `apps/api/spec/integration/sentry_spec.rb`, `apps/web/src/shared/monitoring.test.ts`, `apps/mobile/src/shared/__tests__/monitoring.test.ts`. Lacuna aceita em 2026-11-11 | AC-01-07 |
 | NFR-OBS-003 | 09 | — | — | — | AC-09-02 |
 | NFR-OBS-004 | 01 | — | `apps/api/app/controllers/health_controller.rb`, `apps/api/app/services/health/readiness_check.rb` | `apps/api/spec/requests/health_spec.rb`, `apps/api/spec/requests/health_ready_spec.rb` | AC-01-08 |
 | NFR-A11Y-001 | 07 | — | — | — | AC-07-06 |
