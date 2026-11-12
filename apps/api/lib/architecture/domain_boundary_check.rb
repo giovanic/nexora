@@ -30,6 +30,13 @@ module Architecture
       found
     end
 
+    # Every folder of app/ outside app/domains, plus lib/, so a new folder is checked as soon as it exists.
+    def self.application_roots(rails_root)
+      root = Pathname(rails_root)
+      folders = root.join("app").children.select(&:directory?).reject { |path| path.basename.to_s == "domains" }
+      (folders + [ root.join("lib") ]).select(&:directory?).sort
+    end
+
     def initialize(root:, rules:, outside_roots: [])
       @root = root.to_s
       @rules = rules

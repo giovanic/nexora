@@ -7,16 +7,21 @@ RSpec.describe "contract and routes" do
 
   let(:routes) do
     Rails.application.routes.routes
-      .map { |route| route.path.spec.to_s.delete_suffix("(.:format)") }
-      .reject { |path| path.empty? || path.match?(outside_contract) }
+      .map { |route| [ route.verb, route.path.spec.to_s ] }
+      .reject { |verb, path| verb.empty? || path.empty? || path.match?(outside_contract) }
+      .map { |verb, path| Contract.operation(verb, path) }
       .uniq
   end
 
-  it "documents every public route" do
-    expect(routes - Contract.paths).to eq([])
+  it "documents every public route, by method and path" do
+    expect(routes - Contract.operations).to eq([])
   end
 
-  it "does not document a route that does not exist" do
-    expect(Contract.paths - routes).to eq([])
+  it "does not document an operation that does not exist" do
+    expect(Contract.operations - routes).to eq([])
+  end
+
+  it "compares Rails parameters with OpenAPI parameters" do
+    expect(Contract.operation("GET", "/api/v1/sessions/:id(.:format)")).to eq("GET /api/v1/sessions/{id}")
   end
 end

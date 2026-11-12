@@ -5,7 +5,7 @@ RSpec.describe "domain boundaries" do
   let(:root) { Rails.root.join("app/domains") }
   let(:rules) { YAML.load_file(Rails.root.join("config/domain_boundaries.yml")) }
 
-  let(:outside_roots) { %w[app/controllers app/jobs app/models app/services].map { |path| Rails.root.join(path) } }
+  let(:outside_roots) { Architecture::DomainBoundaryCheck.application_roots(Rails.root) }
 
   # A bare constant such as FoodEntry cannot be traced to a context, so business
   # code placed here would escape the check. New files must be added deliberately.
@@ -29,6 +29,16 @@ RSpec.describe "domain boundaries" do
       .map { |file| Pathname(file).relative_path_from(Rails.root).to_s }
 
     expect(found).to match_array(infrastructure_files)
+  end
+
+  it "analyzes every folder of app/ outside app/domains, and lib/, including new ones" do
+    Dir.mktmpdir do |dir|
+      %w[app/controllers app/serializers app/domains lib].each { |path| FileUtils.mkdir_p(File.join(dir, path)) }
+
+      roots = Architecture::DomainBoundaryCheck.application_roots(Pathname(dir)).map { |path| path.relative_path_from(Pathname(dir)).to_s }
+
+      expect(roots).to contain_exactly("app/controllers", "app/serializers", "lib")
+    end
   end
 
   it "defines rules for exactly the existing contexts" do

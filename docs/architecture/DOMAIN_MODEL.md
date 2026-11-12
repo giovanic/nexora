@@ -49,7 +49,7 @@ flowchart TD
   ID -. eventos .-> SI
 ```
 
-Setas contínuas são chamadas síncronas permitidas. Setas tracejadas são eventos. `user.deletion_requested` chega a **todos** os contextos, além dos três desenhados.
+Setas contínuas mostram as principais chamadas síncronas permitidas; a lista completa está nas seções "Permitido" e em `apps/api/config/domain_boundaries.yml`. Setas tracejadas são eventos. `user.deletion_requested` chega a **todos** os contextos, além dos três desenhados.
 
 ## Contextos
 

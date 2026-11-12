@@ -66,7 +66,8 @@ RSpec.describe "central error format" do
     ActionController::UnknownFormat => [ 406, "not_acceptable" ],
     ActionController::BadRequest => [ 400, "bad_request" ],
     ActionController::MethodNotAllowed => [ 405, "method_not_allowed" ],
-    ActiveRecord::RecordNotFound => [ 404, "not_found" ]
+    ActiveRecord::RecordNotFound => [ 404, "not_found" ],
+    ActiveRecord::RecordInvalid => [ 422, "validation_failed" ]
   }.each do |exception, (status, code)|
     it "keeps #{exception} as #{status} #{code}" do
       arguments = exception == ActionController::MethodNotAllowed ? [ "GET" ] : []

@@ -14,6 +14,7 @@ Lista sem valores. As da Fase 01 estão em uso; as demais são planejadas, e cad
 
 | Variável | Fase | Segredo | Finalidade |
 |---|---|---|---|
+| `SIDEKIQ_CONCURRENCY` | 01 | Não | Threads do Sidekiq; também dimensiona o pool do banco, padrão 5 |
 | `DATABASE_URL` | 01 | Sim | PostgreSQL. Obrigatória em produção |
 | `REDIS_URL` | 01 | Sim em produção | Valkey para o Sidekiq. O nome é o que o Sidekiq lê. Obrigatória em produção |
 | `SECRET_KEY_BASE` | 01 | Sim | Base criptográfica do Rails. Obrigatória em produção. Sem credenciais do Rails, portanto sem `RAILS_MASTER_KEY` |

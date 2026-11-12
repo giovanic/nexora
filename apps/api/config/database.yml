@@ -3,7 +3,8 @@
 default: &default
   adapter: postgresql
   encoding: unicode
-  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
+  # Large enough for Puma threads and for every Sidekiq thread in the worker.
+  max_connections: <%= [ ENV.fetch("RAILS_MAX_THREADS", 5).to_i, ENV.fetch("SIDEKIQ_CONCURRENCY", 5).to_i ].max %>
   connect_timeout: 2
   checkout_timeout: 1
 

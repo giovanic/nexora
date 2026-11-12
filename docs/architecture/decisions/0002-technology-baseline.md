@@ -88,6 +88,8 @@ Valkey em vez de Redis: as duas opções funcionam com o Sidekiq, e o Redis a pa
 - **Risco:** o Rails 8.1 só recebe correções de segurança, e até 2027-10-10. Reavaliar quando sair uma nova linha.
 - **Risco:** a validação não prova o comportamento em produção nem cobre todas as gems futuras.
 - O nome da variável segue `REDIS_URL`, que é o que o Sidekiq lê, mesmo com Valkey.
+- O React da web fica na versão que o SDK do Expo define, porque o monorepo tem um único lockfile e duas cópias quebram os testes. A web só atualiza o React junto com o SDK.
+- O pool de conexões do banco é o maior entre `RAILS_MAX_THREADS` e `SIDEKIQ_CONCURRENCY`, para o worker ter uma conexão por thread.
 
 ## Estado da decisão
 

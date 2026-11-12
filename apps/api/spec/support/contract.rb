@@ -9,8 +9,19 @@ module Contract
     @definition ||= OpenapiFirst.load(PATH)
   end
 
-  def self.paths
-    YAML.load_file(PATH).fetch("paths").keys
+  HTTP_METHODS = %w[get put post delete patch head options trace].freeze
+
+  # Every documented operation as "VERB /path", with OpenAPI parameters such as {id}.
+  def self.operations
+    YAML.load_file(PATH).fetch("paths").flat_map do |path, item|
+      (item.keys & HTTP_METHODS).map { |method| "#{method.upcase} #{path}" }
+    end
+  end
+
+  # A Rails route in the same form, converting :id into {id}.
+  def self.operation(verb, rails_path)
+    path = rails_path.delete_suffix("(.:format)").gsub(/:(\w+)/, '{\\1}')
+    "#{verb} #{path}"
   end
 
   def expect_response_to_match_contract

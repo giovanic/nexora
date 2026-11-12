@@ -14,7 +14,7 @@ class ApiErrorApp
     409 => [ "conflict", "A ação entra em conflito com o estado atual." ],
     413 => [ "payload_too_large", "O conteúdo enviado é grande demais." ],
     415 => [ "unsupported_media_type", "Este formato de conteúdo não é aceito." ],
-    422 => [ "unprocessable", "Não foi possível processar a requisição." ],
+    422 => [ "validation_failed", "Não foi possível processar a requisição." ],
     429 => [ "too_many_requests", "Muitas requisições. Tente novamente em instantes." ]
   }.freeze
   OTHER_CLIENT_ERROR = [ "request_error", "A requisição não pôde ser atendida." ].freeze

@@ -5,7 +5,7 @@
 
 ## Contexto
 
-Mobile e web consomem a mesma API, e o Master Prompt pede REST com OpenAPI. A versão atual da especificação é a 3.2.1. O README do `rswag` declara compatibilidade com OpenAPI 3.0 e busca mantenedores ([fontes](../EXTERNAL_SOURCES.md)). Outras ferramentas não foram avaliadas.
+Mobile e web consomem a mesma API, e o Master Prompt pede REST com OpenAPI. A versão atual da especificação é a 3.2.1. O README do `rswag` declara compatibilidade com OpenAPI 3.0 e busca mantenedores ([fontes](../EXTERNAL_SOURCES.md)). As alternativas avaliadas estão em Decisão.
 
 ## Problema
 
@@ -34,7 +34,7 @@ Por que não a 3.2.1, a mais recente: `openapi_first`, `committee` e `openapi-ty
 
 Por que `openapi_first`, e não `committee`: foi feito para teste de contrato e não declara as restrições de JSON Schema que o `committee` lista para 3.x.
 
-O teste de rotas compara as rotas públicas do Rails com os caminhos do contrato, nos dois sentidos, porque a validação de resposta só alcança o que os testes exercitam.
+O teste de rotas compara pares de método e caminho das rotas públicas do Rails com as operações do contrato, nos dois sentidos, convertendo `:id` em `{id}`, porque a validação de resposta só alcança o que os testes exercitam.
 
 ## Evidência
 
@@ -44,7 +44,7 @@ Execução de 2026-11-06:
 |---|---|
 | Mudar `status` de `unavailable` para `degraded` no contrato | `health_ready_spec` falha; restaurado, passa |
 | Erro 500 validado contra o esquema `Error` | Passa |
-| Rotas públicas contra `paths` do contrato (`spec/contract/routes_spec.rb`) | Passa nos dois sentidos |
+| Rotas públicas contra operações do contrato, por método e caminho (`spec/contract/routes_spec.rb`) | Passa nos dois sentidos |
 | `npm run generate -w @app/contracts` | Tipos gerados |
 | Alterar `generated/api.d.ts` e rodar `npm run check -w @app/contracts` | Falha; regenerado, passa |
 

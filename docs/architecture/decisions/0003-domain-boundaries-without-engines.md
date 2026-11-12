@@ -22,7 +22,7 @@ Como manter os limites entre domínios de forma verificável, com o mínimo de i
 
 Domínios como namespaces em `apps/api/app/domains/<contexto>/`, sem Engines. Comunicação apenas por `<Contexto>::Api` e eventos, conforme as regras do modelo de domínio.
 
-**Mecanismo: alternativa 2.** Um teste próprio em RSpec, `spec/architecture/domains_spec.rb`, usa `Architecture::DomainBoundaryCheck`, que percorre com o Prism, parser que vem com o Ruby, `app/domains` e também `app/controllers`, `app/jobs`, `app/models` e `app/services`. A lista de dependências permitidas fica em `config/domain_boundaries.yml`.
+**Mecanismo: alternativa 2.** Um teste próprio em RSpec, `spec/architecture/domains_spec.rb`, usa `Architecture::DomainBoundaryCheck`, que percorre com o Prism, parser que vem com o Ruby, `app/domains` e também toda pasta de `app/` fora dela e `lib/`, inclusive pastas criadas depois (`DomainBoundaryCheck.application_roots`). A lista de dependências permitidas fica em `config/domain_boundaries.yml`.
 
 O teste falha quando:
 
@@ -48,7 +48,7 @@ Avaliação de 2026-11-06, em Ruby 4.0.9:
 
 O `USAGE.md` do Packwerk declara: *"Packwerk ships with dependency boundary checking only."* A verificação de visibilidade dependeria de outra gem, não avaliada.
 
-Violação plantada na árvore real: `app/domains/goals/planted.rb`, referenciando `Gamification::Api`, fez `spec/architecture/domains_spec.rb` falhar; removida, ele voltou a passar. A execução em 2026-11-06 foi local. A prova no CI é pendência da Tarefa 13 do plano da Fase 01, com o link registrado no relatório da fase.
+Violação plantada na árvore real: `app/domains/goals/planted.rb`, referenciando `Gamification::Api`, fez `spec/architecture/domains_spec.rb` falhar; removida, ele voltou a passar. A execução em 2026-11-06 foi local. No CI, o PR #6 (`defect/domain-boundary`) reprovou o job `api`, na Tarefa 13.
 
 Estrutura interna: `zeitwerk:check` aprova um arquivo plantado em `models/`, `services/` e `jobs/` de um contexto (`spec/architecture/domain_layout_spec.rb`).
 
