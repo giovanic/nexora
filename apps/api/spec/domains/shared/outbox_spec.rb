@@ -91,6 +91,21 @@ RSpec.describe Shared::Outbox do
 
         expect(Shared::Outbox::PublishJob).not_to have_received(:perform_async)
       end
+
+      # The change is already committed, and the cron delivers the event anyway.
+      it "keeps the committed change when the publisher cannot be scheduled" do
+        allow(Shared::Outbox::PublishJob).to receive(:perform_async)
+          .and_raise(RedisClient::CannotConnectError, "connect to redis://queue-secret-host failed")
+        allow(Rails.logger).to receive(:warn).and_call_original
+
+        event = ActiveRecord::Base.transaction { described_class.publish!(name: "user.registered", user_id:) }
+
+        expect(Shared::Outbox::Event.exists?(event.id)).to be(true)
+        expect(Rails.logger).to have_received(:warn) do |message|
+          expect(message).to include("RedisClient::CannotConnectError")
+          expect(message).not_to include("queue-secret-host")
+        end
+      end
     end
 
     it "leaves delivery to the spec in the test environment" do

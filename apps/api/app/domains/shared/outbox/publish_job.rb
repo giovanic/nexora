@@ -6,7 +6,9 @@ module Shared
     # Each event is locked with SKIP LOCKED for the whole delivery, so two runs
     # at once never handle the same event. Each consumer runs in a savepoint
     # with its consumed_events row: a failure undoes only that consumer, and a
-    # consumer that already succeeded is skipped on the next attempt.
+    # consumer that already succeeded is skipped on the next attempt. A failure
+    # of the publisher's own steps, a discard rule or the bookkeeping, also
+    # counts as an attempt of that event, so it never holds back the next ones.
     class PublishJob
       include Sidekiq::Job
 
@@ -14,31 +16,53 @@ module Shared
       sidekiq_options retry: false
 
       BATCH_SIZE = 200
+      # The publisher's own steps, named where a failure names a consumer.
+      DISCARD_RULE = "outbox.discard_rule".freeze
+      PUBLISHER = "outbox.publisher".freeze
 
       def perform
         BATCH_SIZE.times do
-          delivered, alerts = deliver_next
-          alerts.each { |consumer| alert_dead(consumer) }
-          break unless delivered
+          event_name, dead_for = deliver_next
+          dead_for.each { |consumer| alert_dead(event_name, consumer) }
+          break unless event_name
         end
       end
 
       private
 
-      # Returns whether an event was handled, and the consumers to alert about,
-      # which the caller reports after the transaction commits.
+      # Returns the name of the event handled, nil when none is due, and the
+      # consumers it died for, which the caller reports after the commit.
       def deliver_next
+        event = nil
+        step = DISCARD_RULE
         Event.transaction do
           event = Event.due.order(:occurred_at).lock("FOR UPDATE SKIP LOCKED").first
-          next [ false, [] ] unless event
+          next [ nil, [] ] unless event
 
           if Outbox.discard?(event)
             event.destroy!
-            next [ true, [] ]
+            next [ event.name, [] ]
           end
 
+          step = PUBLISHER
           failed = Outbox.consumers_for(event.name).reject { |consumer| consume(consumer, event) }
-          [ true, record_result(event, failed) ]
+          [ event.name, record_result(event, failed.map(&:name)) ]
+        end
+      rescue StandardError => error
+        # Without an event, the database itself failed: the next run retries.
+        raise unless event
+
+        # The event's transaction rolled back, consumers included. Counting the
+        # attempt in a new one keeps it from holding back the events after it.
+        log_failure(event, step, error)
+        [ event.name, record_failure(event.id, step) ]
+      end
+
+      def record_failure(event_id, step)
+        Event.transaction do
+          # Another run may have taken the event once the rollback released it.
+          event = Event.due.lock("FOR UPDATE SKIP LOCKED").find_by(id: event_id)
+          event ? record_result(event, [ step ]) : []
         end
       end
 
@@ -57,11 +81,16 @@ module Shared
 
         true
       rescue StandardError => error
-        # The message can carry user data, so only identifiers and the class go to the log.
-        Rails.logger.warn("outbox consumer failed event_id=#{event.id} event=#{event.name} consumer=#{consumer.name} error=#{error.class}")
+        log_failure(event, consumer.name, error)
         false
       end
 
+      # The message can carry user data, so only identifiers and the class go to the log.
+      def log_failure(event, consumer_name, error)
+        Rails.logger.warn("outbox delivery failed event_id=#{event.id} event=#{event.name} consumer=#{consumer_name} error=#{error.class}")
+      end
+
+      # failed holds consumer names; returns those to alert about when the event dies.
       def record_result(event, failed)
         now = Time.current
         if failed.empty?
@@ -80,8 +109,8 @@ module Shared
         end
       end
 
-      def alert_dead(consumer)
-        Sentry.capture_exception(DeadEvent.new, tags: { outbox_event: consumer.event_name, outbox_consumer: consumer.name })
+      def alert_dead(event_name, consumer_name)
+        Sentry.capture_exception(DeadEvent.new, tags: { outbox_event: event_name, outbox_consumer: consumer_name })
       end
     end
   end

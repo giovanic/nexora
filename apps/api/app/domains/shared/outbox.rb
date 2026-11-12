@@ -39,7 +39,7 @@ module Shared
         PayloadCheck.call(payload)
         event = Event.create!(name:, user_id:, payload:, version:, correlation_id:, occurred_at: Time.current)
         # The cron run every minute stays as the safety net (config/schedule.yml).
-        Event.current_transaction.after_commit { PublishJob.perform_async } if enqueue_after_commit?
+        Event.current_transaction.after_commit { enqueue_publisher } if enqueue_after_commit?
         event
       end
 
@@ -96,6 +96,15 @@ module Shared
 
       def enqueue_after_commit?
         Rails.configuration.x.outbox_enqueue_after_commit != false
+      end
+
+      # Runs after the commit, so raising would fail a change that succeeded.
+      # The enqueue only speeds delivery up: the cron delivers without it.
+      def enqueue_publisher
+        PublishJob.perform_async
+      rescue StandardError => error
+        # The message can name the queue host, so only the class goes to the log.
+        Rails.logger.warn("outbox publisher not enqueued, the cron delivers instead error=#{error.class}")
       end
     end
   end

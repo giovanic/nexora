@@ -239,6 +239,69 @@ RSpec.describe Shared::Outbox::PublishJob do
     end
   end
 
+  # The oldest due event is picked first, so a failure that never counted as an
+  # attempt would hold every later event back on every run.
+  describe "a failure of the publisher itself" do
+    it "counts a discard rule that fails as an attempt and delivers the next event in the same run" do
+      subscribe("user_profile.create_profile")
+      broken = travel_to(1.minute.ago) { publish }
+      # A database error also aborts the transaction the event was picked in.
+      Shared::Outbox.discard_if do |event|
+        Shared::Outbox::Event.connection.select_value("SELECT 1 / 0") if event.id == broken.id
+        false
+      end
+      later = publish
+
+      run_publisher
+
+      expect(received["user_profile.create_profile"]).to eq([ later.id ])
+      expect(broken.reload).to have_attributes(attempts: 1, published_at: nil, dead_at: nil)
+      expect(broken.next_attempt_at).to be > Time.current
+    end
+
+    it "counts a failure to record the result as an attempt and delivers the next event in the same run" do
+      subscribe("user_profile.create_profile")
+      first = travel_to(1.minute.ago) { publish }
+      later = publish
+      updates = 0
+      allow_any_instance_of(Shared::Outbox::Event).to receive(:update!).and_wrap_original do |original, *args, **options|
+        updates += 1
+        raise ActiveRecord::StatementInvalid, "update failed" if updates == 1
+
+        original.call(*args, **options)
+      end
+
+      run_publisher
+
+      expect(first.reload).to have_attributes(attempts: 1, published_at: nil)
+      expect(consumed(first)).to eq([])
+      expect(later.reload.published_at).to be_present
+      expect(consumed(later)).to eq([ "user_profile.create_profile" ])
+    end
+
+    describe "after 8 attempts" do
+      include SentryCapture
+
+      it "marks dead an event whose discard rule keeps failing, alerting with only the event name and the rule" do
+        Shared::Outbox.discard_if { |_event| raise "failed for ana@example.test" }
+        subscribe("user_profile.create_profile")
+        event = publish(payload: { "profile_id" => "profile-secret-id" })
+
+        8.times { after_wait(event) { run_publisher } }
+
+        expect(event.reload).to have_attributes(attempts: 8, published_at: nil)
+        expect(event.dead_at).to be_present
+        expect(received).to be_empty
+        expect(sentry_events.size).to eq(1)
+        alert = sentry_events.first
+        expect(alert.exception.values.first.type).to eq("Shared::Outbox::DeadEvent")
+        expect(alert.tags).to include(outbox_event: "user.registered", outbox_consumer: "outbox.discard_rule")
+        serialized = alert.to_json_compatible.to_json
+        [ event.id, "profile-secret-id", "ana@example.test" ].each { |value| expect(serialized).not_to include(value) }
+      end
+    end
+  end
+
   # Committed rows and real threads: the examples above share one transaction,
   # which other connections cannot see.
   describe "two publishers at once" do
