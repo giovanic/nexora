@@ -6,7 +6,7 @@ Doze contextos num só monólito, separados por namespace ([ADR 0003](decisions/
 
 1. Um contexto só chama outro por sua **API pública**: módulos e serviços expostos em `<Contexto>::Api` ou por eventos. A `Api` devolve valores, `Data` ou identificadores, nunca modelos nem consultas do ActiveRecord.
 2. Um contexto **nunca** lê ou grava as tabelas de outro, nem usa os modelos de outro em associações. Referência entre contextos é por identificador.
-3. Identity & Access é a única dependência permitida a todos, e somente para: usuário atual, `consent_granted?(user_id, purpose)` e `confirm_deletion(user_id, context)`.
+3. Identity & Access é a única dependência permitida a todos, e somente para: usuário atual e `consent_granted?(user_id, purpose)`. Na exclusão de conta, nenhum contexto chama Identity: cada contexto registra seu `exporter` e seu `eraser` em `Shared::DataRegistry` ao iniciar, e Identity executa os apagadores.
 4. Nenhum contexto depende de Gamification, Notifications ou Progress & Analytics. Gamification só escuta eventos. Notifications escuta eventos e lê preferências em User Profile. Progress & Analytics escuta eventos e pode ler as APIs públicas dos demais, em sentido único.
 5. Ciclos são proibidos. Quando a informação precisa voltar, usa-se evento.
 6. Infraestrutura (cliente de IA, cliente do Strava, armazenamento) fica atrás de adaptadores de cada contexto.

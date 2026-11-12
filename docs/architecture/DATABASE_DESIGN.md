@@ -71,7 +71,7 @@ Histórico de inclusão apenas: nunca atualizado nem apagado enquanto a conta ex
 
 Trilha de ações sensíveis, de inclusão apenas.
 
-- **Colunas:** `id`, `user_ref` (identificador sem outros dados, anonimizado na exclusão), `action`, `metadata` (lista fechada de campos por `action`, sem texto livre, e-mail digitado ou dado de saúde), `ip_hmac` (HMAC com chave rotativa, pois hash simples de IPv4 é reversível), `occurred_at`.
+- **Colunas:** `id`, `user_ref` (UUID do usuário, sem outros dados; na exclusão da conta continua ligado ao mesmo UUID), `action`, `metadata` (lista fechada de campos por `action`, sem texto livre, e-mail digitado ou dado de saúde), `ip_hmac` (HMAC com chave rotativa, pois hash simples de IPv4 é reversível), `occurred_at`.
 - **Índices:** `(user_ref, occurred_at)`.
 
 ### `account_deletions`
@@ -336,7 +336,7 @@ Prazos iniciais, a confirmar com a revisão jurídica ([PRIVACY_AND_LGPD.md](../
 | `activity_sync_events` | 30 dias | Apagados |
 | `outbox_events` e `consumed_events` | 30 dias após o processamento | Removidos ou anonimizados |
 | XP, metas, missões e conquistas | Enquanto a conta existir | Apagados |
-| `consent_records` e `audit_events` | Proposta provisória de 5 anos, a confirmar na revisão jurídica | Mantidos sem conteúdo de saúde, com referência anonimizada |
+| `consent_records` e `audit_events` | Proposta provisória de 5 anos, a confirmar na revisão jurídica | Mantidos sem conteúdo de saúde, ligados ao mesmo UUID |
 | `sessions` e `device_tokens` | Até expirar ou revogar, mais 30 dias | Apagados |
 | `notifications` | 90 dias | Apagadas |
 | `weekly_reports`, `progress_snapshots`, `weekly_plans` | Enquanto a conta existir | Apagados |
