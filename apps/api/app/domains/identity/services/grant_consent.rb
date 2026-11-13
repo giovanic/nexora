@@ -1,7 +1,8 @@
 module Identity
   # Records the grant of a purpose, for the version of the text in force only.
   # The record, the audit and consent.granted are written together. Granting a
-  # purpose already granted with that version writes nothing.
+  # purpose already granted with that version writes nothing. A new health_data
+  # grant waits for the earlier withdrawal to be applied (revocation_pending).
   module GrantConsent
     def self.call(user_id:, purpose:, version:, source: nil)
       return ConsentRecord.unknown_purpose unless ConsentTexts.purpose?(purpose)
@@ -16,6 +17,10 @@ module Identity
         # The lock puts the decisions of one person in a row, so the latest record stays the latest.
         next :not_found unless User.active.lock.find_by(id: user_id)
 
+        # health_data: what the person withdrew must be erased before a new grant,
+        # or the old data would come back under it (owner ruling R34).
+        next revocation_pending if purpose == "health_data" && withdrawal_pending?(user_id)
+
         latest = ConsentRecord.latest(user_id:, purpose:)
         record(user_id:, purpose:, version:, source:, latest:) unless latest&.granted? && latest.text_version == version
         Api.consent(user_id:, purpose:)
@@ -28,5 +33,14 @@ module Identity
       Shared::Outbox.publish!(name: "consent.granted", user_id:, payload: { purpose:, version: })
     end
     private_class_method :record
+
+    def self.withdrawal_pending?(user_id)
+      Shared::Outbox.undelivered?(name: "consent.revoked", user_id:, payload: { purpose: "health_data" })
+    end
+
+    def self.revocation_pending
+      Api::Errors.new(code: "revocation_pending", details: [])
+    end
+    private_class_method :withdrawal_pending?, :revocation_pending
   end
 end

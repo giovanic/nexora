@@ -96,15 +96,6 @@ module Identity
         consent_info(purpose, ConsentRecord.latest(user_id:, purpose:)).state == "granted"
       end
 
-      # True when the latest record of the purpose is a grant made after the
-      # instant, so a consumer of an older revoke can tell it was overtaken.
-      def consent_granted_after?(user_id:, purpose:, instant:)
-        raise ArgumentError, "unknown consent purpose" unless ConsentTexts.purpose?(purpose)
-
-        latest = ConsentRecord.latest(user_id:, purpose:)
-        !!(latest&.granted? && latest.occurred_at > instant)
-      end
-
       # Every purpose, in the order of ConsentTexts::PURPOSES, from one query.
       def consents(user_id:)
         latest = ConsentRecord.where(user_id:).select("DISTINCT ON (purpose) *").order(:purpose, occurred_at: :desc).index_by(&:purpose)
@@ -115,7 +106,8 @@ module Identity
         consent_info(purpose, ConsentRecord.latest(user_id:, purpose:))
       end
 
-      # Consent, Errors (validation_failed, outdated_version) or :not_found
+      # Consent, Errors (validation_failed, outdated_version, revocation_pending for
+      # health_data while its withdrawal is not applied) or :not_found
       # for an account that does not exist or was deleted.
       def grant_consent(user_id:, purpose:, version:, source: nil)
         GrantConsent.call(user_id:, purpose:, version:, source:)

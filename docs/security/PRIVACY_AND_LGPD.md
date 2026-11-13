@@ -56,7 +56,7 @@ Requisitos do art. 11, I, e do art. 8:
 | `usage_metrics` | Progress & Analytics para a coleta | `usage_facts` da pessoa apagados |
 | `health_data` | Todo o tratamento, porque é a função do produto | O contexto de perfil apaga esportes (com histórico), níveis, motivações e nome de exibição; ficam fuso horário e unidades, e a conta continua. As funções de saúde ficam bloqueadas até nova concessão. Decisão do responsável de 2026-11-13; a revisão jurídica confirma |
 
-**Estado na Fase 02:** só existe a Identity. Revogar `health_data` funciona como as outras finalidades: registro, evento `consent.revoked` e apagamento das informações de saúde do perfil (esportes, níveis, motivações e nome de exibição), sem exigir a exclusão da conta. As demais finalidades já podem ser concedidas e revogadas, com registro e evento `consent.revoked`, mas ainda não têm tratamento a interromper.
+**Estado na Fase 02:** só existe a Identity. Revogar `health_data` funciona como as outras finalidades: registro, evento `consent.revoked` e apagamento das informações de saúde do perfil (esportes, níveis, motivações e nome de exibição), sem exigir a exclusão da conta. As demais finalidades já podem ser concedidas e revogadas, com registro e evento `consent.revoked`, mas ainda não têm tratamento a interromper. Um novo consentimento de `health_data` só é aceito depois que a retirada anterior foi aplicada (em geral em menos de um minuto); antes disso a API responde `409 revocation_pending`, para que nada escrito antes da retirada sobreviva a ela.
 
 Toda fase que cria um novo tratamento atualiza esta tabela e testa a interrupção.
 

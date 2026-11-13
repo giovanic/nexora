@@ -305,7 +305,9 @@ paths:
       description: |
         A version other than the current one answers 409 outdated_version, so the app shows the
         current text again. Granting a purpose already granted with that version writes nothing new.
-        An unknown purpose answers 422 validation_failed.
+        An unknown purpose answers 422 validation_failed. Granting health_data again while its earlier
+        withdrawal is not yet applied (the profile's health information is still being erased,
+        usually under a minute) answers 409 revocation_pending; the app tries again shortly.
       requestBody:
         required: true
         content:

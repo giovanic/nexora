@@ -62,6 +62,19 @@ RSpec.describe "consents", :identity do
       expect_response_to_match_contract
     end
 
+    it "health_data again before the withdrawal is applied is refused with 409 revocation_pending" do
+      grant(purpose: "health_data")
+      delete "/api/v1/consents/health_data", headers: bearer(token)
+      records = Identity::ConsentRecord.count
+
+      grant(purpose: "health_data")
+
+      expect(response).to have_http_status(:conflict)
+      expect(response.parsed_body.dig("error", "code")).to eq("revocation_pending")
+      expect(Identity::ConsentRecord.count).to eq(records)
+      expect_response_to_match_contract
+    end
+
     it "outdated version is refused with 409 outdated_version" do
       grant(purpose: "health_data", version: 2)
 

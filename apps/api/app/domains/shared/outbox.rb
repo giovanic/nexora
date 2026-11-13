@@ -43,6 +43,16 @@ module Shared
         event
       end
 
+      # True while an event of the person with that name (and, when given, that
+      # payload) was not delivered to every consumer. A dead event counts: it
+      # was not applied either. Lets a context wait for its own earlier change
+      # to take effect without reading the table.
+      def undelivered?(name:, user_id:, payload: {})
+        scope = Event.where(name:, user_id:, published_at: nil)
+        scope = scope.where("payload @> ?::jsonb", payload.to_json) if payload.present?
+        scope.exists?
+      end
+
       def subscribe(event_name, consumer:, &handler)
         raise ArgumentError, "subscribe needs a block" unless handler
         raise ArgumentError, "consumer must look like context.action" unless consumer.to_s.match?(CONSUMER_NAME)
