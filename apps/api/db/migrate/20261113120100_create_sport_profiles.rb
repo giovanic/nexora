@@ -10,8 +10,8 @@ class CreateSportProfiles < ActiveRecord::Migration[8.1]
       t.datetime :ended_at
       t.timestamps
 
-      t.check_constraint "sport IN ('running', 'walking', 'cycling', 'strength', 'swimming', 'other')", name: "sport_profiles_sport_known"
-      t.check_constraint "level IN ('beginner', 'intermediate', 'advanced')", name: "sport_profiles_level_known"
+      t.check_constraint "sport::text IN ('running'::text, 'walking'::text, 'cycling'::text, 'strength'::text, 'swimming'::text, 'other'::text)", name: "sport_profiles_sport_known"
+      t.check_constraint "level::text IN ('beginner'::text, 'intermediate'::text, 'advanced'::text)", name: "sport_profiles_level_known"
       t.check_constraint "ended_at IS NULL OR ended_at >= started_at", name: "sport_profiles_period_ordered"
     end
 

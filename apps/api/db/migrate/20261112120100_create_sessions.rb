@@ -12,7 +12,7 @@ class CreateSessions < ActiveRecord::Migration[8.1]
       t.datetime :revoked_at
       t.timestamps
 
-      t.check_constraint "client IN ('web', 'mobile')", name: "sessions_client_known"
+      t.check_constraint "client::text IN ('web'::text, 'mobile'::text)", name: "sessions_client_known"
       t.check_constraint "idle_expires_at <= absolute_expires_at", name: "sessions_idle_within_absolute"
       t.check_constraint "char_length(device_label) <= 100", name: "sessions_device_label_length"
     end
