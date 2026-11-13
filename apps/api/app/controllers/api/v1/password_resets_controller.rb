@@ -5,7 +5,7 @@ module Api
 
       allow_unauthenticated_access only: %i[create update]
       limit_attempts_by_ip :create
-      limit_attempts_by_email :create
+      limit_resets_by_email :create
       limit_attempts_by_ip :update
 
       # The same answer whether the e-mail has an account or not.

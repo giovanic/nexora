@@ -80,6 +80,34 @@ RSpec.describe "sessions", :identity do
       end
     end
 
+    describe "the per-e-mail limit counts failures only" do
+      it "does not block 6 successful sign ins for the same e-mail from different IPs" do
+        sign_up
+        6.times { |n| sign_in(env: { "REMOTE_ADDR" => "198.51.100.#{n}" }) }
+
+        expect(response).to have_http_status(:created)
+      end
+
+      it "blocks the 6th attempt after 5 failures, even with the right password" do
+        sign_up
+        5.times { |n| sign_in(password: "wrong password!", env: { "REMOTE_ADDR" => "198.51.100.#{n}" }) }
+        sign_in(env: { "REMOTE_ADDR" => "198.51.100.99" })
+
+        expect(response).to have_http_status(:too_many_requests)
+        expect(response.headers["Retry-After"]).to eq("900")
+      end
+
+      it "lets the person in again after 15 minutes" do
+        sign_up
+        5.times { |n| sign_in(password: "wrong password!", env: { "REMOTE_ADDR" => "198.51.100.#{n}" }) }
+
+        travel 16.minutes
+        sign_in(env: { "REMOTE_ADDR" => "198.51.100.99" })
+
+        expect(response).to have_http_status(:created)
+      end
+    end
+
     it "keeps e-mail, password and token out of the log" do
       log_path = Rails.root.join("log/test.log")
       offset = File.size(log_path)

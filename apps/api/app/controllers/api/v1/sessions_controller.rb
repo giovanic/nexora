@@ -5,7 +5,7 @@ module Api
 
       allow_unauthenticated_access only: %i[create refresh]
       limit_attempts_by_ip :create
-      limit_attempts_by_email :create
+      refuse_after_failed_sign_ins :create
       limit_attempts_by_ip :refresh
 
       def index
@@ -25,7 +25,10 @@ module Api
 
         result = Identity::Api.authenticate(email: fields[:email], password: fields[:password], client: fields[:client],
                                             device_label: fields[:device_label], ip: request.remote_ip)
-        return render_error(:unauthorized, "invalid_credentials") if result == :invalid
+        if result == :invalid
+          count_failed_sign_in
+          return render_error(:unauthorized, "invalid_credentials")
+        end
 
         render_session(result, client: fields[:client], status: :created)
       end

@@ -104,13 +104,14 @@ RSpec.describe "password resets", :identity do
         expect_response_to_match_contract
       end
 
-      it "allows 5 requests per normalized e-mail in 15 minutes, from any IP" do
-        5.times { |n| request_reset(" ANA@example.test", env: { "REMOTE_ADDR" => "198.51.100.#{n}" }) }
+      it "allows 20 requests per normalized e-mail in 1 hour, from any IP" do
+        20.times { |n| request_reset(" ANA@example.test", env: { "REMOTE_ADDR" => "198.51.#{n}.1" }) }
+        expect(response).to have_http_status(:accepted)
         request_reset(env: { "REMOTE_ADDR" => "198.51.100.99" })
 
         expect(response).to have_http_status(:too_many_requests)
-        expect(response.headers["Retry-After"]).to eq("900")
-        expect(ActionMailer::Base.deliveries.size).to eq(5)
+        expect(response.headers["Retry-After"]).to eq("3600")
+        expect(ActionMailer::Base.deliveries.size).to eq(20)
       end
     end
   end
