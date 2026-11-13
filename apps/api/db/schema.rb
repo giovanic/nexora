@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_12_120300) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_13_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -83,6 +83,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_120300) do
     t.check_constraint "idle_expires_at <= absolute_expires_at", name: "sessions_idle_within_absolute"
   end
 
+  create_table "sport_profiles", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "sport", null: false
+    t.string "level", null: false
+    t.datetime "started_at", null: false
+    t.datetime "ended_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "sport"], name: "index_sport_profiles_active", unique: true, where: "(ended_at IS NULL)"
+    t.index ["user_id", "started_at"], name: "index_sport_profiles_on_user_id_and_started_at"
+    t.check_constraint "ended_at IS NULL OR ended_at >= started_at", name: "sport_profiles_period_ordered"
+    t.check_constraint "level::text = ANY (ARRAY['beginner'::character varying, 'intermediate'::character varying, 'advanced'::character varying]::text[])", name: "sport_profiles_level_known"
+    t.check_constraint "sport::text = ANY (ARRAY['running'::character varying, 'walking'::character varying, 'cycling'::character varying, 'strength'::character varying, 'swimming'::character varying, 'other'::character varying]::text[])", name: "sport_profiles_sport_known"
+  end
+
+  create_table "user_profiles", primary_key: "user_id", id: :uuid, default: nil, force: :cascade do |t|
+    t.string "display_name"
+    t.string "time_zone", null: false
+    t.string "units", default: "metric", null: false
+    t.jsonb "notification_preferences", default: {}, null: false
+    t.string "motivations", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.check_constraint "cardinality(motivations) <= 4", name: "user_profiles_motivations_max"
+    t.check_constraint "jsonb_typeof(notification_preferences) = 'object'::text", name: "user_profiles_preferences_object"
+    t.check_constraint "motivations <@ ARRAY['start_caring'::character varying, 'training_consistency'::character varying, 'understand_food'::character varying, 'track_progress'::character varying]", name: "user_profiles_motivations_known"
+    t.check_constraint "units::text = 'metric'::text", name: "user_profiles_units_known"
+  end
+
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "email", null: false
     t.string "password_digest", null: false
@@ -96,4 +125,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_120300) do
   add_foreign_key "consent_records", "users"
   add_foreign_key "consumed_events", "outbox_events", column: "event_id", on_delete: :cascade
   add_foreign_key "sessions", "users"
+  add_foreign_key "sport_profiles", "users"
+  add_foreign_key "user_profiles", "users"
 end

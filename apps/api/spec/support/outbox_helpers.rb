@@ -1,12 +1,15 @@
 require "sentry/test_helper"
 
 # Registrations live in memory for the whole process, so each example that adds
-# consumers, discard rules or data handlers gets them removed afterwards.
+# consumers, discard rules or data handlers gets them removed afterwards. The
+# contexts' own consumers (registered at boot) are cleared too, so a spec of the
+# publisher sees only what it subscribes; tag an example with :real_consumers to keep them.
 module OutboxHelpers
   def self.included(base)
     base.include ActiveSupport::Testing::TimeHelpers
     base.around do |example|
       Shared::Outbox.preserving_registrations do
+        Shared::Outbox.instance_variable_set(:@consumers, {}) unless example.metadata[:real_consumers]
         Shared::DataRegistry.preserving_registrations { example.run }
       end
     end

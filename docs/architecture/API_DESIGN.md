@@ -87,8 +87,8 @@ Os valores acima são apenas ilustrativos.
 
 | Método e rota | Função |
 |---|---|
-| `GET`/`PATCH /api/v1/profile` | Perfil e preferências |
-| `GET`/`POST`/`PATCH`/`DELETE /api/v1/sport_profiles` | Esportes e níveis |
+| `GET`/`PATCH /api/v1/profile` | Perfil, motivações e fuso. Exige `health_data`; antes de o perfil nascer do cadastro responde `409 profile_pending`; fuso desconhecido responde `422 invalid_time_zone` |
+| `GET`/`POST /api/v1/sport_profiles`, `DELETE /api/v1/sport_profiles/:id` | Esportes e níveis. Trocar o nível encerra a linha e abre outra, e o histórico fica. Exige `health_data` |
 
 ### Nutrition e Food AI (Fase 03)
 

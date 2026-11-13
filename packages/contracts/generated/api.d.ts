@@ -248,6 +248,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The profile of the signed-in person. Needs the health_data consent.
+         * @description The profile is created from the sign-up, shortly after it. Until then this answers
+         *     409 profile_pending; try again in a moment. Without health_data it answers 403 consent_required.
+         */
+        get: operations["getProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Changes the fields sent and leaves the others as they are.
+         * @description Nothing is saved unless every field is valid. A time zone unknown to the IANA database answers
+         *     422 invalid_time_zone. Motivations outside the list, or more than 4, answer 422 validation_failed.
+         *     Needs the health_data consent. Before the profile exists it answers 409 profile_pending.
+         */
+        patch: operations["updateProfile"];
+        trace?: never;
+    };
+    "/api/v1/sport_profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The sports the signed-in person practices now, with the level of each.
+         * @description Needs the health_data consent. Before the profile exists it answers 409 profile_pending.
+         */
+        get: operations["listSportProfiles"];
+        put?: never;
+        /**
+         * Adds a sport or changes its level.
+         * @description Changing the level ends the current entry and starts a new one, so the history is kept. Sending
+         *     the level already set changes nothing. A sport or level outside the lists answers 422
+         *     validation_failed. Needs the health_data consent.
+         */
+        post: operations["setSportProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sport_profiles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Stops a sport. The entry is ended, not erased, so the history stays.
+         * @description Another person's entry, an ended one or an unknown id answers 404. Needs the health_data consent.
+         */
+        delete: operations["removeSportProfile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -306,6 +379,41 @@ export interface components {
             last_used_at: string;
             /** @description True for the session that made this request. */
             current: boolean;
+        };
+        /** @enum {string} */
+        Motivation: "start_caring" | "training_consistency" | "understand_food" | "track_progress";
+        Profile: {
+            display_name: string | null;
+            /** @description IANA time zone, such as America/Sao_Paulo. */
+            time_zone: string;
+            /** @enum {string} */
+            units: "metric";
+            motivations: components["schemas"]["Motivation"][];
+        };
+        ProfileUpdate: {
+            display_name?: string | null;
+            /** @description IANA time zone. Unknown zones answer 422 invalid_time_zone. */
+            time_zone?: string;
+            motivations?: components["schemas"]["Motivation"][];
+        };
+        /** @enum {string} */
+        Sport: "running" | "walking" | "cycling" | "strength" | "swimming" | "other";
+        /** @enum {string} */
+        SportLevel: "beginner" | "intermediate" | "advanced";
+        SportProfileRequest: {
+            sport: components["schemas"]["Sport"];
+            level: components["schemas"]["SportLevel"];
+        };
+        SportProfile: {
+            /** Format: uuid */
+            id: string;
+            sport: components["schemas"]["Sport"];
+            level: components["schemas"]["SportLevel"];
+            /** Format: date-time */
+            started_at: string;
+        };
+        SportProfileList: {
+            sport_profiles: components["schemas"]["SportProfile"][];
         };
         /** @enum {string} */
         ConsentPurpose: "health_data" | "food_photo_ai" | "strava_integration" | "usage_metrics";
@@ -729,6 +837,137 @@ export interface operations {
             };
             401: components["responses"]["Error"];
             404: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    getProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description The profile after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    listSportProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One entry per active sport. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportProfileList"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    setSportProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SportProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description The entry in force. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportProfile"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    removeSportProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sport was stopped. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
     };

@@ -317,6 +317,133 @@ paths:
           $ref: "#/components/responses/Error"
         default:
           $ref: "#/components/responses/Error"
+  /api/v1/profile:
+    get:
+      operationId: getProfile
+      summary: The profile of the signed-in person. Needs the health_data consent.
+      description: |
+        The profile is created from the sign-up, shortly after it. Until then this answers
+        409 profile_pending; try again in a moment. Without health_data it answers 403 consent_required.
+      responses:
+        "200":
+          description: The profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    patch:
+      operationId: updateProfile
+      summary: Changes the fields sent and leaves the others as they are.
+      description: |
+        Nothing is saved unless every field is valid. A time zone unknown to the IANA database answers
+        422 invalid_time_zone. Motivations outside the list, or more than 4, answer 422 validation_failed.
+        Needs the health_data consent. Before the profile exists it answers 409 profile_pending.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: The profile after the change.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/sport_profiles:
+    get:
+      operationId: listSportProfiles
+      summary: The sports the signed-in person practices now, with the level of each.
+      description: Needs the health_data consent. Before the profile exists it answers 409 profile_pending.
+      responses:
+        "200":
+          description: One entry per active sport.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SportProfileList"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: setSportProfile
+      summary: Adds a sport or changes its level.
+      description: |
+        Changing the level ends the current entry and starts a new one, so the history is kept. Sending
+        the level already set changes nothing. A sport or level outside the lists answers 422
+        validation_failed. Needs the health_data consent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SportProfileRequest"
+      responses:
+        "201":
+          description: The entry in force.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SportProfile"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/sport_profiles/{id}:
+    delete:
+      operationId: removeSportProfile
+      summary: Stops a sport. The entry is ended, not erased, so the history stays.
+      description: Another person's entry, an ended one or an unknown id answers 404. Needs the health_data consent.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: The sport was stopped.
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     bearerSession:
@@ -463,6 +590,83 @@ components:
         current:
           type: boolean
           description: True for the session that made this request.
+    Motivation:
+      type: string
+      enum: [start_caring, training_consistency, understand_food, track_progress]
+    Profile:
+      type: object
+      additionalProperties: false
+      required: [display_name, time_zone, units, motivations]
+      properties:
+        display_name:
+          type: [string, "null"]
+          maxLength: 60
+        time_zone:
+          type: string
+          description: IANA time zone, such as America/Sao_Paulo.
+        units:
+          type: string
+          enum: [metric]
+        motivations:
+          type: array
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/Motivation"
+    ProfileUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        display_name:
+          type: [string, "null"]
+          maxLength: 60
+        time_zone:
+          type: string
+          description: IANA time zone. Unknown zones answer 422 invalid_time_zone.
+        motivations:
+          type: array
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/Motivation"
+    Sport:
+      type: string
+      enum: [running, walking, cycling, strength, swimming, other]
+    SportLevel:
+      type: string
+      enum: [beginner, intermediate, advanced]
+    SportProfileRequest:
+      type: object
+      additionalProperties: false
+      required: [sport, level]
+      properties:
+        sport:
+          $ref: "#/components/schemas/Sport"
+        level:
+          $ref: "#/components/schemas/SportLevel"
+    SportProfile:
+      type: object
+      additionalProperties: false
+      required: [id, sport, level, started_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sport:
+          $ref: "#/components/schemas/Sport"
+        level:
+          $ref: "#/components/schemas/SportLevel"
+        started_at:
+          type: string
+          format: date-time
+    SportProfileList:
+      type: object
+      additionalProperties: false
+      required: [sport_profiles]
+      properties:
+        sport_profiles:
+          type: array
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/SportProfile"
     ConsentPurpose:
       type: string
       enum: [health_data, food_photo_ai, strava_integration, usage_metrics]
