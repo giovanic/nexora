@@ -19,13 +19,13 @@ module RequiredEnv
 
   # Names of variables that are present but malformed. Never the values.
   def self.invalid(env)
-    short = MINIMUM_LENGTH.select { |name, length| present?(env, name) && env[name].to_s.length < length }.keys
-    bad_url = present?(env, "APP_WEB_URL") && !WEB_URL.match?(env["APP_WEB_URL"].to_s) ? [ "APP_WEB_URL" ] : []
+    short = MINIMUM_LENGTH.select { |name, length| set?(env, name) && env[name].to_s.length < length }.keys
+    bad_url = set?(env, "APP_WEB_URL") && !WEB_URL.match?(env["APP_WEB_URL"].to_s) ? [ "APP_WEB_URL" ] : []
     short + bad_url
   end
 
-  def self.present?(env, name)
+  def self.set?(env, name)
     !env[name].to_s.strip.empty?
   end
-  private_class_method :present?
+  private_class_method :set?
 end
