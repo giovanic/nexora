@@ -9,18 +9,37 @@ require "support/outbox_helpers"
 RSpec.describe "isolation between people", :identity, :real_consumers do
   include OutboxHelpers
 
-  ISOLATION_PUBLIC_CONTROLLERS = %w[api/v1/registrations api/v1/password_resets health].freeze
-  # Sign in takes no session: nothing of anyone's to reach.
-  ISOLATION_PUBLIC_ACTIONS = %w[sessions#create].freeze
+  # Routes that take no session, by "VERB path". Anything else under api/ needs a case.
+  ISOLATION_PUBLIC_ROUTES = [
+    "POST /api/v1/registrations", "POST /api/v1/sessions", # sign up and sign in
+    "POST /api/v1/password_resets", "PATCH /api/v1/password_resets/:token"
+  ].freeze
+  # Outside api/ only these controller#action pairs may exist: health probes,
+  # local-only operational probes (internal_routes_spec) and Rails development tools.
+  ISOLATION_OTHER_ACTIONS = %w[
+    health#live health#ready
+    internal/smoke_jobs#create internal/smoke_jobs#show internal/smoke_errors#create
+    rails/welcome#index rails/info#index rails/info#properties rails/info#routes rails/info#notes
+    rails/mailers#index rails/mailers#download rails/mailers#preview
+  ].freeze
 
-  def self.authenticated_actions
-    Rails.application.routes.routes.filter_map do |route|
-      controller = route.defaults[:controller]
-      next if route.verb.empty? || controller.nil? || !controller.start_with?("api/") || ISOLATION_PUBLIC_CONTROLLERS.include?(controller)
+  # Returns the "VERB path" of every route that needs a case, and the routes
+  # outside api/ that are on no list.
+  def self.classify_routes
+    needing_case = []
+    unknown = []
+    Rails.application.routes.routes.each do |route|
+      next if route.verb.empty?
 
-      action = "#{controller.delete_prefix('api/v1/')}##{route.defaults[:action]}"
-      action unless ISOLATION_PUBLIC_ACTIONS.include?(action)
-    end.uniq
+      controller = route.defaults[:controller].to_s
+      key = "#{route.verb} #{route.path.spec.to_s.delete_suffix('(.:format)')}"
+      if controller.start_with?("api/")
+        needing_case << key unless ISOLATION_PUBLIC_ROUTES.include?(key)
+      elsif !ISOLATION_OTHER_ACTIONS.include?("#{controller}##{route.defaults[:action]}")
+        unknown << "#{key} (#{controller}##{route.defaults[:action]})"
+      end
+    end
+    [ needing_case, unknown ]
   end
 
   let!(:a_token) { mobile_token(email: "ana@example.test") }
@@ -67,79 +86,85 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
   end
 
   ISOLATION_CASES = {
-    "sessions#index" => lambda {
+    "GET /api/v1/sessions" => lambda {
       get "/api/v1/sessions", headers: b_headers
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["sessions"].map { |s| s["id"] }).to eq([ Identity::Session.where(user_id: b_id).sole.id ])
       expect(response.body).not_to include(a_session_id)
     },
-    "sessions#refresh" => lambda {
+    "POST /api/v1/sessions/refresh" => lambda {
       post "/api/v1/sessions/refresh", headers: b_headers
       expect(response).to have_http_status(:ok)
     },
-    "sessions#destroy" => lambda {
+    "DELETE /api/v1/sessions/:id" => lambda {
       delete "/api/v1/sessions/#{a_session_id}", headers: b_headers
       expect(response).to have_http_status(:not_found)
     },
-    "sessions#destroy_current" => lambda {
+    "DELETE /api/v1/sessions/current" => lambda {
       delete "/api/v1/sessions/current", headers: b_headers
       expect(response).to have_http_status(:no_content)
     },
-    "consents#index" => lambda {
+    "GET /api/v1/consents" => lambda {
       get "/api/v1/consents", headers: b_headers
       expect(response).to have_http_status(:ok)
       mine = response.parsed_body["consents"].to_h { |consent| [ consent["purpose"], consent["state"] ] }
       expect(mine["health_data"]).to eq("granted")
       expect(mine["usage_metrics"]).not_to eq("granted")
     },
-    "consents#create" => lambda {
+    "POST /api/v1/consents" => lambda {
       post "/api/v1/consents", params: { purpose: "food_photo_ai", version: 1 }, headers: b_headers, as: :json
       expect(response).to have_http_status(:created)
     },
-    "consents#destroy" => lambda {
+    "DELETE /api/v1/consents/:purpose" => lambda {
       post "/api/v1/consents", params: { purpose: "food_photo_ai", version: 1 }, headers: b_headers, as: :json
       delete "/api/v1/consents/food_photo_ai", headers: b_headers
       expect(response).to have_http_status(:no_content)
       expect(Identity::Api.consent_granted?(user_id: a_id, purpose: "food_photo_ai")).to be(true)
     },
-    "consents#text" => lambda {
+    "GET /api/v1/consents/:purpose/text" => lambda {
       get "/api/v1/consents/health_data/text", headers: b_headers
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.keys).to match_array(%w[purpose version text])
     },
-    "profiles#show" => lambda {
+    "GET /api/v1/profile" => lambda {
       get "/api/v1/profile", headers: b_headers
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to include("display_name" => nil, "motivations" => [])
     },
-    "profiles#update" => lambda {
+    "PATCH /api/v1/profile" => lambda {
       patch "/api/v1/profile", params: { display_name: "Bia", motivations: %w[track_progress] }, headers: b_headers, as: :json
       expect(response).to have_http_status(:ok)
       expect(UserProfile::Profile.find(b_id).display_name).to eq("Bia")
     },
-    "sport_profiles#index" => lambda {
+    "GET /api/v1/sport_profiles" => lambda {
       get "/api/v1/sport_profiles", headers: b_headers
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["sport_profiles"]).to be_empty
     },
-    "sport_profiles#create" => lambda {
+    "POST /api/v1/sport_profiles" => lambda {
       post "/api/v1/sport_profiles", params: { sport: "cycling", level: "advanced" }, headers: b_headers, as: :json
       expect(response).to have_http_status(:created)
       expect(UserProfile::SportProfile.where(user_id: b_id).pluck(:sport)).to eq([ "cycling" ])
     },
-    "sport_profiles#destroy" => lambda {
+    "DELETE /api/v1/sport_profiles/:id" => lambda {
       delete "/api/v1/sport_profiles/#{a_sport_id}", headers: b_headers
       expect(response).to have_http_status(:not_found)
     },
-    "accounts#export" => lambda {
+    "POST /api/v1/account/export" => lambda {
       post "/api/v1/account/export", params: { password: IdentityHelpers::PASSWORD }, headers: b_headers, as: :json
       expect(response).to have_http_status(:ok)
       expect(response.body).not_to include("ana@example.test", a_id, a_session_id, a_sport_id)
     },
-    "accounts#destroy" => lambda {
+    # The real erasure runs for B, with A's consumers and erasers registered.
+    "DELETE /api/v1/account" => lambda {
       delete "/api/v1/account", params: { password: IdentityHelpers::PASSWORD }, headers: b_headers, as: :json
       expect(response).to have_http_status(:accepted)
       expect(Identity::AccountDeletion.pluck(:user_id)).to eq([ b_id ])
+      run_publisher
+      Identity::EraseAccountJob.new.perform(Identity::AccountDeletion.sole.id)
+      expect(Identity::AccountDeletion.sole.completed_at).to be_present
+      expect(Identity::User.find(b_id).deleted_at).to be_present
+      expect(UserProfile::Profile.find_by(user_id: b_id)).to be_nil
     }
   }.freeze
 
@@ -155,9 +180,10 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
   end
 
   it "isolation: every authenticated route has a case where another person gets 404 and nothing changes" do
-    routes = self.class.authenticated_actions
+    routes, unknown = self.class.classify_routes
 
     expect(routes).not_to be_empty
+    expect(unknown).to be_empty, "route outside api/ on no list: #{unknown.join(', ')}"
     expect(routes - ISOLATION_CASES.keys).to be_empty, "authenticated route without an isolation case: #{(routes - ISOLATION_CASES.keys).join(', ')}"
     expect(ISOLATION_CASES.keys - routes).to be_empty, "case for a route that does not exist: #{(ISOLATION_CASES.keys - routes).join(', ')}"
   end

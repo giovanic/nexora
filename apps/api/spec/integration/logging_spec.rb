@@ -142,7 +142,7 @@ RSpec.describe "structured logging", type: :request do
       ActionMailer::Base.deliveries.last.body.to_s[%r{\S+/reset-password#token=\S+}]
     end
 
-    it "keeps e-mail, password, token and reset link out of every line, failures included" do
+    it "logs of sign up, sign in, reset, export and deletion, including failures, contain no email, password, token or reset link" do
       secrets = [ email, other_email, IdentityHelpers::PASSWORD, new_password, wrong_password ]
       level = Rails.logger.level
       Rails.logger.level = :debug
