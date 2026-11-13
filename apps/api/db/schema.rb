@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_13_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_13_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -89,7 +89,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_130000) do
     t.datetime "updated_at", null: false
     t.index ["token_digest"], name: "index_sessions_on_token_digest", unique: true
     t.index ["user_id"], name: "index_sessions_on_user_id"
-    t.check_constraint "char_length(device_label::text) <= 100", name: "sessions_device_label_length"
     t.check_constraint "client::text = ANY (ARRAY['web'::text, 'mobile'::text])", name: "sessions_client_known"
     t.check_constraint "idle_expires_at <= absolute_expires_at", name: "sessions_idle_within_absolute"
   end

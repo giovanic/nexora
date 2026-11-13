@@ -318,7 +318,7 @@ RSpec.describe "sessions", :identity do
     it "signs another device of the same person out" do
       token = mobile_token
       sign_in(client: "mobile", device_label: "Tablet")
-      tablet = Identity::Session.find_by!(device_label: "Tablet")
+      tablet = Identity::Session.order(:created_at).last
 
       delete "/api/v1/sessions/#{tablet.id}", headers: bearer(token)
 

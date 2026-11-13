@@ -12,8 +12,11 @@ module Identity
 
     belongs_to :user, class_name: "Identity::User"
 
-    # A label the device sends, shown only to its owner. Cut instead of
-    # refused, so an odd label never blocks a sign in.
+    # A label the device sends ("iPhone de <Name>"), shown only to its owner,
+    # so it is encrypted like the profile name. Never search by it. Cut instead
+    # of refused, so an odd label never blocks a sign in; cut before encrypting,
+    # since the encrypted value is longer.
+    encrypts :device_label
     normalizes :device_label, with: ->(label) { label.strip.first(MAX_DEVICE_LABEL).presence }
 
     validates :client, inclusion: { in: CLIENTS }
