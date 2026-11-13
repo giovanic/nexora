@@ -87,7 +87,7 @@ Prazos provisórios, a confirmar na revisão jurídica ([DATABASE_DESIGN.md](../
 | `sessions` | 30 dias após expirar ou ser revogada | `Identity::RetentionJob` |
 | `audit_events` | 5 anos (provisório) | `Identity::RetentionJob` |
 | `consent_records` | 5 anos (provisório). O último registro de cada finalidade de uma conta ativa permanece, porque é a prova do que está concedido hoje; o de conta excluída segue o prazo | `Identity::RetentionJob` |
-| `outbox_events` e `consumed_events` | 30 dias após o processamento (publicado ou morto); os eventos pendentes permanecem | `Shared::Outbox::CleanupJob` |
+| `outbox_events` e `consumed_events` | 30 dias após a publicação; os eventos pendentes e os mortos permanecem até serem resolvidos ([runbook](../operations/RUNBOOK_OUTBOX.md)) | `Shared::Outbox::CleanupJob` |
 | `account_deletions` concluídas | Já guardam só o UUID e as datas, como registro para reaplicar exclusões após restaurar backup; nenhuma rotina as apaga | n/a |
 
 ## Exclusão de conta

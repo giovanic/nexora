@@ -12,7 +12,7 @@ RSpec.describe Shared::Outbox::CleanupJob do
     Shared::Outbox::ConsumedEvent.create!(consumer:, event_id: event.id, consumed_at: Time.current)
   end
 
-  it "cleanup removes events processed more than 30 days ago, with their consumption marks, and keeps the rest" do
+  it "cleanup removes events published more than 30 days ago, with their consumption marks, and keeps dead and recent ones" do
     old_published = event(published_at: 31.days.ago)
     old_dead = event(dead_at: 31.days.ago)
     recent_published = event(published_at: 29.days.ago)
@@ -22,9 +22,18 @@ RSpec.describe Shared::Outbox::CleanupJob do
 
     result = described_class.new.perform
 
-    expect(Shared::Outbox::Event.all).to match_array([ recent_published, recent_dead, pending ])
+    expect(Shared::Outbox::Event.all).to match_array([ old_dead, recent_published, recent_dead, pending ])
     expect(Shared::Outbox::ConsumedEvent.pluck(:event_id)).to match_array([ recent_published.id, pending.id ])
-    expect(result).to eq(events: 2)
+    expect(result).to eq(events: 1)
+  end
+
+  it "never deletes a dead event, however old: it was not processed, and consent.revoked still blocks on it" do
+    dead = event(name: "consent.revoked", dead_at: 400.days.ago, user_id: SecureRandom.uuid, payload: { "purpose" => "health_data" })
+
+    described_class.new.perform
+
+    expect(Shared::Outbox::Event.find(dead.id)).to be_present
+    expect(Shared::Outbox.undelivered?(name: "consent.revoked", user_id: dead.user_id, payload: { purpose: "health_data" })).to be(true)
   end
 
   it "keeps a user.deletion_requested event that is still pending" do
