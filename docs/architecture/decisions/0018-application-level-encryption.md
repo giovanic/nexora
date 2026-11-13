@@ -32,7 +32,7 @@ Alternativa 2.
 
 **Chaves**, por variável de ambiente: `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`, `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY`, `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT` e `AUDIT_IP_HMAC_KEY` (HMAC do IP em `audit_events`). Em produção as quatro são obrigatórias e têm no mínimo 32 caracteres, verificado na inicialização (`RequiredEnv`); desenvolvimento e teste usam valores públicos locais. Nenhuma chave no repositório.
 
-**Item em aberto: rotação de chaves.** Não há procedimento definido nem testado. Trocar uma chave hoje deixaria dados ilegíveis. Antes do M1 é preciso decidir e testar a rotação (a criptografia do Active Record aceita chaves anteriores, mas isso não foi exercitado) e documentá-la em [SECURITY.md](../../security/SECURITY.md).
+**Item em aberto: rotação de chaves.** Não há procedimento definido nem testado, e trocar uma chave hoje deixaria dados ilegíveis. Segundo o [registro de fontes](../EXTERNAL_SOURCES.md) (linha da cifragem determinística, verificada), a rotação de chaves não é suportada para a cifragem determinística, e `users.email` é determinística. Girar essa chave exigiria um procedimento de recifragem, a ser desenhado e testado antes do M1 e documentado em [SECURITY.md](../../security/SECURITY.md). Não se afirma aqui o que vale para as colunas não determinísticas, porque isso não está registrado como verificado.
 
 ## Justificativa
 

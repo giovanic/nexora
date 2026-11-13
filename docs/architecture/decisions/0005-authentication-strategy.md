@@ -20,7 +20,7 @@ Como autenticar mobile e web com sessões revogáveis por dispositivo, sem mante
 5. **Provedor externo de identidade:** tira o problema de casa, mas adiciona custo, dependência e transferência de dados pessoais.
 
 **Web:** cookie `HttpOnly` e `SameSite` em vez de token em `localStorage`.
-**Mobile:** token em armazenamento seguro do sistema (`expo-secure-store`, a confirmar).
+**Mobile:** token em armazenamento seguro do sistema (`expo-secure-store`).
 
 ## Decisão
 
@@ -61,7 +61,7 @@ Suíte completa da API em 2026-11-13, no commit 35684a2: `bundle exec rspec` com
 - `domains/identity/api_spec.rb`, `domains/identity/user_spec.rb`, `domains/identity/session_device_label_spec.rb`: regras do domínio, digest, e-mail normalizado;
 - `requests/isolation_spec.rb`, `requests/no_store_spec.rb`, `requests/cors_spec.rb`, `integration/logging_spec.rb`: isolamento entre pessoas, `no-store`, origens e ausência de senha, token e e-mail nos logs.
 
-O fluxo no app e no painel está nos relatórios das Tarefas 10 e 11 e nas capturas de tela da fase.
+O fluxo no app e no painel está nas capturas de tela versionadas em `docs/roadmap/reports/evidence/phase-02/` (`mobile-*.png` e `web-*.png`: cadastro, entrada, consentimento, sessões, saída, exportação com senha errada, token de recuperação inválido e exclusão).
 
 ## Estado da decisão
 

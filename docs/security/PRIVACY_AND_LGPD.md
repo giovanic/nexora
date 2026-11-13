@@ -144,5 +144,5 @@ Provedor de IA, hospedagem, armazenamento, e-mail, monitoramento e serviço de p
 11. Pessoas e menores que apareçam em fotos, e aviso na tela de consentimento.
 12. Retorno do beta (conversas e pedidos): categoria de dado e destinação ao encerrar.
 13. Normas além da LGPD citadas na revisão interna, sem verificação na fonte: resolução da ANPD sobre prazo de incidente, ECA Digital e regras da Anvisa sobre software como dispositivo médico.
-14. Marco Civil da Internet (Lei 12.965/2014, art. 15): se o dever de guardar registros de acesso à aplicação conflita com o `ip_hmac` não reversível de `audit_events`, que não permite recuperar o IP. Não decidido.
+14. Marco Civil da Internet (Lei 12.965/2014, art. 15), sem verificação na fonte: se o dever de guardar registros de acesso à aplicação conflita com o `ip_hmac` não reversível de `audit_events`, que não permite recuperar o IP. Não decidido.
 15. Retenção de evento morto da outbox sem resolução: hoje ele fica até alguém resolver (não há prazo), e o evento carrega só identificadores. Se isso exige um prazo máximo, a revisão jurídica define. Não decidido.

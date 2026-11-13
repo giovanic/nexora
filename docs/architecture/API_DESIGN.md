@@ -1,6 +1,6 @@
 # Desenho da API
 
-Contrato entre o backend e os clientes. **Nenhum endpoint é implementado na Fase 00.** A lista abaixo é o desenho inicial; cada fase confirma o seu trecho no contrato OpenAPI.
+Contrato entre o backend e os clientes. As rotas de Identity & Access e de User Profile estão implementadas desde a Fase 02 e seguem o contrato OpenAPI (`packages/contracts/openapi.yaml`). O restante é o desenho inicial; cada fase confirma o seu trecho no contrato.
 
 ## Princípios
 
@@ -23,18 +23,18 @@ Contrato entre o backend e os clientes. **Nenhum endpoint é implementado na Fas
 
 | Status e código | Quando |
 |---|---|
-| `401` (sem código) | Sessão ausente, inválida, revogada ou expirada; token de renovação já usado |
+| `401 unauthorized` | Sessão ausente, inválida, revogada ou expirada; token de renovação já usado |
 | `401 invalid_credentials` | E-mail ou senha errados na entrada, ou senha errada em exportação e exclusão. Não diz qual dos dois errou |
 | `403 consent_required` | Rota que exige um consentimento que não está vigente |
-| `403` (sem código) | `Origin` não permitido numa requisição com cookie que muda estado |
-| `404` | Recurso inexistente ou de outra pessoa; finalidade desconhecida |
+| `403 forbidden` | `Origin` não permitido numa requisição com cookie que muda estado |
+| `404 not_found` | Recurso inexistente ou de outra pessoa; finalidade desconhecida |
 | `409 profile_pending` | Perfil ainda não criado a partir do cadastro (o app tenta de novo) |
 | `409 revocation_pending` | Novo consentimento de `health_data` enquanto a revogação anterior ainda não foi aplicada |
 | `409 outdated_version` | Consentimento concedido numa versão que não é a vigente |
 | `422 validation_failed` | Campos inválidos, com `details`; inclui senha fraca na recuperação |
 | `422 invalid_time_zone` | Fuso que não é IANA |
 | `422 invalid_token` | Token de recuperação desconhecido, usado ou expirado |
-| `429` | Limite de tentativas excedido, com `Retry-After` em segundos |
+| `429 too_many_requests` | Limite de tentativas excedido, com `Retry-After` em segundos |
 
 ## Formato de erro
 

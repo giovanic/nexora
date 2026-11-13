@@ -39,6 +39,7 @@ Outbox transacional em `outbox_events`. Entrega pelo menos uma vez. Cada consumi
 
 Implementação entregue na Fase 02, ainda sem aceitação da ADR:
 
+- **Escolha de implementação:** implementação mínima própria, em `Shared::Outbox`, sem gem de outbox.
 - **Construído:** `outbox_events` e `consumed_events`; `Shared::Outbox.publish!` (exige transação, filtra o payload), `PublishJob` (entrega após o commit, com a rotina de 1 minuto como rede de segurança), consumidores idempotentes em savepoint junto da linha de `consumed_events`, retentativas com espera crescente e evento morto após 8 falhas com alerta, `ReconcileJob` (acusa consumidor faltante), `CleanupJob` (só eventos publicados, 30 dias após a publicação) e regra de descarte para usuário com exclusão pedida. O procedimento para evento morto está em [RUNBOOK_OUTBOX.md](../../operations/RUNBOOK_OUTBOX.md).
 - **AC-02-12:** `apps/api/spec/integration/deletion_requested_delivery_spec.rb` prova que `user.deletion_requested` é entregue mesmo com falha do consumidor, reprocessado sem efeito duplicado, e que a conferência acusa consumidor faltante.
 - **Outros specs:** `apps/api/spec/domains/shared/outbox_spec.rb` e `apps/api/spec/domains/shared/outbox/` (publish, reconcile, cleanup e agenda).
