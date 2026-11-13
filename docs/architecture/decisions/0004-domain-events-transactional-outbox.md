@@ -50,7 +50,7 @@ Regras que todo consumidor futuro deve seguir:
 
 ## Evidência
 
-Implementação entregue na Fase 02, ainda sem aceitação da ADR:
+Implementação entregue na Fase 02:
 
 - **Escolha de implementação:** implementação mínima própria, em `Shared::Outbox`, sem gem de outbox.
 - **Construído:** `outbox_events` e `consumed_events`; `Shared::Outbox.publish!` (exige transação, filtra o payload), `PublishJob` (entrega após o commit, com a rotina de 1 minuto como rede de segurança), consumidores idempotentes em savepoint junto da linha de `consumed_events`, retentativas com espera crescente e evento morto após 8 falhas com alerta, `ReconcileJob` (acusa consumidor faltante), `CleanupJob` (só eventos publicados, 30 dias após a publicação) e regra de descarte para usuário com exclusão pedida. O procedimento para evento morto está em [RUNBOOK_OUTBOX.md](../../operations/RUNBOOK_OUTBOX.md).
@@ -59,8 +59,8 @@ Implementação entregue na Fase 02, ainda sem aceitação da ADR:
 - **Revisão:** várias rodadas de revisão por tarefa na Fase 02 corrigiram, entre outros achados, evento marcado como publicado sem o efeito do consumidor e a corrida entre revogação de `health_data` e escrita de perfil.
 - **Suíte completa** em 2026-11-13: `583 examples, 0 failures`.
 
-Aceitação pendente do responsável no encerramento da Fase 02. Esta seção não muda o estado da decisão.
+Aceita pelo responsável em 2026-11-13, no encerramento da Fase 02.
 
 ## Estado da decisão
 
-Proposta
+Aceita

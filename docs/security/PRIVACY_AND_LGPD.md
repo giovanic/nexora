@@ -37,7 +37,7 @@ Requisitos do art. 11, I, e do art. 8:
 - **Revogável** a qualquer momento, de forma gratuita e facilitada (art. 8, §5).
 - **Versionado:** `consent_records` guarda a versão do texto, a data e a ação.
 - **Só o necessário bloqueia:** recusar a análise de fotos não bloqueia o registro manual.
-- **Textos:** versionados em `apps/api/config/consents/<purpose>.v<N>.md`. Os da versão 1 são rascunhos, aguardando a aprovação do responsável, e não têm revisão jurídica.
+- **Textos:** versionados em `apps/api/config/consents/<purpose>.v<N>.md`. Os da versão 1 foram aprovados pelo responsável em 2026-11-13 e não têm revisão jurídica (M1). A identificação do controlador e o contato do encarregado continuam pendentes nos próprios textos.
 
 | Finalidade (`purpose`) | Quando é pedida | Sem ela |
 |---|---|---|
