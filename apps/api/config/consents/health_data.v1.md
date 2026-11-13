@@ -22,7 +22,18 @@ Para funcionar, o app guarda informações que a lei brasileira de proteção de
 
 ## Com quem compartilhamos
 
-Os dados ficam nos serviços que hospedam o app e não são compartilhados para outras finalidades. A análise de fotos por inteligência artificial, a integração com o Strava e as métricas de uso têm consentimentos próprios, pedidos só quando você for usar cada uma.
+Os dados são tratados por empresas que prestam serviço ao app (operadoras): hospedagem, monitoramento de erros e envio de e-mails. Elas só tratam os dados para nos prestar esse serviço, e não os usam para fins próprios. Algumas podem funcionar fora do Brasil, e então os dados podem ser processados em outro país. A lista com o nome de cada operadora e o país será publicada antes do lançamento. Os dados não são compartilhados para outras finalidades. A análise de fotos por inteligência artificial, a integração com o Strava e as métricas de uso têm consentimentos próprios, pedidos só quando você for usar cada uma.
+
+## Por quanto tempo guardamos
+
+- Os seus dados de saúde, como esportes, nível e o que você registrar: enquanto a sua conta existir. São apagados quando você exclui a conta.
+- O registro dos seus consentimentos e das ações de segurança da conta: 5 anos (prazo provisório, a confirmar na revisão jurídica), ligado a um código interno e sem conteúdo de saúde.
+- As sessões de entrada nos aparelhos: até vencerem ou você sair, mais 30 dias.
+- Cópias de segurança: expiram na rotação das cópias (prazo a definir). Se uma cópia for restaurada, apagamos de novo o que você já tinha excluído.
+
+## Quem é responsável pelos seus dados
+
+[Pendente: identificação do controlador e contato do encarregado — decisão do responsável pelo produto]
 
 ## Para quem é
 

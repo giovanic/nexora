@@ -4,11 +4,21 @@ Com este consentimento, as fotos de refeição que você enviar são analisadas 
 
 ## Como funciona
 
-- Antes do envio, o app tira da foto os dados de localização e do aparelho.
+- Antes da análise, os nossos servidores removem da foto os dados de localização e do aparelho (EXIF).
 - O serviço de IA recebe só a foto. Não recebe o seu nome, o seu e-mail, o seu histórico nem dados do Strava.
 - A IA só identifica os alimentos e estima as porções. As calorias vêm de bases de alimentos com origem conhecida e aparecem como estimativa em faixa, nunca como medição. Você pode corrigir tudo.
 - Só usamos serviços de IA cujas regras publicadas dizem que as fotos não são usadas para treinar os seus modelos.
 - A foto fica guardada em armazenamento privado e nunca entra nos registros técnicos (logs) do sistema.
+
+## Por quanto tempo guardamos
+
+- A foto: até você apagar a refeição ou a conta. O prazo máximo será definido antes de liberar este recurso e informado aqui. Foto em que nenhum alimento é encontrado é apagada automaticamente.
+- O resultado da análise: 90 dias (prazo provisório); depois, ficam só contagens sem texto livre.
+- O registro deste consentimento: 5 anos (prazo provisório, a confirmar na revisão jurídica), sem a foto.
+
+## Quem é responsável pelos seus dados
+
+[Pendente: identificação do controlador e contato do encarregado — decisão do responsável pelo produto]
 
 ## Transferência internacional
 

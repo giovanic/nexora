@@ -16,8 +16,19 @@ Mostrar essas atividades no seu histórico, junto das que você registra à mão
 - Eles nunca são enviados a serviços de inteligência artificial.
 - O app guarda só o necessário para mostrar o seu histórico. Ele não substitui nem copia o Strava.
 
+## Por quanto tempo guardamos
+
+- As atividades importadas: enquanto a integração durar e a sua conta existir.
+- O acesso à sua conta do Strava: até você desconectar.
+- Os registros técnicos de sincronização: 30 dias.
+- O registro deste consentimento: 5 anos (prazo provisório, a confirmar na revisão jurídica).
+
+## Quem é responsável pelos seus dados
+
+[Pendente: identificação do controlador e contato do encarregado — decisão do responsável pelo produto]
+
 ## Se você não aceitar ou quiser retirar
 
 O app funciona sem o Strava, e você pode registrar as atividades à mão.
 
-Retirar é tão simples quanto aceitar: em Configurações, Consentimentos. A integração é desconectada, e as atividades trazidas do Strava são apagadas do app. Os dados continuam na sua conta do Strava.
+Retirar é tão simples quanto aceitar: em Configurações, Consentimentos. A integração é desconectada e apagamos as atividades importadas. O que for mantido de forma agregada, se houver, será informado antes. Os dados continuam na sua conta do Strava.
