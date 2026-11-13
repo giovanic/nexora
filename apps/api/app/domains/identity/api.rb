@@ -143,6 +143,18 @@ module Identity
         AccountDeletion.exists?(user_id:)
       end
 
+      # For the outbox's discard rule, inside the transaction that delivers the
+      # event. FOR SHARE on the person's users row makes RequestDeletion (FOR
+      # UPDATE on the same row) wait until the delivery commits, so the eraser
+      # sees whatever the consumers wrote; a delivery that starts after the
+      # request sees the deletion and discards. Lock order is the event row,
+      # then this row; RequestDeletion holds the users row and only inserts a
+      # new event, never locking an existing one, so the two cannot deadlock.
+      def deletion_requested_for_delivery?(user_id:)
+        User.where(id: user_id).lock("FOR SHARE").load
+        deletion_requested?(user_id:)
+      end
+
       def export_user_data(user_id)
         UserData.export(user_id)
       end
