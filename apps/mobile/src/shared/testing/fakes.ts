@@ -58,7 +58,7 @@ export function makeApi(routes: Record<string, Route>, token: string | null = "t
   const session = fakeSession(token);
   const onUnauthorized = jest.fn();
   const sleep = jest.fn(async (_ms: number) => {});
-  const api = createApi({ baseUrl: "http://api.test", fetchFn, session, onUnauthorized, sleep });
+  const api = createApi({ baseUrl: "http://api.test", fetchFn, session, onUnauthorized, sleep, deviceLabel: "Aparelho de teste" });
   return { api, fetchFn, session, onUnauthorized, sleep, calls };
 }
 

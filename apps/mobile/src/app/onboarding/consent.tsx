@@ -8,5 +8,5 @@ async function signOut() {
 }
 
 export default function Consent() {
-  return <ConsentStep api={api} onGranted={() => router.replace("/onboarding/motivations")} onSignOut={signOut} />;
+  return <ConsentStep api={api} onGranted={() => router.replace("/onboarding/motivations")} onSignOut={signOut} onOpenSettings={() => router.push("/settings")} />;
 }

@@ -2,21 +2,21 @@ import { useCallback, useState } from "react";
 import type { Api, Result, Sport, SportLevel, SportProfile } from "../../shared/api";
 import { errorMessage } from "../../shared/messages";
 import { LEVELS, SPORTS } from "../../shared/options";
+import { ConsentNotice } from "./ConsentNotice";
 import { useResource } from "../../shared/useResource";
 import { Body, Button, Choice, EmptyView, ErrorText, ErrorView, LoadingView, Subtitle } from "../../shared/ui";
 
-type Props = { api: Api; onConsentRequired: () => void };
+type Props = { api: Api; onOpenConsent: () => void };
 
-export function SportsSection({ api, onConsentRequired }: Props) {
+export function SportsSection({ api, onOpenConsent }: Props) {
   const load = useCallback(() => api.listSportProfiles(), [api]);
-  const { state, reload } = useResource(load, onConsentRequired);
+  const { state, reload } = useResource(load);
   const [error, setError] = useState<string | null>(null);
 
   async function change(action: Promise<Result<unknown>>) {
     setError(null);
     const result = await action;
     if (result.ok) return reload(false);
-    if (result.code === "consent_required") return onConsentRequired();
     setError(errorMessage(result));
   }
 
@@ -24,7 +24,8 @@ export function SportsSection({ api, onConsentRequired }: Props) {
     <>
       <Subtitle>Esportes</Subtitle>
       {state.status === "loading" && <LoadingView />}
-      {state.status === "error" && <ErrorView error={state.error} onRetry={reload} />}
+      {state.status === "error" && state.error.code === "consent_required" && <ConsentNotice onOpenConsent={onOpenConsent} />}
+      {state.status === "error" && state.error.code !== "consent_required" && <ErrorView error={state.error} onRetry={reload} />}
       {state.status === "ready" && (
         <>
           {state.data.sport_profiles.length === 0 && <EmptyView>Você ainda não escolheu nenhum esporte.</EmptyView>}

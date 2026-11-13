@@ -62,7 +62,7 @@ describe("ConsentStep", () => {
   it("shows the server text and grants the current version", async () => {
     const { api, calls } = makeApi({ "GET /api/v1/consents/health_data/text": text, "POST /api/v1/consents": jsonResponse(201, {}) });
     const onGranted = jest.fn();
-    await render(<ConsentStep api={api} onGranted={onGranted} onSignOut={jest.fn()} />);
+    await render(<ConsentStep api={api} onGranted={onGranted} onSignOut={jest.fn()} onOpenSettings={jest.fn()} />);
 
     expect(await screen.findByText("Usamos seus dados de saúde para personalizar o app.")).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Concordo e continuar" }));
@@ -78,7 +78,7 @@ describe("ConsentStep", () => {
       "POST /api/v1/consents": errorResponse(409, "revocation_pending"),
     });
     const onGranted = jest.fn();
-    await render(<ConsentStep api={api} onGranted={onGranted} onSignOut={jest.fn()} />);
+    await render(<ConsentStep api={api} onGranted={onGranted} onSignOut={jest.fn()} onOpenSettings={jest.fn()} />);
     await screen.findByText(/Usamos seus dados/);
 
     await fireEvent.press(screen.getByRole("button", { name: "Concordo e continuar" }));
@@ -91,7 +91,7 @@ describe("ConsentStep", () => {
 
   it("shows the error state when the text cannot be loaded", async () => {
     const { api } = makeApi({ "GET /api/v1/consents/health_data/text": errorResponse(500, "internal_error") });
-    await render(<ConsentStep api={api} onGranted={jest.fn()} onSignOut={jest.fn()} />);
+    await render(<ConsentStep api={api} onGranted={jest.fn()} onSignOut={jest.fn()} onOpenSettings={jest.fn()} />);
 
     expect(await screen.findByText(/Algo deu errado do nosso lado/)).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: "Tentar de novo" })).toBeOnTheScreen();
@@ -100,12 +100,25 @@ describe("ConsentStep", () => {
   it("offers to leave without agreeing", async () => {
     const { api } = makeApi({ "GET /api/v1/consents/health_data/text": text });
     const onSignOut = jest.fn();
-    await render(<ConsentStep api={api} onGranted={jest.fn()} onSignOut={onSignOut} />);
+    await render(<ConsentStep api={api} onGranted={jest.fn()} onSignOut={onSignOut} onOpenSettings={jest.fn()} />);
     await screen.findByText(/Usamos seus dados/);
 
     await fireEvent.press(screen.getByRole("link", { name: "Sair da conta" }));
 
     expect(onSignOut).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ConsentStep without agreeing", () => {
+  it("links to settings, to delete the account or manage other consents", async () => {
+    const { api } = makeApi({ "GET /api/v1/consents/health_data/text": text });
+    const onOpenSettings = jest.fn();
+    await render(<ConsentStep api={api} onGranted={jest.fn()} onSignOut={jest.fn()} onOpenSettings={onOpenSettings} />);
+    await screen.findByText(/Usamos seus dados/);
+
+    await fireEvent.press(screen.getByRole("link", { name: "Configurações, para excluir a conta ou ver outras opções" }));
+
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
   });
 });
 

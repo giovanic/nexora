@@ -6,8 +6,8 @@ const profile = { display_name: "Ana", time_zone: "America/Sao_Paulo", units: "m
 const sport = { id: "11111111-1111-4111-8111-111111111111", sport: "running", level: "beginner", started_at: "2026-11-01T00:00:00Z" };
 const sessions = {
   sessions: [
-    { id: "s-current", client: "mobile", device_label: "Este celular", created_at: "2026-11-01T00:00:00Z", last_used_at: "2026-11-13T00:00:00Z", current: true },
-    { id: "s-other", client: "mobile", device_label: "Tablet antigo", created_at: "2026-11-01T00:00:00Z", last_used_at: "2026-11-10T00:00:00Z", current: false },
+    { id: "s-current", client: "mobile", device_label: "Este celular", created_at: "2026-11-01T12:00:00Z", last_used_at: "2026-11-13T12:00:00Z", current: true },
+    { id: "s-other", client: "mobile", device_label: "Tablet antigo", created_at: "2026-11-01T00:00:00Z", last_used_at: "2026-11-10T12:00:00Z", current: false },
   ],
 };
 
@@ -22,7 +22,7 @@ function baseRoutes() {
 
 function setup(routes: Record<string, never> | Record<string, unknown> = {}, props: { webUrl?: string; openUrl?: (url: string) => void } = {}) {
   const ctx = makeApi({ ...baseRoutes(), ...routes } as never);
-  const handlers = { onSignedOut: jest.fn(), onConsentRequired: jest.fn(), onHealthRevoked: jest.fn() };
+  const handlers = { onSignedOut: jest.fn(), onOpenConsent: jest.fn(), onHealthRevoked: jest.fn() };
   const element = <SettingsScreen api={ctx.api} {...handlers} {...props} />;
   return { ...ctx, ...handlers, element };
 }
@@ -43,11 +43,19 @@ describe("SettingsScreen sections", () => {
     expect(screen.getByText("Este aparelho")).toBeOnTheScreen();
   });
 
+  it("tells sessions apart by device, kind and last use", async () => {
+    const { element } = setup();
+    await render(element);
+
+    expect(await screen.findByText("Aplicativo no celular · último uso em 10/11/2026")).toBeOnTheScreen();
+    expect(screen.getByText("Aplicativo no celular · último uso em 13/11/2026")).toBeOnTheScreen();
+  });
+
   it("shows loading in every section", async () => {
     const never = () => new Promise<never>(() => {});
     const ctx = makeApi({ "GET /api/v1/profile": never, "GET /api/v1/sport_profiles": never, "GET /api/v1/consents": never, "GET /api/v1/sessions": never } as never, "t");
     const timers = jest.useFakeTimers();
-    await render(<SettingsScreen api={ctx.api} onSignedOut={jest.fn()} onConsentRequired={jest.fn()} onHealthRevoked={jest.fn()} />);
+    await render(<SettingsScreen api={ctx.api} onSignedOut={jest.fn()} onOpenConsent={jest.fn()} onHealthRevoked={jest.fn()} />);
 
     expect(screen.getAllByText("Carregando…")).toHaveLength(4);
     timers.clearAllTimers();
@@ -73,14 +81,31 @@ describe("SettingsScreen sections", () => {
     expect(await screen.findByText("Você ainda não escolheu nenhum esporte.")).toBeOnTheScreen();
   });
 
-  it("goes to the consent step when a health route answers consent_required", async () => {
-    const { element, onConsentRequired } = setup({
+  it("without health_data the person can open Settings, delete the account and see the consents", async () => {
+    const { element, onOpenConsent, calls, onSignedOut } = setup({
       "GET /api/v1/profile": errorResponse(403, "consent_required"),
       "GET /api/v1/sport_profiles": errorResponse(403, "consent_required"),
+      "GET /api/v1/consents": consentList({ health_data: "revoked" }),
+      "DELETE /api/v1/account": jsonResponse(202),
     });
     await render(element);
 
-    await waitFor(() => expect(onConsentRequired).toHaveBeenCalled());
+    const notices = await screen.findAllByText(/Esta parte depende do consentimento de dados de saúde/);
+    expect(notices).toHaveLength(2);
+    expect(onOpenConsent).not.toHaveBeenCalled();
+    expect(screen.getByText("Dados de saúde")).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Ver texto: Dados de saúde" })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Sair" })).toBeOnTheScreen();
+    expect(screen.getByText("Para exportar seus dados, use o painel web.")).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getAllByRole("button", { name: "Dar consentimento de dados de saúde" })[0]);
+    expect(onOpenConsent).toHaveBeenCalledTimes(1);
+
+    await fireEvent.press(screen.getByRole("button", { name: "Excluir conta" }));
+    await fireEvent.changeText(screen.getByLabelText("Senha para confirmar"), "uma-senha-bem-longa");
+    await fireEvent.press(screen.getByRole("button", { name: "Excluir minha conta" }));
+    await waitFor(() => expect(onSignedOut).toHaveBeenCalledTimes(1));
+    expect(calls.some((c) => c.key === "DELETE /api/v1/account")).toBe(true);
   });
 
   it("saves the profile", async () => {

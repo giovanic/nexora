@@ -73,6 +73,7 @@ describe("api client", () => {
       adult_confirmed: true,
       time_zone: "America/Sao_Paulo",
       client: "mobile",
+      device_label: "Aparelho de teste",
     });
   });
 
@@ -131,5 +132,42 @@ describe("api client", () => {
     fetchFn.mockRejectedValue(new TypeError("network down"));
 
     expect(await api.listConsents()).toMatchObject({ ok: false, status: 0, code: "network_error" });
+  });
+
+  it("sends the device label on sign in", async () => {
+    const { api, calls } = makeApi({ "POST /api/v1/sessions": jsonResponse(201, grant) }, null);
+
+    await api.signIn("a@x.test", "uma-senha-longa");
+
+    expect(JSON.parse(calls[0].init.body as string).device_label).toBe("Aparelho de teste");
+  });
+
+  it("navigates once and clears once when several requests get 401 together", async () => {
+    const { api, session, onUnauthorized } = makeApi({
+      "GET /api/v1/profile": errorResponse(401, "unauthorized"),
+      "GET /api/v1/sport_profiles": errorResponse(401, "unauthorized"),
+      "GET /api/v1/consents": errorResponse(401, "unauthorized"),
+      "GET /api/v1/sessions": errorResponse(401, "unauthorized"),
+    });
+
+    await Promise.all([api.getProfile(), api.listSportProfiles(), api.listConsents(), api.listSessions()]);
+
+    expect(session.clear).toHaveBeenCalledTimes(1);
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a late 401 from an old token and keeps the newly stored one", async () => {
+    const ctx = makeApi({
+      "GET /api/v1/profile": async () => {
+        await ctx.session.setToken("token-novo");
+        return errorResponse(401, "unauthorized");
+      },
+    });
+
+    await ctx.api.getProfile();
+
+    expect(ctx.session.clear).not.toHaveBeenCalled();
+    expect(ctx.onUnauthorized).not.toHaveBeenCalled();
+    expect(await ctx.session.getToken()).toBe("token-novo");
   });
 });

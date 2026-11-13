@@ -1,4 +1,5 @@
 import type { components } from "@app/contracts";
+import { deviceLabel as defaultDeviceLabel } from "./deviceLabel";
 import { session as defaultSession, type Session } from "./session";
 
 type Schemas = components["schemas"];
@@ -25,6 +26,7 @@ export type ApiOptions = {
   onUnauthorized?: () => void;
   sleep?: (ms: number) => Promise<void>;
   timeoutMs?: number;
+  deviceLabel?: string;
 };
 
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -41,17 +43,34 @@ type RequestOptions = { body?: unknown; auth?: boolean };
 
 export function createApi(options: ApiOptions) {
   const { baseUrl, session = defaultSession, onUnauthorized, timeoutMs = REQUEST_TIMEOUT_MS } = options;
+  const label = options.deviceLabel ?? defaultDeviceLabel();
   const fetchFn: FetchFn = options.fetchFn ?? ((url, init) => fetch(url, init));
   const sleep = options.sleep ?? defaultSleep;
 
-  async function expire() {
-    // Clearing never blocks the redirect: the person must always reach sign in.
-    try {
-      await session.clear();
-    } catch {
-      // ignored on purpose
-    }
-    onUnauthorized?.();
+  // Several requests can fail together with the same dead token. The first one to
+  // arrive clears and navigates; the others join it. A 401 for a token that is no
+  // longer the stored one (a new sign in happened meanwhile) changes nothing.
+  const expiring = new Map<string, Promise<void>>();
+
+  function expire(used: string | null): Promise<void> {
+    const key = used ?? "";
+    const running = expiring.get(key);
+    if (running) return running;
+
+    const task = (async () => {
+      try {
+        const stored = await session.getToken();
+        if (used !== null && stored !== used) return;
+        await session.clear();
+      } catch {
+        // Clearing never blocks the redirect: the person must always reach sign in.
+      }
+      onUnauthorized?.();
+    })().finally(() => {
+      expiring.delete(key);
+    });
+    expiring.set(key, task);
+    return task;
   }
 
   async function request<T>(method: string, path: string, { body, auth = true }: RequestOptions = {}): Promise<Result<T>> {
@@ -60,10 +79,11 @@ export function createApi(options: ApiOptions) {
     const headers: Record<string, string> = { Accept: "application/json" };
     if (body !== undefined) headers["Content-Type"] = "application/json";
 
+    let token: string | null = null;
     if (auth) {
-      const token = await session.getToken();
+      token = await session.getToken();
       if (!token) {
-        await expire();
+        await expire(null);
         return failure(401, "unauthorized");
       }
       headers.Authorization = `Bearer ${token}`;
@@ -110,7 +130,7 @@ export function createApi(options: ApiOptions) {
     if (Number.isFinite(retryAfter) && retryAfter > 0) result.retryAfter = retryAfter;
 
     // A wrong password (sign in, account deletion) is also a 401, but the session is fine.
-    if (response.status === 401 && auth && result.code !== "invalid_credentials") await expire();
+    if (response.status === 401 && auth && result.code !== "invalid_credentials") await expire(token);
 
     return result;
   }
@@ -143,8 +163,9 @@ export function createApi(options: ApiOptions) {
         adult_confirmed: true,
         time_zone: input.timeZone,
         client: "mobile",
+        device_label: label,
       }),
-    signIn: (email: string, password: string) => openSession("/api/v1/sessions", { email, password, client: "mobile" }),
+    signIn: (email: string, password: string) => openSession("/api/v1/sessions", { email, password, client: "mobile", device_label: label }),
     requestPasswordReset: (email: string) => request<undefined>("POST", "/api/v1/password_resets", { body: { email }, auth: false }),
     signOut: async () => {
       const result = await request<undefined>("DELETE", "/api/v1/sessions/current");

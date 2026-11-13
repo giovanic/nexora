@@ -5,6 +5,15 @@ import { useResource } from "../../shared/useResource";
 import { Body, Button, EmptyView, ErrorText, ErrorView, LoadingView, Subtitle } from "../../shared/ui";
 
 const UNNAMED = "Aparelho sem nome";
+const KINDS = { mobile: "Aplicativo no celular", web: "Navegador" } as const;
+
+// dd/mm/aaaa in the device time zone, without depending on Intl support.
+function formatDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "data desconhecida";
+  const two = (value: number) => String(value).padStart(2, "0");
+  return `${two(date.getDate())}/${two(date.getMonth() + 1)}/${date.getFullYear()}`;
+}
 
 export function SessionsSection({ api }: { api: Api }) {
   const load = useCallback(() => api.listSessions(), [api]);
@@ -28,7 +37,7 @@ export function SessionsSection({ api }: { api: Api }) {
         state.data.sessions.map((entry) => {
           const label = entry.device_label ?? UNNAMED;
           return (
-            <SessionRow key={entry.id} label={label} current={entry.current} onRevoke={() => revoke(entry.id)} />
+            <SessionRow key={entry.id} label={label} detail={`${KINDS[entry.client]} · último uso em ${formatDate(entry.last_used_at)}`} current={entry.current} onRevoke={() => revoke(entry.id)} />
           );
         })}
       <ErrorText>{error}</ErrorText>
@@ -36,10 +45,11 @@ export function SessionsSection({ api }: { api: Api }) {
   );
 }
 
-function SessionRow({ label, current, onRevoke }: { label: string; current: boolean; onRevoke: () => void }) {
+function SessionRow({ label, detail, current, onRevoke }: { label: string; detail: string; current: boolean; onRevoke: () => void }) {
   return (
     <>
       <Body>{label}</Body>
+      <Body>{detail}</Body>
       {current ? <Body>Este aparelho</Body> : <Button label={`Encerrar sessão: ${label}`} variant="secondary" onPress={onRevoke} />}
     </>
   );
