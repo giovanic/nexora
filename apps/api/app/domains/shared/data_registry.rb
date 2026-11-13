@@ -37,6 +37,21 @@ module Shared
         @entries.map { |context, entry| [ context, entry.eraser ] }
       end
 
+      def contexts
+        @entries.keys
+      end
+
+      # Contexts under app/domains that own models, so tables. Each one must
+      # register an exporter; the coverage spec requires contexts_without_exporter
+      # to be empty.
+      def contexts_with_models(root = Rails.root.join("app/domains"))
+        Dir.children(root.to_s).select { |name| Dir.glob(File.join(root.to_s, name, "models", "**", "*.rb")).any? }.sort
+      end
+
+      def contexts_without_exporter(contexts_to_check)
+        contexts_to_check.map(&:to_s) - @entries.select { |_, entry| entry.exporter.respond_to?(:call) }.keys
+      end
+
       def registered_tables
         @entries.values.flat_map(&:tables).uniq.sort
       end

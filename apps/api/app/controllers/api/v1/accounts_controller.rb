@@ -1,0 +1,21 @@
+module Api
+  module V1
+    # The signed-in person's own account. Works without health_data, since
+    # export is a right the person has either way (design 4.5).
+    class AccountsController < ApplicationController
+      include AuthenticationRateLimits
+
+      limit_attempts_by_ip :export
+
+      # The password is asked again. The body holds personal data, so it is
+      # built on the fly and never cached.
+      def export
+        data = Identity::Api.export(user_id: current_user_id, password: params[:password], ip: request.remote_ip)
+        return render_error(:unauthorized, "invalid_credentials") if data == :invalid_password
+
+        response.headers["Cache-Control"] = "no-store"
+        render json: data
+      end
+    end
+  end
+end

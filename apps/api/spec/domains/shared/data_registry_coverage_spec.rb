@@ -31,4 +31,29 @@ RSpec.describe "data registry coverage" do
 
     expect(Shared::DataRegistry.unregistered_tables(connection)).to eq([])
   end
+
+  describe "contexts" do
+    it "exports every context that owns models" do
+      missing = Shared::DataRegistry.contexts_without_exporter(Shared::DataRegistry.contexts_with_models)
+
+      expect(missing).to eq([]), "Register an exporter for: #{missing.join(', ')}"
+    end
+
+    it "registry coverage fails if a context has no exporter" do
+      Dir.mktmpdir do |root|
+        FileUtils.mkdir_p(File.join(root, "planted_context/models"))
+        File.write(File.join(root, "planted_context/models/note.rb"), "")
+        FileUtils.mkdir_p(File.join(root, "empty_context"))
+
+        contexts = Shared::DataRegistry.contexts_with_models(root)
+
+        expect(contexts).to eq([ "planted_context" ])
+        expect(Shared::DataRegistry.contexts_without_exporter(contexts)).to eq([ "planted_context" ])
+      end
+    end
+
+    it "the export has one key per registered context" do
+      expect(Shared::DataRegistry.export(user_id: SecureRandom.uuid).keys).to match_array(Shared::DataRegistry.contexts)
+    end
+  end
 end

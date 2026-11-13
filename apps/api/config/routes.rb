@@ -20,6 +20,7 @@ Rails.application.routes.draw do
       resources :consents, only: %i[index create destroy], param: :purpose, constraints: { purpose: /[a-z_]+/ }, format: false do
         get :text, on: :member
       end
+      post "account/export", to: "accounts#export"
       get "profile", to: "profiles#show"
       patch "profile", to: "profiles#update"
       resources :sport_profiles, only: %i[index create destroy], constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }

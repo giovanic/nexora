@@ -151,10 +151,11 @@ RSpec.describe "profile and sports", :identity, :real_consumers do
 
   describe "without health_data" do
     # Controller#action of every authenticated route that works without the
-    # health_data consent. Tasks that add export and account deletion extend it.
+    # health_data consent. Export and account deletion extend it.
     CONSENT_EXEMPT = %w[
       sessions#index sessions#create sessions#refresh sessions#destroy sessions#destroy_current
       consents#index consents#create consents#destroy consents#text
+      accounts#export
     ].freeze
     PUBLIC_CONTROLLERS = %w[api/v1/registrations api/v1/password_resets health].freeze
 

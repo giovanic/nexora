@@ -182,6 +182,29 @@ export interface paths {
         patch: operations["resetPassword"];
         trace?: never;
     };
+    "/api/v1/account/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exports all the signed-in person's data, after the password is typed again.
+         * @description Works without the health_data consent. The body is built on the spot from every context
+         *     that holds the person's data, keyed by context, and is never stored; the answer carries
+         *     Cache-Control no-store. It holds no password, token or key digest. A wrong or missing
+         *     password answers 401 invalid_credentials and exports nothing. Attempts are limited per IP.
+         */
+        post: operations["exportAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/consents": {
         parameters: {
             query?: never;
@@ -421,6 +444,15 @@ export interface components {
             purpose: components["schemas"]["ConsentPurpose"];
             /** @description The version of the text the person read, from GET /api/v1/consents/{purpose}/text. */
             version: number;
+        };
+        AccountExportRequest: {
+            password: string;
+        };
+        /** @description One entry per context that holds the person's data. Each entry is that context's own shape. */
+        AccountExport: {
+            [key: string]: {
+                [key: string]: unknown;
+            };
         };
         ConsentList: {
             consents: components["schemas"]["Consent"][];
@@ -735,6 +767,34 @@ export interface operations {
             };
             403: components["responses"]["Error"];
             422: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    exportAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountExportRequest"];
+            };
+        };
+        responses: {
+            /** @description The person's data, one entry per context. */
+            200: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountExport"];
+                };
+            };
+            401: components["responses"]["Error"];
             429: components["responses"]["TooManyRequests"];
             default: components["responses"]["Error"];
         };

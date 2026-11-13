@@ -123,6 +123,12 @@ module Identity
         ConsentText.new(purpose:, version: ConsentTexts.current_version(purpose), body: ConsentTexts.read(purpose))
       end
 
+      # The person's data from every registered context, built on the spot and
+      # never stored, or :invalid_password. Records that the export happened.
+      def export(user_id:, password:, ip: nil)
+        ExportAccount.call(user_id:, password:, ip:)
+      end
+
       def export_user_data(user_id)
         UserData.export(user_id)
       end

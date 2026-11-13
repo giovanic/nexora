@@ -219,6 +219,40 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         default:
           $ref: "#/components/responses/Error"
+  /api/v1/account/export:
+    post:
+      operationId: exportAccount
+      summary: Exports all the signed-in person's data, after the password is typed again.
+      description: |
+        Works without the health_data consent. The body is built on the spot from every context
+        that holds the person's data, keyed by context, and is never stored; the answer carries
+        Cache-Control no-store. It holds no password, token or key digest. A wrong or missing
+        password answers 401 invalid_credentials and exports nothing. Attempts are limited per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountExportRequest"
+      responses:
+        "200":
+          description: The person's data, one entry per context.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum: [no-store]
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountExport"
+        "401":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
   /api/v1/consents:
     get:
       operationId: listConsents
@@ -681,6 +715,19 @@ components:
           type: integer
           minimum: 1
           description: The version of the text the person read, from GET /api/v1/consents/{purpose}/text.
+    AccountExportRequest:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
+    AccountExport:
+      type: object
+      description: One entry per context that holds the person's data. Each entry is that context's own shape.
+      additionalProperties:
+        type: object
+        additionalProperties: true
     ConsentList:
       type: object
       additionalProperties: false

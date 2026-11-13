@@ -10,6 +10,7 @@ module Identity
       "session_revoked" => {},
       "all_sessions_revoked" => {},
       "password_reset" => {},
+      "account_exported" => {},
       "consent_granted" => { "purpose" => ConsentTexts::PURPOSES },
       "consent_revoked" => { "purpose" => ConsentTexts::PURPOSES }
     }.freeze
