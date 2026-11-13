@@ -2,7 +2,7 @@
 
 - **Estado:** ver [STATUS.md](../STATUS.md)
 - **Requisitos:** FR-ID-001, FR-ID-002, FR-ID-003, FR-ID-004, FR-ID-005, FR-ID-006, FR-ID-007, FR-ID-008, FR-PROFILE-001, FR-PROFILE-002, FR-PROFILE-003, FR-PROFILE-004, NFR-SEC-001, NFR-SEC-003, NFR-SEC-006, NFR-PRIVACY-002, NFR-PRIVACY-003
-- **ADRs:** [0005](../../architecture/decisions/0005-authentication-strategy.md), [0010](../../architecture/decisions/0010-adults-only-mvp-and-consent.md)
+- **ADRs:** [0005](../../architecture/decisions/0005-authentication-strategy.md), [0010](../../architecture/decisions/0010-adults-only-mvp-and-consent.md), [0018](../../architecture/decisions/0018-application-level-encryption.md)
 
 ## Objetivo
 
