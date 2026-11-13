@@ -8,8 +8,7 @@ module ErrorRendering
     "invalid_token" => "Este link de redefinição não vale mais. Peça um novo.",
     "profile_pending" => "Estamos preparando o seu perfil. Tente de novo em instantes.",
     "consent_required" => "Esta parte do app depende de um consentimento que você ainda não deu.",
-    "outdated_version" => "O texto deste consentimento foi atualizado. Leia a versão atual antes de aceitar.",
-    "deletion_required" => "Sem este consentimento o app não funciona. Para retirá-lo, exclua a conta; nada muda até você confirmar."
+    "outdated_version" => "O texto deste consentimento foi atualizado. Leia a versão atual antes de aceitar."
   }.freeze
 
   private

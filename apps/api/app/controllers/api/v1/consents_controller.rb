@@ -3,7 +3,7 @@ module Api
     # Consent per purpose of the signed-in person. Works without health_data,
     # since that is where it is given (design 4.5).
     class ConsentsController < ApplicationController
-      STATUSES = { "outdated_version" => :conflict, "deletion_required" => :conflict, "validation_failed" => :unprocessable_content }.freeze
+      STATUSES = { "outdated_version" => :conflict, "validation_failed" => :unprocessable_content }.freeze
 
       def index
         render json: { consents: Identity::Api.consents(user_id: current_user_id).map { |consent| serialize(consent) } }

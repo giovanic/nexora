@@ -269,9 +269,9 @@ export interface paths {
         post?: never;
         /**
          * Revokes a purpose. Revoking one that is not granted writes nothing.
-         * @description health_data answers 409 deletion_required and stays granted: it is what the product does,
-         *     so the app leads to account deletion, which needs its own confirmation. An unknown purpose
-         *     answers 404.
+         * @description health_data is revoked like any other purpose (owner decision of 2026-11-13): the profile's
+         *     health information is erased afterwards, the account stays, and the health routes answer
+         *     403 consent_required until it is granted again. An unknown purpose answers 404.
          */
         delete: operations["revokeConsent"];
         options?: never;
@@ -930,7 +930,6 @@ export interface operations {
             401: components["responses"]["Error"];
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
-            409: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
     };

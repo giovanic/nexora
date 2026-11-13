@@ -100,15 +100,14 @@ RSpec.describe "consents", :identity do
       expect(Identity::ConsentRecord.order(:occurred_at).pluck(:action)).to eq(%w[granted revoked])
     end
 
-    it "revoking health_data answers 409 and keeps it" do
+    it "revoking health_data revokes like any other purpose" do
       grant(purpose: "health_data")
 
       delete "/api/v1/consents/health_data", headers: bearer(token)
 
-      expect(response).to have_http_status(:conflict)
-      expect(response.parsed_body.dig("error", "code")).to eq("deletion_required")
-      expect(Identity::Api.consent_granted?(user_id:, purpose: "health_data")).to be(true)
-      expect_response_to_match_contract
+      expect(response).to have_http_status(:no_content)
+      expect(Identity::Api.consent_granted?(user_id:, purpose: "health_data")).to be(false)
+      expect(Identity::ConsentRecord.where(purpose: "health_data").order(:occurred_at).pluck(:action)).to eq(%w[granted revoked])
     end
 
     it "answers 404 for an unknown purpose" do

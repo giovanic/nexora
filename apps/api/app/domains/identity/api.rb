@@ -112,7 +112,7 @@ module Identity
         GrantConsent.call(user_id:, purpose:, version:, source:)
       end
 
-      # true, Errors (validation_failed, deletion_required for health_data) or :not_found.
+      # true, Errors (validation_failed) or :not_found.
       def revoke_consent(user_id:, purpose:, source: nil)
         RevokeConsent.call(user_id:, purpose:, source:)
       end

@@ -202,15 +202,15 @@ RSpec.describe "Identity::Api consents" do
       expect(Identity::AuditEvent.find_by!(action: "consent_revoked").metadata).to eq("purpose" => "strava_integration")
     end
 
-    it "revoking health_data answers deletion_required and keeps it" do
+    it "revokes health_data like any other purpose, with its event and audit" do
       api.grant_consent(user_id:, purpose: "health_data", version: 1)
 
-      result = api.revoke_consent(user_id:, purpose: "health_data")
+      expect(api.revoke_consent(user_id:, purpose: "health_data")).to be(true)
 
-      expect(result).to have_attributes(ok?: false, code: "deletion_required")
-      expect(api.consent_granted?(user_id:, purpose: "health_data")).to be(true)
-      expect(records("health_data").count).to eq(1)
-      expect(Shared::Outbox::Event.where(name: "consent.revoked")).to be_empty
+      expect(api.consent_granted?(user_id:, purpose: "health_data")).to be(false)
+      expect(records("health_data").last).to have_attributes(action: "revoked", text_version: 1)
+      expect(Shared::Outbox::Event.find_by!(name: "consent.revoked").payload).to eq("purpose" => "health_data", "version" => 1)
+      expect(Identity::AuditEvent.find_by!(action: "consent_revoked").metadata).to eq("purpose" => "health_data")
     end
 
     it "writes nothing for a purpose that is not granted" do

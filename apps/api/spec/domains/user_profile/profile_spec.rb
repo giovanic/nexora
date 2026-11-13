@@ -223,4 +223,62 @@ RSpec.describe "UserProfile::Api", :real_consumers do
       expect(UserProfile::SportProfile.where(user_id:)).to be_empty
     end
   end
+
+  describe "erasure on consent.revoked" do
+    let(:other_id) do
+      Identity::Api.register(email: "bia@example.test", password: "correct horse battery", adult_confirmed: true,
+                             time_zone: "UTC", client: "mobile", device_label: nil, ip: nil).user_id
+    end
+
+    def revoke(purpose, who = user_id, version: 1)
+      ActiveRecord::Base.transaction { Shared::Outbox.publish!(name: "consent.revoked", user_id: who, payload: { purpose:, version: }) }
+      run_publisher
+    end
+
+    before do
+      other_id
+      deliver
+      [ user_id, other_id ].each do |id|
+        api.update_profile(user_id: id, attrs: { display_name: "Nome", motivations: %w[start_caring], time_zone: "Europe/Lisbon" })
+        api.set_sport(user_id: id, sport: "running", level: "beginner")
+        api.set_sport(user_id: id, sport: "running", level: "advanced")
+      end
+    end
+
+    it "health_data erases sports with history, motivations and name, keeping time zone and units" do
+      revoke("health_data")
+
+      expect(UserProfile::SportProfile.where(user_id:)).to be_empty
+      expect(api.profile(user_id:)).to have_attributes(display_name: nil, motivations: [], time_zone: "Europe/Lisbon", units: "metric")
+    end
+
+    it "never touches another person" do
+      revoke("health_data")
+
+      expect(UserProfile::SportProfile.where(user_id: other_id).count).to eq(2)
+      expect(api.profile(user_id: other_id)).to have_attributes(display_name: "Nome", motivations: %w[start_caring])
+    end
+
+    it "ignores other purposes" do
+      revoke("strava_integration")
+      revoke("usage_metrics")
+
+      expect(UserProfile::SportProfile.where(user_id:).count).to eq(2)
+      expect(api.profile(user_id:)).to have_attributes(display_name: "Nome", motivations: %w[start_caring])
+    end
+
+    it "is safe to deliver again" do
+      revoke("health_data")
+      event = Shared::Outbox::Event.find_by!(name: "consent.revoked", user_id:)
+
+      expect { Shared::Outbox.consumers_for("consent.revoked").each { |consumer| consumer.handler.call(event) } }.not_to raise_error
+      expect(UserProfile::SportProfile.where(user_id:)).to be_empty
+    end
+
+    it "does nothing for a person without a profile" do
+      ghost = SecureRandom.uuid
+
+      expect { revoke("health_data", ghost) }.not_to change(UserProfile::Profile, :count)
+    end
+  end
 end

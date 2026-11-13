@@ -149,6 +149,54 @@ RSpec.describe "profile and sports", :identity, :real_consumers do
     end
   end
 
+  describe "revoking health_data" do
+    let(:other_token) { mobile_token(email: "bia@example.test") }
+    let(:user_id) { Identity::User.find_by!(email: "ana@example.test").id }
+    let(:other_id) { Identity::User.find_by!(email: "bia@example.test").id }
+
+    before do
+      other_token
+      [ token, other_token ].each { |t| grant_health_data(t) }
+      run_publisher
+      [ token, other_token ].each do |t|
+        patch "/api/v1/profile", params: { display_name: "Nome", motivations: %w[start_caring], time_zone: "Europe/Lisbon" }, headers: bearer(t), as: :json
+      end
+      [ token, other_token ].each { |t| post "/api/v1/sport_profiles", params: { sport: "running", level: "beginner" }, headers: bearer(t), as: :json }
+      post "/api/v1/sport_profiles", params: { sport: "running", level: "advanced" }, headers: bearer(token), as: :json
+      delete "/api/v1/consents/health_data", headers: bearer(token)
+      run_publisher
+    end
+
+    it "erases the profile's health data, keeps time zone and units, and leaves other people alone" do
+      expect(response).to have_http_status(:no_content)
+      expect(UserProfile::SportProfile.where(user_id:)).to be_empty
+      expect(UserProfile::Profile.find(user_id)).to have_attributes(display_name: nil, motivations: [], time_zone: "Europe/Lisbon", units: "metric")
+      expect(UserProfile::SportProfile.where(user_id: other_id).count).to eq(1)
+      expect(UserProfile::Profile.find(other_id)).to have_attributes(display_name: "Nome", motivations: %w[start_caring])
+    end
+
+    it "refuses the health routes with 403 consent_required" do
+      get "/api/v1/profile", headers: bearer(token)
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body.dig("error", "code")).to eq("consent_required")
+
+      patch_profile({ display_name: "Ana" })
+      expect(response).to have_http_status(:forbidden)
+      expect(UserProfile::Profile.find(user_id).display_name).to be_nil
+    end
+
+    it "granting again restores access with an empty profile in the same time zone" do
+      grant_health_data
+
+      expect(response).to have_http_status(:created)
+      get "/api/v1/profile", headers: bearer(token)
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq("display_name" => nil, "time_zone" => "Europe/Lisbon", "units" => "metric", "motivations" => [])
+      get "/api/v1/sport_profiles", headers: bearer(token)
+      expect(response.parsed_body.fetch("sport_profiles")).to be_empty
+    end
+  end
+
   describe "without health_data" do
     # Controller#action of every authenticated route that works without the
     # health_data consent. Export and account deletion extend it.

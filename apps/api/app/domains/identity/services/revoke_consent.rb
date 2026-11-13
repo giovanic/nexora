@@ -1,15 +1,11 @@
 module Identity
   # Records the revoke of a granted purpose, with the version that was
-  # accepted. health_data is what the product does, so it is not revoked here:
-  # it answers deletion_required, and the app leads to account deletion, which
-  # has its own confirmation (design 4.5). Revoking a purpose that is not
-  # granted writes nothing.
+  # accepted. Every purpose, health_data included, is revoked the same way
+  # (owner decision of 2026-11-13); each context reacts to consent.revoked.
+  # Revoking a purpose that is not granted writes nothing.
   module RevokeConsent
-    REQUIRES_DELETION = %w[health_data].freeze
-
     def self.call(user_id:, purpose:, source: nil)
       return ConsentRecord.unknown_purpose unless ConsentTexts.purpose?(purpose)
-      return Api::Errors.new(code: "deletion_required", details: []) if REQUIRES_DELETION.include?(purpose)
 
       ConsentRecord.transaction do
         next :not_found unless User.active.lock.find_by(id: user_id)

@@ -54,9 +54,9 @@ Requisitos do art. 11, I, e do art. 8:
 | `food_photo_ai` | Food AI bloqueia novos envios e cancela análises em andamento | Refeições permanecem; a pessoa pode apagá-las |
 | `strava_integration` | Strava Integration desconecta | Apagados, como na desconexão |
 | `usage_metrics` | Progress & Analytics para a coleta | `usage_facts` da pessoa apagados |
-| `health_data` | Todo o tratamento, porque é a função do produto | Tela explica e leva à exclusão de conta, após confirmação. A revisão jurídica confirma esse destino |
+| `health_data` | Todo o tratamento, porque é a função do produto | O contexto de perfil apaga esportes (com histórico), níveis, motivações e nome de exibição; ficam fuso horário e unidades, e a conta continua. As funções de saúde ficam bloqueadas até nova concessão. Decisão do responsável de 2026-11-13; a revisão jurídica confirma |
 
-**Estado na Fase 02:** só existe a Identity. Revogar `health_data` responde `409 deletion_required` e o consentimento continua, até a pessoa confirmar a exclusão da conta. As outras finalidades já podem ser concedidas e revogadas, com registro e evento `consent.revoked`, mas ainda não têm tratamento a interromper.
+**Estado na Fase 02:** só existe a Identity. Revogar `health_data` funciona como as outras finalidades: registro, evento `consent.revoked` e apagamento das informações de saúde do perfil (esportes, níveis, motivações e nome de exibição), sem exigir a exclusão da conta. As demais finalidades já podem ser concedidas e revogadas, com registro e evento `consent.revoked`, mas ainda não têm tratamento a interromper.
 
 Toda fase que cria um novo tratamento atualiza esta tabela e testa a interrupção.
 
@@ -74,7 +74,7 @@ Gratuitos (§5).
 | Eliminação dos dados tratados com consentimento (VI) | `DELETE /api/v1/account`: sessões revogadas na hora e apagamento por contexto em até 24 horas, com o resíduo mínimo descrito abaixo. Revogar uma finalidade interrompe o tratamento (tabela de efeitos) | Conta: implementado na Fase 02. Exclusão de refeição e de atividade: documentado, fora desta fase (Fase 03 e Strava) |
 | Informação sobre compartilhamento (VII) | Política de privacidade, com a lista de operadores | Documentado, fora desta fase (M1) |
 | Informação sobre a possibilidade de não consentir e suas consequências (VIII) | Texto de cada tela de consentimento (`GET /api/v1/consents/{purpose}/text`) e coluna "Sem ela" da tabela de finalidades | Implementado na Fase 02. Textos sem revisão jurídica |
-| Revogação do consentimento (IX) | `DELETE /api/v1/consents/{purpose}`, tão fácil quanto conceder, com registro e evento `consent.revoked`. Efeito na Fase 02: o consentimento passa a revogado e nenhum tratamento depende dele ainda; `health_data` responde `409 deletion_required` até a exclusão da conta | Implementado na Fase 02. Efeito sobre cada tratamento: documentado, fora desta fase (cada fase testa a interrupção) |
+| Revogação do consentimento (IX) | `DELETE /api/v1/consents/{purpose}`, tão fácil quanto conceder, com registro e evento `consent.revoked`. Efeito na Fase 02: o consentimento passa a revogado e nenhum tratamento depende dele ainda; `health_data` também é revogado assim e apaga as informações de saúde do perfil, sem exigir a exclusão da conta | Implementado na Fase 02. Efeito sobre cada tratamento: documentado, fora desta fase (cada fase testa a interrupção) |
 
 Esta tabela descreve o fluxo técnico e **não é parecer jurídico**: a adequação de cada fluxo e os prazos continuam nas pendências da revisão jurídica. Os direitos são gratuitos (§5), e o canal e o prazo de resposta ao titular dependem da indicação do encarregado.
 

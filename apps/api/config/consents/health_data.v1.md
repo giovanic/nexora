@@ -41,6 +41,6 @@ Só para pessoas com 18 anos ou mais.
 
 ## Se você não aceitar ou quiser retirar
 
-Este consentimento é a base do app: sem ele, não há como guardar nem mostrar os seus dados. Você pode retirá-lo quando quiser, excluindo a conta em Configurações. Nada muda até você confirmar a exclusão. Antes, você pode exportar os seus dados.
+Sem este consentimento, o app não guarda nem mostra as informações descritas aqui, e as partes que dependem delas ficam indisponíveis. Você pode retirá-lo quando quiser, em Configurações, com a mesma facilidade com que o deu. Ao retirar, apagamos as informações de saúde do seu perfil (esportes, níveis, motivações e nome de exibição) e bloqueamos essas partes do app até você dar o consentimento de novo. A sua conta continua. Antes, você pode exportar os seus dados.
 
-Depois da exclusão, os dados de saúde são apagados. Fica só o registro dos seus consentimentos e das ações de segurança da conta, ligado a um código interno, sem e-mail e sem nenhum conteúdo de saúde.
+Se preferir encerrar tudo, você também pode excluir a conta em Configurações. Depois da exclusão, os dados de saúde são apagados. Fica só o registro dos seus consentimentos e das ações de segurança da conta, ligado a um código interno, sem e-mail e sem nenhum conteúdo de saúde.
