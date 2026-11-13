@@ -11,7 +11,7 @@ Doze contextos num só monólito, separados por namespace ([ADR 0003](decisions/
 5. Ciclos são proibidos. Quando a informação precisa voltar, usa-se evento.
 6. Infraestrutura (cliente de IA, cliente do Strava, armazenamento) fica atrás de adaptadores de cada contexto.
 7. `UserProfile::Api.time_zone(user_id)` pode ser lido por Nutrition, Activities, Goals e Missions, para calcular `local_date`.
-8. Exportação e exclusão usam um registro compartilhado em `shared/`: cada contexto com dados de usuário inscreve seu exportador e seu apagador. Identity aciona o registro sem conhecer o conteúdo, e os exportadores gravam direto no arquivo final. `shared/` contém também a infraestrutura de eventos e não tem regra de negócio.
+8. Exportação e exclusão usam um registro compartilhado em `shared/`: cada contexto com dados de usuário inscreve seu exportador e seu apagador. Identity aciona o registro sem conhecer o conteúdo, e a exportação é montada na hora, em memória, sem gravar arquivo. `shared/` contém também a infraestrutura de eventos e não tem regra de negócio. Exceção aceita (rulings R3 e R4): `shared/` conhece um único nome de evento de Identity, `user.deletion_requested`, que a regra de descarte da outbox nunca descarta.
 
 O teste que impõe isso, e o que ele não alcança, estão na [ADR 0003](decisions/0003-domain-boundaries-without-engines.md). As dependências permitidas ficam em `apps/api/config/domain_boundaries.yml`.
 
@@ -49,7 +49,7 @@ flowchart TD
   ID -. eventos .-> SI
 ```
 
-Setas contínuas mostram as principais chamadas síncronas permitidas; a lista completa está nas seções "Permitido" e em `apps/api/config/domain_boundaries.yml`. Setas tracejadas são eventos. `user.deletion_requested` chega a **todos** os contextos, além dos três desenhados.
+Setas contínuas mostram as principais chamadas síncronas permitidas; a lista completa está nas seções "Permitido" e em `apps/api/config/domain_boundaries.yml`. Setas tracejadas são eventos. `user.deletion_requested` não tem consumidor hoje: a exclusão chega a todos os contextos pelo registro de dados, e o evento fica para efeitos fora do banco que um contexto venha a precisar.
 
 ## Contextos
 
@@ -57,8 +57,8 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 
 - **Responsabilidade:** contas, autenticação, sessões, autorização base, consentimentos e exclusão de conta.
 - **Modelos:** `User`, `Session`, `ConsentRecord`, `AuditEvent`, `AccountDeletion`.
-- **Serviços:** `RegisterUser`, `Authenticate`, `RevokeSession`, `GrantConsent`, `RevokeConsent`, `RequestAccountDeletion`, `ConfirmDeletion`, `ExportUserData`.
-- **Publica:** `user.registered`, `consent.granted`, `consent.revoked`, `user.deletion_requested`.
+- **Serviços:** `Register`, `Authenticate`, `RevokeSession`, `GrantConsent`, `RevokeConsent`, `RequestDeletion`, `ExportAccount`, e o job `EraseAccountJob`, que percorre o registro de dados.
+- **Publica:** `user.registered`, `consent.granted`, `consent.revoked`.
 - **Consome:** nada.
 - **Registra no registro de dados** (`Shared::DataRegistry`): as tabelas `users`, `sessions`, `consent_records`, `audit_events`, `account_deletions`, com exportador e apagador. Registra também a regra de descarte da outbox: evento de usuário com exclusão pedida (`account_deletions` existe) é descartado, exceto `user.deletion_requested`.
 - **Permitido:** nenhum outro contexto.
@@ -67,7 +67,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 ### 2. User Profile
 
 - **Responsabilidade:** dados pessoais, preferências e perfil esportivo por esporte.
-- **Modelos:** `UserProfile`, `SportProfile`.
+- **Modelos:** `Profile`, `SportProfile`.
 - **Serviços:** `UpdateProfile`, `SetSportLevel`.
 - **Publica:** `sport_profile.changed`.
 - **Consome:** `user.registered` (consumidor `user_profile.create_profile`, cria o perfil com o fuso do cadastro) e `consent.revoked` (consumidor `user_profile.erase_health_data`, quando a finalidade é `health_data`: apaga esportes, motivações e nome de exibição e mantém fuso e unidades). A exclusão de conta chega pelo registro de dados, não por evento.
@@ -81,7 +81,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Modelos:** `FoodEntry`, `FoodItem`.
 - **Serviços:** `ConfirmFoodEntry`, `CorrectFoodItem`, `CreateManualFoodEntry`, `DeleteFoodEntry`, `NutritionCalculator`.
 - **Publica:** `food_entry.created`, `food_entry.confirmed`, `food_entry.corrected`, `food_entry.deleted`.
-- **Consome:** `food_analysis.completed`, `food_analysis.failed`, `user.deletion_requested`.
+- **Consome:** `food_analysis.completed`, `food_analysis.failed`.
 - **Permitido:** API pública de Food AI, de Food Catalog e o fuso de User Profile.
 - **Proibido:** conhecer provedor de IA; expor limite ou meta de calorias.
 
@@ -91,7 +91,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Modelos:** `FoodAnalysisResult`, `AiUsageRecord`, `PromptVersion`.
 - **Serviços:** `AuthorizeUpload`, `AnalyzeFoodPhoto`, `ProviderAdapter` (interface), `RecordAiUsage`, `CheckAnalysisQuota`.
 - **Publica:** `food_analysis.completed`, `food_analysis.failed`.
-- **Consome:** `consent.revoked`, `user.deletion_requested`.
+- **Consome:** `consent.revoked`.
 - **Permitido:** Identity & Access (consentimento).
 - **Proibido:** gravar em `food_entries`; calcular nutrição; receber dados do Strava.
 
@@ -111,7 +111,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Modelos:** `Activity`.
 - **Serviços:** `RecordManualActivity`, `UpsertExternalActivity`, `DeleteActivity`.
 - **Publica:** `activity.imported`, `activity.updated`, `activity.deleted`.
-- **Consome:** `user.deletion_requested`.
+- **Consome:** nada.
 - **Permitido:** Identity & Access e o fuso de User Profile.
 - **Proibido:** conhecer detalhes do Strava além de `provider` e `external_id`.
 
@@ -121,7 +121,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Modelos:** `Integration`, `IntegrationToken`, `ActivitySyncEvent`.
 - **Serviços:** `ConnectStrava`, `RefreshToken`, `ReceiveWebhookEvent`, `ProcessWebhookEvent`, `BackfillActivities`, `ReconcileActivities`, `DisconnectStrava`, `RateLimitBudget`.
 - **Publica:** `integration.connected`, `integration.disconnected`.
-- **Consome:** `consent.revoked` (finalidade `strava_integration`, dispara a desconexão), `user.deletion_requested`.
+- **Consome:** `consent.revoked` (finalidade `strava_integration`, dispara a desconexão).
 - **Permitido:** API pública de Activities e Identity & Access (consentimento).
 - **Proibido:** expor dados de um atleta a outro; enviar dados a provedores de IA.
 
@@ -131,7 +131,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Modelos:** `Goal`, `GoalCheckIn`, `WeeklyPlan`.
 - **Serviços:** `CreateGoal`, `CheckIn`, `EvaluateGoal`, `PlanWeek`.
 - **Publica:** `goal.created`, `goal.progressed`, `goal.completed`, `goal.uncompleted`, `recovery_day.planned`, `recovery_day.logged`.
-- **Consome:** `food_entry.confirmed`, `food_entry.deleted`, `activity.imported`, `activity.deleted`, `sport_profile.changed`, `user.deletion_requested`.
+- **Consome:** `food_entry.confirmed`, `food_entry.deleted`, `activity.imported`, `activity.deleted`, `sport_profile.changed`.
 - **Permitido:** API pública de User Profile para sugestão de metas.
 - **Proibido:** tipos de meta baseados em calorias, déficit, peso ou compensação.
 
@@ -141,7 +141,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Modelos:** `Mission`, `UserMission`.
 - **Serviços:** `AssignMissions`, `EvaluateMission`.
 - **Publica:** `mission.assigned`, `mission.completed`.
-- **Consome:** `food_entry.confirmed`, `activity.imported`, `goal.completed`, `recovery_day.logged`, `sport_profile.changed`, `user.deletion_requested`.
+- **Consome:** `food_entry.confirmed`, `activity.imported`, `goal.completed`, `recovery_day.logged`, `sport_profile.changed`.
 - **Permitido:** API pública de User Profile.
 - **Proibido:** conceder XP diretamente.
 
@@ -151,7 +151,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Modelos:** `XpTransaction`, `UserLevel`, `Achievement`, `UserAchievement`, `Streak`, `GamificationCounter`, `PlannedRecoveryDay`.
 - **Serviços:** `RuleRegistry` (regras em classes Ruby versionadas), `AwardXp`, `ReverseXp`, `RecalculateLevel`, `UnlockAchievement`, `UpdateStreak`.
 - **Publica:** `xp.awarded`, `xp.reversed`, `level.unlocked`, `achievement.unlocked`.
-- **Consome:** `food_entry.confirmed`, `food_entry.deleted`, `activity.imported`, `activity.deleted`, `goal.completed`, `goal.uncompleted`, `mission.completed`, `recovery_day.planned`, `recovery_day.logged`, `user.deletion_requested`.
+- **Consome:** `food_entry.confirmed`, `food_entry.deleted`, `activity.imported`, `activity.deleted`, `goal.completed`, `goal.uncompleted`, `mission.completed`, `recovery_day.planned`, `recovery_day.logged`.
 - **Permitido:** nenhum contexto de forma síncrona.
 - **Proibido:** ler tabelas de Nutrition ou de Activities; usar calorias, déficit, peso, duração, distância ou volume absoluto em regras. Os eventos não carregam esses campos ([ADR 0009](decisions/0009-gamification-safety-principles.md)).
 
@@ -161,7 +161,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Modelos:** `Notification`, `DeviceToken`.
 - **Serviços:** `Notify`, `DeliverPush`.
 - **Publica:** nada.
-- **Consome:** `mission.assigned`, `achievement.unlocked`, `level.unlocked`, `report.generated`, `user.deletion_requested`.
+- **Consome:** `mission.assigned`, `achievement.unlocked`, `level.unlocked`, `report.generated`.
 - **Permitido:** API pública de User Profile para preferências.
 - **Proibido:** gerar texto fora da lista de linguagem aprovada.
 
@@ -171,7 +171,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Modelos:** `ProgressSnapshot`, `WeeklyReport`, `UsageFact`.
 - **Serviços:** `BuildWeeklyReport`, `ComputeConsistency`, `GenerateInsight`.
 - **Publica:** `report.generated`.
-- **Consome:** `user.registered`, `consent.revoked`, eventos de Nutrition, Activities, Goals, Missions e Gamification, e `user.deletion_requested`. Eventos servem de gatilho.
+- **Consome:** `user.registered`, `consent.revoked`, eventos de Nutrition, Activities, Goals, Missions e Gamification. Eventos servem de gatilho.
 - **Permitido:** leitura das APIs públicas de Identity & Access, User Profile, Nutrition, Activities, Goals e Missions. Projeções podem ser reconstruídas por essas APIs. Food AI e Strava Integration ficam de fora, porque dados do Strava não podem chegar a um provedor de IA ([ADR 0003](decisions/0003-domain-boundaries-without-engines.md)).
 - **Proibido:** diagnóstico; inferências sobre saúde; enviar dados do Strava à IA; expor dados entre usuários.
 
@@ -181,9 +181,9 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 
 | Evento | Produtor | Conteúdo mínimo do payload | Consumidores |
 |---|---|---|---|
-| `user.registered` | Identity & Access | nenhum | User Profile, Progress & Analytics |
-| `user.deletion_requested` | Identity & Access | prazo | Todos |
-| `consent.granted` / `consent.revoked` | Identity & Access | finalidade, versão | Food AI, Strava Integration, Progress & Analytics |
+| `user.registered` | Identity & Access | `time_zone` | User Profile, Progress & Analytics |
+| `user.deletion_requested` | Identity & Access | vazio | nenhum hoje (a exclusão usa o registro de dados) |
+| `consent.granted` / `consent.revoked` | Identity & Access | finalidade, versão | User Profile (só `consent.revoked`), Food AI, Strava Integration, Progress & Analytics |
 | `sport_profile.changed` | User Profile | `sport_profile_id`, tipo da mudança (esporte e nível são dado de saúde: o consumidor lê pela `UserProfile::Api`) | Goals, Missions |
 | `food_entry.created` | Nutrition | `food_entry_id`, origem | Progress & Analytics |
 | `food_analysis.completed` / `food_analysis.failed` | Food AI | `analysis_id`, `food_entry_id` (itens e porções ficam na API de Food AI) | Nutrition |
@@ -212,7 +212,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 
 ## Entrega, ordem e idempotência
 
-- **Publicação:** todo evento da tabela acima é gravado em `outbox_events` na mesma transação da mudança. Um job publica os pendentes ([ADR 0004](decisions/0004-domain-events-transactional-outbox.md)). A Fase 02 é a dona da implementação, porque `user.deletion_requested` não pode se perder.
+- **Publicação:** todo evento da tabela acima é gravado em `outbox_events` na mesma transação da mudança. Um job publica os pendentes ([ADR 0004](decisions/0004-domain-events-transactional-outbox.md)). A decisão e as regras dos consumidores estão na ADR 0004.
 - **Entrega:** pelo menos uma vez. Sem garantia de ordem global, porque a API é assíncrona. Consumidores usam `occurred_at` e consultam a API pública quando a ordem importa.
 - **Idempotência:** cada consumidor registra `(consumer, event_id)` numa tabela com índice único, na mesma transação do efeito. Evento repetido é ignorado.
 - **Falhas:** retentativas com espera crescente. Após o limite (8), o evento fica marcado como morto e dispara alerta. A rotina de limpeza nunca o apaga. Procedimento de reprocessamento em [RUNBOOK_OUTBOX.md](../operations/RUNBOOK_OUTBOX.md). Enquanto um `consent.revoked` de `health_data` está morto, um novo consentimento de `health_data` responde `409 revocation_pending`. Uma conferência periódica compara eventos publicados, consumidores esperados e `consumed_events`, com alerta por consumidor.
