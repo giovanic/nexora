@@ -5,7 +5,10 @@ module ErrorRendering
     "invalid_credentials" => "E-mail ou senha incorretos.",
     "email_taken" => "Já existe uma conta com este e-mail. Você pode entrar com ele.",
     "invalid_time_zone" => "Não reconhecemos o fuso horário do aparelho.",
-    "invalid_token" => "Este link de redefinição não vale mais. Peça um novo."
+    "invalid_token" => "Este link de redefinição não vale mais. Peça um novo.",
+    "consent_required" => "Esta parte do app depende de um consentimento que você ainda não deu.",
+    "outdated_version" => "O texto deste consentimento foi atualizado. Leia a versão atual antes de aceitar.",
+    "deletion_required" => "Sem este consentimento o app não funciona. Para retirá-lo, exclua a conta; nada muda até você confirmar."
   }.freeze
 
   private

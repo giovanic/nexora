@@ -16,6 +16,10 @@ Rails.application.routes.draw do
           delete :current, action: :destroy_current
         end
       end
+      # Any lowercase purpose reaches the controller, which answers 404 for one it does not know.
+      resources :consents, only: %i[index create destroy], param: :purpose, constraints: { purpose: /[a-z_]+/ }, format: false do
+        get :text, on: :member
+      end
     end
   end
 

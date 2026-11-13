@@ -37,6 +37,7 @@ Requisitos do art. 11, I, e do art. 8:
 - **Revogável** a qualquer momento, de forma gratuita e facilitada (art. 8, §5).
 - **Versionado:** `consent_records` guarda a versão do texto, a data e a ação.
 - **Só o necessário bloqueia:** recusar a análise de fotos não bloqueia o registro manual.
+- **Textos:** versionados em `apps/api/config/consents/<purpose>.v<N>.md`. Os da versão 1 são rascunhos, aguardando a aprovação do responsável, e não têm revisão jurídica.
 
 | Finalidade (`purpose`) | Quando é pedida | Sem ela |
 |---|---|---|
@@ -54,6 +55,8 @@ Requisitos do art. 11, I, e do art. 8:
 | `strava_integration` | Strava Integration desconecta | Apagados, como na desconexão |
 | `usage_metrics` | Progress & Analytics para a coleta | `usage_facts` da pessoa apagados |
 | `health_data` | Todo o tratamento, porque é a função do produto | Tela explica e leva à exclusão de conta, após confirmação. A revisão jurídica confirma esse destino |
+
+**Estado na Fase 02:** só existe a Identity. Revogar `health_data` responde `409 deletion_required` e o consentimento continua, até a pessoa confirmar a exclusão da conta. As outras finalidades já podem ser concedidas e revogadas, com registro e evento `consent.revoked`, mas ainda não têm tratamento a interromper.
 
 Toda fase que cria um novo tratamento atualiza esta tabela e testa a interrupção.
 

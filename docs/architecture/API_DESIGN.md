@@ -78,7 +78,8 @@ Os valores acima são apenas ilustrativos.
 | `POST /api/v1/sessions/refresh` | Renovar sessão, conforme a ADR 0005 |
 | `POST /api/v1/password_resets` | Pedir o link de recuperação de senha; responde sempre `202` |
 | `PATCH /api/v1/password_resets/:token` | Trocar a senha com o token do link; encerra todas as sessões |
-| `GET`/`POST /api/v1/consents`, `DELETE /api/v1/consents/:purpose` | Consultar, conceder, revogar |
+| `GET`/`POST /api/v1/consents`, `DELETE /api/v1/consents/:purpose` | Consultar, conceder, revogar. Versão diferente da vigente responde `409 outdated_version`; revogar `health_data` responde `409 deletion_required` e o consentimento continua |
+| `GET /api/v1/consents/:purpose/text` | Texto da versão vigente, em Markdown |
 | `POST /api/v1/account/export` | Solicitar exportação |
 | `DELETE /api/v1/account` | Solicitar exclusão |
 

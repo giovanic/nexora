@@ -18,6 +18,16 @@ module Authentication
     def allow_unauthenticated_access(**options)
       skip_before_action :require_authentication, **options
     end
+
+    # Runs after the session check, and answers 403 consent_required unless
+    # the latest record of the purpose is a grant (design 4.5).
+    def require_consent(purpose, **options)
+      raise ArgumentError, "unknown consent purpose" unless Identity::Api.consent_purpose?(purpose.to_s)
+
+      before_action(**options) do
+        render_error(:forbidden, "consent_required") unless Identity::Api.consent_granted?(user_id: current_user_id, purpose: purpose.to_s)
+      end
+    end
   end
 
   private

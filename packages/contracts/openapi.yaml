@@ -219,6 +219,104 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         default:
           $ref: "#/components/responses/Error"
+  /api/v1/consents:
+    get:
+      operationId: listConsents
+      summary: Lists every purpose of consent with its state for the signed-in person.
+      description: |
+        The state comes from the latest record of each purpose. Every grant and revoke is kept as
+        history. Pending means the person was never asked or never answered.
+      responses:
+        "200":
+          description: One entry per purpose, always in the same order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentList"
+        "401":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: grantConsent
+      summary: Grants a purpose, accepting the current version of its text.
+      description: |
+        A version other than the current one answers 409 outdated_version, so the app shows the
+        current text again. Granting a purpose already granted with that version writes nothing new.
+        An unknown purpose answers 422 validation_failed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsentGrantRequest"
+      responses:
+        "201":
+          description: The purpose is granted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Consent"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/consents/{purpose}:
+    delete:
+      operationId: revokeConsent
+      summary: Revokes a purpose. Revoking one that is not granted writes nothing.
+      description: |
+        health_data answers 409 deletion_required and stays granted: it is what the product does,
+        so the app leads to account deletion, which needs its own confirmation. An unknown purpose
+        answers 404.
+      parameters:
+        - name: purpose
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: The purpose is revoked.
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/consents/{purpose}/text:
+    get:
+      operationId: getConsentText
+      summary: The text of the current version of a purpose, in Markdown. An unknown purpose answers 404.
+      parameters:
+        - name: purpose
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The current text, to show before asking for the consent.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentText"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     bearerSession:
@@ -365,6 +463,65 @@ components:
         current:
           type: boolean
           description: True for the session that made this request.
+    ConsentPurpose:
+      type: string
+      enum: [health_data, food_photo_ai, strava_integration, usage_metrics]
+    ConsentGrantRequest:
+      type: object
+      additionalProperties: false
+      required: [purpose, version]
+      properties:
+        purpose:
+          $ref: "#/components/schemas/ConsentPurpose"
+        version:
+          type: integer
+          minimum: 1
+          description: The version of the text the person read, from GET /api/v1/consents/{purpose}/text.
+    ConsentList:
+      type: object
+      additionalProperties: false
+      required: [consents]
+      properties:
+        consents:
+          type: array
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/Consent"
+    Consent:
+      type: object
+      additionalProperties: false
+      required: [purpose, state, current_version, accepted_version, decided_at]
+      properties:
+        purpose:
+          $ref: "#/components/schemas/ConsentPurpose"
+        state:
+          type: string
+          enum: [granted, revoked, pending]
+        current_version:
+          type: integer
+          minimum: 1
+          description: The version of the text in force now.
+        accepted_version:
+          type: [integer, "null"]
+          minimum: 1
+          description: The version the person accepted, while granted. Null when revoked or pending.
+        decided_at:
+          type: [string, "null"]
+          format: date-time
+          description: When the latest grant or revoke happened. Null when pending.
+    ConsentText:
+      type: object
+      additionalProperties: false
+      required: [purpose, version, text]
+      properties:
+        purpose:
+          $ref: "#/components/schemas/ConsentPurpose"
+        version:
+          type: integer
+          minimum: 1
+        text:
+          type: string
+          description: Markdown, in Brazilian Portuguese.
     HealthLive:
       type: object
       additionalProperties: false

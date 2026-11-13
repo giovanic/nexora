@@ -9,7 +9,9 @@ module Identity
       "sign_in_failed" => {},
       "session_revoked" => {},
       "all_sessions_revoked" => {},
-      "password_reset" => {}
+      "password_reset" => {},
+      "consent_granted" => { "purpose" => ConsentTexts::PURPOSES },
+      "consent_revoked" => { "purpose" => ConsentTexts::PURPOSES }
     }.freeze
 
     def self.call(action:, ip:, user_ref: nil, metadata: {})

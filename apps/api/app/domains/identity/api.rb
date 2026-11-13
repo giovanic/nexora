@@ -4,8 +4,7 @@ module Identity
   module Api
     CLIENTS = Session::CLIENTS
     MAX_SESSIONS_LISTED = 100
-    USER_DATA_TABLES = %w[users sessions audit_events].freeze
-
+    USER_DATA_TABLES = %w[users sessions audit_events consent_records].freeze
     Result = Data.define(:session_token, :user_id, :expires_at) do
       def ok? = true
     end
@@ -14,6 +13,12 @@ module Identity
       def ok? = false
     end
     SessionInfo = Data.define(:id, :user_id, :client, :device_label, :created_at, :last_used_at)
+    # state: granted, revoked or pending (never answered). accepted_version is
+    # set only while granted.
+    Consent = Data.define(:purpose, :state, :current_version, :accepted_version, :decided_at) do
+      def ok? = true
+    end
+    ConsentText = Data.define(:purpose, :version, :body)
 
     class << self
       # Code outside Identity reaches only this module, so it asks instead of reading CLIENTS.
@@ -79,6 +84,45 @@ module Identity
         ResetPassword.call(token:, password:, ip:)
       end
 
+      def consent_purpose?(purpose)
+        ConsentTexts.purpose?(purpose)
+      end
+
+      # From the latest record of the purpose. Any context may ask (DOMAIN_MODEL.md).
+      def consent_granted?(user_id:, purpose:)
+        raise ArgumentError, "unknown consent purpose" unless ConsentTexts.purpose?(purpose)
+
+        ConsentRecord.latest(user_id:, purpose:)&.granted? || false
+      end
+
+      # Every purpose, in the order of ConsentTexts::PURPOSES, from one query.
+      def consents(user_id:)
+        latest = ConsentRecord.where(user_id:).select("DISTINCT ON (purpose) *").order(:purpose, occurred_at: :desc).index_by(&:purpose)
+        ConsentTexts::PURPOSES.map { |purpose| consent_info(purpose, latest[purpose]) }
+      end
+
+      def consent(user_id:, purpose:)
+        consent_info(purpose, ConsentRecord.latest(user_id:, purpose:))
+      end
+
+      # Consent, Errors (validation_failed, outdated_version) or :not_found
+      # for an account that does not exist or was deleted.
+      def grant_consent(user_id:, purpose:, version:, source: nil)
+        GrantConsent.call(user_id:, purpose:, version:, source:)
+      end
+
+      # true, Errors (validation_failed, deletion_required for health_data) or :not_found.
+      def revoke_consent(user_id:, purpose:, source: nil)
+        RevokeConsent.call(user_id:, purpose:, source:)
+      end
+
+      # The text of the version in force, or nil for an unknown purpose.
+      def consent_text(purpose:)
+        return unless ConsentTexts.purpose?(purpose)
+
+        ConsentText.new(purpose:, version: ConsentTexts.current_version(purpose), body: ConsentTexts.read(purpose))
+      end
+
       def export_user_data(user_id)
         UserData.export(user_id)
       end
@@ -92,6 +136,12 @@ module Identity
       def info(session)
         SessionInfo.new(id: session.id, user_id: session.user_id, client: session.client, device_label: session.device_label,
                         created_at: session.created_at, last_used_at: session.last_used_at)
+      end
+
+      def consent_info(purpose, latest)
+        state = latest ? latest.action : "pending"
+        Consent.new(purpose:, state:, current_version: ConsentTexts.current_version(purpose),
+                    accepted_version: latest&.granted? ? latest.text_version : nil, decided_at: latest&.occurred_at)
       end
     end
   end

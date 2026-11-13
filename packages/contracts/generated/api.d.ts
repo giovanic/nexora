@@ -182,6 +182,72 @@ export interface paths {
         patch: operations["resetPassword"];
         trace?: never;
     };
+    "/api/v1/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists every purpose of consent with its state for the signed-in person.
+         * @description The state comes from the latest record of each purpose. Every grant and revoke is kept as
+         *     history. Pending means the person was never asked or never answered.
+         */
+        get: operations["listConsents"];
+        put?: never;
+        /**
+         * Grants a purpose, accepting the current version of its text.
+         * @description A version other than the current one answers 409 outdated_version, so the app shows the
+         *     current text again. Granting a purpose already granted with that version writes nothing new.
+         *     An unknown purpose answers 422 validation_failed.
+         */
+        post: operations["grantConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/consents/{purpose}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revokes a purpose. Revoking one that is not granted writes nothing.
+         * @description health_data answers 409 deletion_required and stays granted: it is what the product does,
+         *     so the app leads to account deletion, which needs its own confirmation. An unknown purpose
+         *     answers 404.
+         */
+        delete: operations["revokeConsent"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/consents/{purpose}/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The text of the current version of a purpose, in Markdown. An unknown purpose answers 404. */
+        get: operations["getConsentText"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -240,6 +306,36 @@ export interface components {
             last_used_at: string;
             /** @description True for the session that made this request. */
             current: boolean;
+        };
+        /** @enum {string} */
+        ConsentPurpose: "health_data" | "food_photo_ai" | "strava_integration" | "usage_metrics";
+        ConsentGrantRequest: {
+            purpose: components["schemas"]["ConsentPurpose"];
+            /** @description The version of the text the person read, from GET /api/v1/consents/{purpose}/text. */
+            version: number;
+        };
+        ConsentList: {
+            consents: components["schemas"]["Consent"][];
+        };
+        Consent: {
+            purpose: components["schemas"]["ConsentPurpose"];
+            /** @enum {string} */
+            state: "granted" | "revoked" | "pending";
+            /** @description The version of the text in force now. */
+            current_version: number;
+            /** @description The version the person accepted, while granted. Null when revoked or pending. */
+            accepted_version: number | null;
+            /**
+             * Format: date-time
+             * @description When the latest grant or revoke happened. Null when pending.
+             */
+            decided_at: string | null;
+        };
+        ConsentText: {
+            purpose: components["schemas"]["ConsentPurpose"];
+            version: number;
+            /** @description Markdown, in Brazilian Portuguese. */
+            text: string;
         };
         HealthLive: {
             /** @enum {string} */
@@ -532,6 +628,107 @@ export interface operations {
             403: components["responses"]["Error"];
             422: components["responses"]["Error"];
             429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    listConsents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One entry per purpose, always in the same order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentList"];
+                };
+            };
+            401: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    grantConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description The purpose is granted. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Consent"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    revokeConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purpose: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The purpose is revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    getConsentText: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purpose: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current text, to show before asking for the consent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentText"];
+                };
+            };
+            401: components["responses"]["Error"];
+            404: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
     };

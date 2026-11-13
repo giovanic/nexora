@@ -11,13 +11,17 @@ module Identity
         end,
         audit_events: AuditEvent.where(user_ref: user_id).order(:occurred_at).map do |audit|
           audit.slice(:action, :metadata, :occurred_at).symbolize_keys
+        end,
+        consent_records: ConsentRecord.where(user_id:).order(:occurred_at).map do |record|
+          record.slice(:purpose, :text_version, :action, :source, :occurred_at).symbolize_keys
         end
       }
     end
 
     # Only the sessions go here. The users row is anonymized by the deletion
-    # flow after every context is erased, and audit_events stay linked to the
-    # same UUID (design 4.4). Safe to run again.
+    # flow after every context is erased, and audit_events and consent_records
+    # stay linked to the same UUID, with no health content (design 4.4). Safe
+    # to run again.
     def self.erase(user_id)
       Session.where(user_id:).delete_all
     end
