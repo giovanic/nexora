@@ -103,12 +103,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_120100) do
     t.string "time_zone", null: false
     t.string "units", default: "metric", null: false
     t.jsonb "notification_preferences", default: {}, null: false
-    t.string "motivations", default: [], null: false, array: true
+    t.text "motivations", default: [], null: false, array: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.check_constraint "cardinality(motivations) <= 4", name: "user_profiles_motivations_max"
     t.check_constraint "jsonb_typeof(notification_preferences) = 'object'::text", name: "user_profiles_preferences_object"
-    t.check_constraint "motivations <@ ARRAY['start_caring'::character varying, 'training_consistency'::character varying, 'understand_food'::character varying, 'track_progress'::character varying]", name: "user_profiles_motivations_known"
+    t.check_constraint "motivations <@ ARRAY['start_caring'::text, 'training_consistency'::text, 'understand_food'::text, 'track_progress'::text]", name: "user_profiles_motivations_known"
     t.check_constraint "units::text = 'metric'::text", name: "user_profiles_units_known"
   end
 
