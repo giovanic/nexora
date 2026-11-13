@@ -1,4 +1,7 @@
+import { useState } from "react";
 import type { Api } from "../../shared/api";
+import { errorMessage } from "../../shared/messages";
+import { ErrorMessage } from "../../shared/ui";
 import { ConsentsSection } from "./ConsentsSection";
 import { downloadJson } from "./download";
 import { PasswordAction } from "./PasswordAction";
@@ -25,19 +28,29 @@ export function PrivacyScreen({ api, onSignedOut, download = downloadJson }: Pro
     return null;
   }
 
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+
+  // The cookie is HttpOnly: only the server can end the session. If it did not answer, the
+  // session is still alive, so the page must not pretend otherwise. A 401 means it is gone.
   async function signOut() {
-    await api.signOut();
-    onSignedOut();
+    setSigningOut(true);
+    setSignOutError(null);
+    const result = await api.signOut();
+    setSigningOut(false);
+    if (result.ok || result.status === 401) return onSignedOut();
+    setSignOutError(errorMessage(result, "Não foi possível sair. Tente de novo."));
   }
 
   return (
     <main>
       <h1>Privacidade</h1>
       <p>
-        <button type="button" onClick={() => void signOut()}>
-          Sair
+        <button type="button" disabled={signingOut} onClick={() => void signOut()}>
+          {signOutError ? "Tentar sair de novo" : "Sair"}
         </button>
       </p>
+      {signOutError && <ErrorMessage>{signOutError}</ErrorMessage>}
       <ConsentsSection api={api} />
       <PasswordAction
         id="export"
@@ -57,6 +70,7 @@ export function PrivacyScreen({ api, onSignedOut, download = downloadJson }: Pro
         submitLabel="Excluir minha conta"
         busyLabel="Excluindo…"
         run={deleteAccount}
+        wrongPassword="Senha incorreta. Nada foi excluído."
       />
     </main>
   );

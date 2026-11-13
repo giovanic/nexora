@@ -193,6 +193,32 @@ describe("consents in settings", () => {
   });
 });
 
+describe("consent wording", () => {
+  it("uses the shared state labels", async () => {
+    const { element } = setup({ "GET /api/v1/consents": consentList({ health_data: "granted", food_photo_ai: "outdated", strava_integration: "revoked" }) });
+    await render(element);
+
+    expect(await screen.findByText("Texto novo: leia e conceda de novo")).toBeOnTheScreen();
+    expect(screen.getByText("Ainda não respondido")).toBeOnTheScreen();
+    expect(screen.getByText("Retirado")).toBeOnTheScreen();
+    expect(screen.getByText("Concedido")).toBeOnTheScreen();
+  });
+
+  it("explains why the text changed when the version is outdated", async () => {
+    const { element } = setup({
+      "GET /api/v1/consents/food_photo_ai/text": jsonResponse(200, { purpose: "food_photo_ai", version: 4, text: "Texto novo." }),
+      "POST /api/v1/consents": errorResponse(409, "outdated_version"),
+    });
+    await render(element);
+
+    await fireEvent.press(await screen.findByRole("button", { name: "Ver texto: Foto da refeição analisada por IA" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Conceder: Foto da refeição analisada por IA" }));
+
+    expect(await screen.findByText("O texto deste consentimento foi atualizado. Leia a versão atual antes de aceitar.")).toBeOnTheScreen();
+    expect(screen.getByText("Texto novo.")).toBeOnTheScreen();
+  });
+});
+
 describe("account", () => {
   it("delete account asks for the password", async () => {
     const { element, calls, onSignedOut } = setup({ "DELETE /api/v1/account": jsonResponse(202) });

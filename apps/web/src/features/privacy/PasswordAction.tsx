@@ -13,10 +13,11 @@ type Props = {
   // Resolves to null on success, or the failure to explain.
   run: (password: string) => Promise<Failure | null>;
   success?: string;
+  wrongPassword?: string;
 };
 
 // A section that asks for the password again before a sensitive action.
-export function PasswordAction({ id, title, description, passwordLabel, submitLabel, busyLabel, run, success }: Props) {
+export function PasswordAction({ id, title, description, passwordLabel, submitLabel, busyLabel, run, success, wrongPassword = "A senha não confere." }: Props) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +32,7 @@ export function PasswordAction({ id, title, description, passwordLabel, submitLa
     setBusy(false);
     setPassword("");
     if (!failure) setDone(true);
-    else setError(failure.code === "invalid_credentials" ? "A senha não confere." : errorMessage(failure));
+    else setError(failure.code === "invalid_credentials" ? wrongPassword : errorMessage(failure));
   }
 
   return (

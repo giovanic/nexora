@@ -34,9 +34,9 @@ describe("PrivacyScreen consents", () => {
     expect(screen.getByRole("status").textContent).toContain("Carregando");
     const health = await row("Dados de saúde");
     expect(health.getByText("Concedido")).toBeTruthy();
-    expect((await row("Fotos de refeição para a IA")).getByText("Pendente")).toBeTruthy();
+    expect((await row("Fotos de refeição para a IA")).getByText("Ainda não respondido")).toBeTruthy();
     expect((await row("Integração com o Strava")).getByText("Retirado")).toBeTruthy();
-    expect((await row("Métricas de uso")).getByText("Texto atualizado")).toBeTruthy();
+    expect((await row("Métricas de uso")).getByText("Texto novo: leia e conceda de novo")).toBeTruthy();
   });
 
   it("shows an error state with a retry", async () => {
@@ -91,6 +91,49 @@ describe("PrivacyScreen consents", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Manter" }));
     expect(screen.queryByRole("group", { name: /Retirar o consentimento/ })).toBeNull();
     expect(fetchFn.mock.calls.some(([, i]) => (i as RequestInit)?.method === "DELETE")).toBe(false);
+  });
+});
+
+describe("PrivacyScreen panels and focus", () => {
+  it("renders the text panel inside its own item and moves focus to its heading", async () => {
+    setup({ "GET /api/v1/consents/food_photo_ai/text": { body: { purpose: "food_photo_ai", version: 2, text: "Texto do consentimento" } } });
+    const item = await row("Fotos de refeição para a IA");
+    const trigger = item.getByRole("button", { name: "Ler e conceder" });
+    fireEvent.click(trigger);
+    const heading = await item.findByRole("heading", { name: "Texto de Fotos de refeição para a IA" });
+    expect(item.getByText("Texto do consentimento")).toBeTruthy();
+    expect(document.activeElement).toBe(heading);
+    fireEvent.click(item.getByRole("button", { name: "Agora não" }));
+    await waitFor(() => expect(document.activeElement).toBe(item.getByRole("button", { name: "Ler e conceder" })));
+  });
+
+  it("renders the revoke confirmation inside its item, focuses it and returns focus on cancel", async () => {
+    setup({});
+    const item = await row("Dados de saúde");
+    fireEvent.click(item.getByRole("button", { name: "Retirar" }));
+    const heading = item.getByRole("heading", { name: "Retirar o consentimento de dados de saúde" });
+    expect(document.activeElement).toBe(heading);
+    fireEvent.click(item.getByRole("button", { name: "Manter" }));
+    await waitFor(() => expect(document.activeElement).toBe(item.getByRole("button", { name: "Retirar" })));
+  });
+
+  it("explains why the text is shown again when the version is outdated", async () => {
+    let texts = 0;
+    setup({
+      "GET /api/v1/consents/food_photo_ai/text": () => ({ body: { purpose: "food_photo_ai", version: 2 + texts++, text: "Texto " + texts } }),
+      "POST /api/v1/consents": { status: 409, body: errorBody("outdated_version") },
+    });
+    fireEvent.click((await row("Fotos de refeição para a IA")).getByRole("button", { name: "Ler e conceder" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Aceitar a versão 2" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("foi atualizado");
+    await screen.findByRole("button", { name: "Aceitar a versão 3" });
+    expect(screen.getByRole("alert").textContent).toContain("foi atualizado");
+  });
+
+  it("shows a calm message when the server answers 200 with something that is not JSON", async () => {
+    const fetchFn = vi.fn(async () => new Response("<!doctype html><html></html>", { status: 200 }));
+    render(<PrivacyScreen api={createApi({ baseUrl: "", fetchFn })} onSignedOut={vi.fn()} download={vi.fn()} />);
+    expect((await screen.findByRole("alert")).textContent).toContain("resposta inesperada");
   });
 });
 
@@ -149,8 +192,40 @@ describe("PrivacyScreen account", () => {
     await row("Dados de saúde");
     fireEvent.change(screen.getByLabelText("Senha para excluir"), { target: { value: "bad" } });
     fireEvent.click(screen.getByRole("button", { name: "Excluir minha conta" }));
-    expect((await screen.findByText("A senha não confere.")).getAttribute("role")).toBe("alert");
+    expect((await screen.findByText("Senha incorreta. Nada foi excluído.")).getAttribute("role")).toBe("alert");
     expect(onSignedOut).not.toHaveBeenCalled();
+  });
+
+  it("stays on the page and offers a retry when sign out fails", async () => {
+    let calls = 0;
+    const { onSignedOut } = setup({ "DELETE /api/v1/sessions/current": () => (++calls === 1 ? { status: 500, body: errorBody("internal") } : { status: 204 }) });
+    await row("Dados de saúde");
+    fireEvent.click(screen.getByRole("button", { name: "Sair" }));
+    const alert = await screen.findByText(/do nosso lado/);
+    expect(alert.getAttribute("role")).toBe("alert");
+    expect(document.activeElement).toBe(alert);
+    expect(onSignedOut).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Tentar sair de novo" }));
+    await waitFor(() => expect(onSignedOut).toHaveBeenCalled());
+  });
+
+  it("stays on the page on a network failure at sign out", async () => {
+    const fetchFn = vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "DELETE") throw new TypeError("down");
+      return new Response(JSON.stringify({ consents: [] }));
+    });
+    const onSignedOut = vi.fn();
+    render(<PrivacyScreen api={createApi({ baseUrl: "", fetchFn })} onSignedOut={onSignedOut} download={vi.fn()} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Sair" }));
+    await screen.findByText(/Não foi possível falar com o servidor/);
+    expect(onSignedOut).not.toHaveBeenCalled();
+  });
+
+  it("counts a 401 at sign out as signed out", async () => {
+    const { onSignedOut } = setup({ "DELETE /api/v1/sessions/current": { status: 401, body: errorBody("unauthorized") } });
+    await row("Dados de saúde");
+    fireEvent.click(screen.getByRole("button", { name: "Sair" }));
+    await waitFor(() => expect(onSignedOut).toHaveBeenCalled());
   });
 
   it("signs out", async () => {

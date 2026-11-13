@@ -9,7 +9,7 @@ const STATE_LABELS: Record<Consent["state"], string> = {
   granted: "Concedido",
   pending: "Ainda não respondido",
   revoked: "Retirado",
-  outdated: "Há um texto novo para ler",
+  outdated: "Texto novo: leia e conceda de novo",
 };
 
 export const HEALTH_REVOCATION_WARNING =
@@ -34,12 +34,17 @@ export function ConsentsSection({ api, onHealthRevoked }: Props) {
     setNotice(null);
   }
 
-  async function read(purpose: ConsentPurpose) {
+  async function read(purpose: ConsentPurpose, why?: string) {
     reset();
     setBusy(true);
     const result = await api.getConsentText(purpose);
     setBusy(false);
-    if (result.ok) return setReading(result.data);
+    if (result.ok) {
+      setReading(result.data);
+      // The text changed under the person: say why it is shown again.
+      if (why) setError(why);
+      return;
+    }
     setError(errorMessage(result));
   }
 
@@ -53,7 +58,7 @@ export function ConsentsSection({ api, onHealthRevoked }: Props) {
       reset();
       return reload(false);
     }
-    if (result.code === "outdated_version") return read(text.purpose);
+    if (result.code === "outdated_version") return read(text.purpose, errorMessage(result));
     // revocation_pending: shown as a calm message, never retried on its own.
     setError(errorMessage(result));
   }

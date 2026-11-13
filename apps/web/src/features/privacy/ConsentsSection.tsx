@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Api, Consent, ConsentPurpose, ConsentText } from "../../shared/api";
 import { errorMessage } from "../../shared/messages";
-import { ErrorMessage } from "../../shared/ui";
+import { ErrorMessage, Panel } from "../../shared/ui";
 
 const LABELS: Record<ConsentPurpose, string> = {
   health_data: "Dados de saúde",
@@ -12,9 +12,9 @@ const LABELS: Record<ConsentPurpose, string> = {
 
 const STATES: Record<Consent["state"], string> = {
   granted: "Concedido",
-  pending: "Pendente",
+  pending: "Ainda não respondido",
   revoked: "Retirado",
-  outdated: "Texto atualizado",
+  outdated: "Texto novo: leia e conceda de novo",
 };
 
 type Load = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ready"; consents: Consent[] };
@@ -36,13 +36,27 @@ export function ConsentsSection({ api }: { api: Api }) {
     void refresh();
   }, [refresh]);
 
-  async function read(purpose: ConsentPurpose) {
+  const triggers = useRef<Partial<Record<ConsentPurpose, HTMLButtonElement | null>>>({});
+
+  // Closing a panel puts focus back on the button that opened it.
+  function close(purpose: ConsentPurpose) {
+    setReading(null);
+    setConfirming(null);
+    setTimeout(() => triggers.current[purpose]?.focus(), 0);
+  }
+
+  // `why` stays on screen when the text is shown again because it changed under the person.
+  async function read(purpose: ConsentPurpose, why?: string) {
     setProblem(null);
     setNotice(null);
     setConfirming(null);
     const result = await api.getConsentText(purpose);
-    if (result.ok) setReading(result.data);
-    else setProblem(errorMessage(result));
+    if (result.ok) {
+      setReading(result.data);
+      if (why) setProblem(why);
+    } else {
+      setProblem(errorMessage(result));
+    }
   }
 
   async function grant(text: ConsentText) {
@@ -55,8 +69,7 @@ export function ConsentsSection({ api }: { api: Api }) {
       setNotice(`Consentimento concedido: ${LABELS[text.purpose]}.`);
       await refresh();
     } else if (result.code === "outdated_version") {
-      setProblem(errorMessage(result));
-      await read(text.purpose);
+      await read(text.purpose, errorMessage(result));
     } else {
       // revocation_pending and the rest: one calm message, no automatic retry.
       setProblem(errorMessage(result));
@@ -96,13 +109,42 @@ export function ConsentsSection({ api }: { api: Api }) {
             <li key={consent.purpose} aria-label={LABELS[consent.purpose]}>
               <strong>{LABELS[consent.purpose]}</strong> <span>{STATES[consent.state]}</span>{" "}
               {consent.state === "granted" ? (
-                <button type="button" onClick={() => { setReading(null); setConfirming(consent.purpose); }}>
+                <button type="button" ref={(el) => { triggers.current[consent.purpose] = el; }} onClick={() => { setReading(null); setNotice(null); setProblem(null); setConfirming(consent.purpose); }}>
                   Retirar
                 </button>
               ) : (
-                <button type="button" onClick={() => void read(consent.purpose)}>
+                <button type="button" ref={(el) => { triggers.current[consent.purpose] = el; }} onClick={() => void read(consent.purpose)}>
                   Ler e conceder
                 </button>
+              )}
+              {reading?.purpose === consent.purpose && (
+                <Panel key={reading.version} title={`Texto de ${LABELS[reading.purpose]}`}>
+                  <pre style={{ whiteSpace: "pre-wrap", font: "inherit" }}>{reading.text}</pre>
+                  <button type="button" disabled={busy} onClick={() => void grant(reading)}>
+                    Aceitar a versão {reading.version}
+                  </button>{" "}
+                  <button type="button" onClick={() => close(consent.purpose)}>
+                    Agora não
+                  </button>
+                </Panel>
+              )}
+              {confirming === consent.purpose && (
+                <Panel title={`Retirar o consentimento de ${LABELS[consent.purpose].toLowerCase()}`}>
+                  {consent.purpose === "health_data" ? (
+                    <p>
+                      Ao retirar este consentimento, seus esportes, níveis, motivações e nome de exibição são apagados. A conta continua. Você pode conceder de
+                      novo quando quiser.
+                    </p>
+                  ) : (
+                    <p>Você pode conceder de novo quando quiser.</p>
+                  )}
+                  <button type="button" disabled={busy} onClick={() => void revoke(consent.purpose)}>
+                    Confirmar a retirada
+                  </button>{" "}
+                  <button type="button" onClick={() => close(consent.purpose)}>
+                    Manter
+                  </button>
+                </Panel>
               )}
             </li>
           ))}
@@ -110,35 +152,6 @@ export function ConsentsSection({ api }: { api: Api }) {
       )}
       <div aria-live="polite">{notice}</div>
       {problem && <ErrorMessage>{problem}</ErrorMessage>}
-      {reading && (
-        <section aria-label={`Texto de ${LABELS[reading.purpose]}`}>
-          <pre style={{ whiteSpace: "pre-wrap", font: "inherit" }}>{reading.text}</pre>
-          <button type="button" disabled={busy} onClick={() => void grant(reading)}>
-            Aceitar a versão {reading.version}
-          </button>{" "}
-          <button type="button" onClick={() => setReading(null)}>
-            Agora não
-          </button>
-        </section>
-      )}
-      {confirming && (
-        <div role="group" aria-label={`Retirar o consentimento de ${LABELS[confirming].toLowerCase()}`}>
-          {confirming === "health_data" ? (
-            <p>
-              Ao retirar este consentimento, seus esportes, níveis, motivações e nome de exibição são apagados. A conta continua. Você pode conceder de novo
-              quando quiser.
-            </p>
-          ) : (
-            <p>Você pode conceder de novo quando quiser.</p>
-          )}
-          <button type="button" disabled={busy} onClick={() => void revoke(confirming)}>
-            Confirmar a retirada
-          </button>{" "}
-          <button type="button" onClick={() => setConfirming(null)}>
-            Manter
-          </button>
-        </div>
-      )}
     </section>
   );
 }

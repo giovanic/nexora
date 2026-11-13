@@ -1,6 +1,7 @@
 import type { Failure } from "./api";
 
 const BY_CODE: Record<string, string> = {
+  bad_response: "Recebemos uma resposta inesperada do servidor. Tente de novo em instantes.",
   invalid_credentials: "E-mail ou senha incorretos.",
   unauthorized: "Sua sessão terminou. Entre de novo.",
   invalid_token: "Este link de redefinição não vale mais. Peça um novo.",

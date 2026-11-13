@@ -65,7 +65,13 @@ export function createApi({ baseUrl, fetchFn, onUnauthorized, timeoutMs = REQUES
       payload = undefined;
     }
 
-    if (response.ok) return { ok: true, status: response.status, data: payload as T };
+    if (response.ok) {
+      // 202 and 204 carry no body. Anything else without JSON is not our API answering
+      // (a host serving index.html, say), and the screens must not treat it as data.
+      const needsBody = response.status !== 202 && response.status !== 204;
+      if (needsBody && (typeof payload !== "object" || payload === null)) return failure(response.status, "bad_response");
+      return { ok: true, status: response.status, data: payload as T };
+    }
 
     const code = (payload as { error?: { code?: unknown } } | undefined)?.error?.code;
     const result: Failure = failure(response.status, typeof code === "string" ? code : "request_error");

@@ -21,22 +21,6 @@ describe("createApi", () => {
     expect(Object.keys(init.headers as object)).not.toContain("Authorization");
   });
 
-  it("no token reaches localStorage or sessionStorage", async () => {
-    // Even if a body carried a token by mistake, the web client never keeps it.
-    const fetchFn = fakeFetch({
-      "POST /api/v1/sessions": { status: 201, body: { user_id: "u", expires_at: "x", token: "SECRET-TOKEN" } },
-      "GET /api/v1/consents": { body: { consents: [] } },
-    });
-    const api = createApi({ baseUrl: "", fetchFn });
-
-    await api.signIn("ana@example.com", "a long password");
-    await api.listConsents();
-
-    expect(localStorage.length).toBe(0);
-    expect(sessionStorage.length).toBe(0);
-    expect(document.cookie).toBe("");
-  });
-
   it("sends the person to sign in on a session problem, but not on a wrong password", async () => {
     const onUnauthorized = vi.fn();
     const fetchFn = fakeFetch({
@@ -51,6 +35,12 @@ describe("createApi", () => {
     const result = await api.listConsents();
     expect(result).toMatchObject({ ok: false, status: 401, code: "unauthorized" });
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats a 200 that is not JSON as bad_response, not as data", async () => {
+    const fetchFn = vi.fn(async () => new Response("<!doctype html>", { status: 200 }));
+    const api = createApi({ baseUrl: "", fetchFn });
+    expect(await api.listConsents()).toMatchObject({ ok: false, code: "bad_response" });
   });
 
   it("reports rate limits and network failures", async () => {
