@@ -184,7 +184,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 | `user.registered` | Identity & Access | nenhum | User Profile, Progress & Analytics |
 | `user.deletion_requested` | Identity & Access | prazo | Todos |
 | `consent.granted` / `consent.revoked` | Identity & Access | finalidade, versão | Food AI, Strava Integration, Progress & Analytics |
-| `sport_profile.changed` | User Profile | esporte, nível | Goals, Missions |
+| `sport_profile.changed` | User Profile | `sport_profile_id`, tipo da mudança (esporte e nível são dado de saúde: o consumidor lê pela `UserProfile::Api`) | Goals, Missions |
 | `food_entry.created` | Nutrition | `food_entry_id`, origem | Progress & Analytics |
 | `food_analysis.completed` / `food_analysis.failed` | Food AI | `analysis_id`, `food_entry_id` (itens e porções ficam na API de Food AI) | Nutrition |
 | `food_entry.confirmed` | Nutrition | `food_entry_id`, data local | Goals, Missions, Gamification, Progress & Analytics |

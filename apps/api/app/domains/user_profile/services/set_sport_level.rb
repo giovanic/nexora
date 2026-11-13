@@ -32,10 +32,11 @@ module UserProfile
       end
     end
 
-    # Identifiers and closed-list values only.
+    # Identifier and kind of change only: sport and level are health data, which
+    # an event outlives (ruling R3). Consumers read them through UserProfile::Api.
     def self.publish(sport, change)
       Shared::Outbox.publish!(name: "sport_profile.changed", user_id: sport.user_id,
-                              payload: { sport_profile_id: sport.id, sport: sport.sport, level: sport.level, change: })
+                              payload: { sport_profile_id: sport.id, change: })
     end
 
     private_class_method :publish

@@ -188,15 +188,15 @@ RSpec.describe "UserProfile::Api", :real_consumers do
       expect(api.sports(user_id:).size).to eq(1)
     end
 
-    it "publishes sport_profile.changed with identifiers and closed-list values only" do
+    it "publishes sport_profile.changed with the sport profile id and the kind of change only" do
       first = api.set_sport(user_id:, sport: "running", level: "beginner")
       api.set_sport(user_id:, sport: "running", level: "advanced")
       api.remove_sport(user_id:, sport_id: api.sports(user_id:).sole.id)
 
       expect(events.map(&:payload)).to match([
-        { "sport_profile_id" => first.id, "sport" => "running", "level" => "beginner", "change" => "added" },
-        { "sport_profile_id" => kind_of(String), "sport" => "running", "level" => "advanced", "change" => "level_changed" },
-        { "sport_profile_id" => kind_of(String), "sport" => "running", "level" => "advanced", "change" => "removed" }
+        { "sport_profile_id" => first.id, "change" => "added" },
+        { "sport_profile_id" => kind_of(String), "change" => "level_changed" },
+        { "sport_profile_id" => kind_of(String), "change" => "removed" }
       ])
     end
 
