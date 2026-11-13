@@ -9,10 +9,7 @@ module UserProfile
       return Api::Errors.new(code: "invalid_time_zone", details: invalid) if invalid.any? { |detail| detail[:field] == "time_zone" }
       return Api::Errors.new(code: "validation_failed", details: invalid) if invalid.any?
 
-      Profile.transaction do
-        profile = Profile.lock.find_by(user_id:)
-        next :pending unless profile
-
+      LockedProfile.call(user_id:) do |profile|
         attrs[:motivations] = attrs[:motivations].uniq if attrs.key?(:motivations)
         profile.update!(attrs)
         Api.present(profile)

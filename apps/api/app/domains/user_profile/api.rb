@@ -21,7 +21,7 @@ module UserProfile
         present(profile) if profile
       end
 
-      # ProfileInfo, Errors (invalid_time_zone, validation_failed) or :pending.
+      # ProfileInfo, Errors (invalid_time_zone, validation_failed), :pending or :consent_required.
       def update_profile(user_id:, attrs:)
         UpdateProfile.call(user_id:, attrs:)
       end
@@ -36,12 +36,12 @@ module UserProfile
         scope.where(user_id:).order(:started_at, :id).map { |sport| present_sport(sport) }
       end
 
-      # SportInfo, Errors (validation_failed) or :pending.
+      # SportInfo, Errors (validation_failed), :pending or :consent_required.
       def set_sport(user_id:, sport:, level:)
         SetSportLevel.call(user_id:, sport:, level:)
       end
 
-      # true, :not_found (also for another person's id) or :pending.
+      # true, :not_found (also for another person's id), :pending or :consent_required.
       def remove_sport(user_id:, sport_id:)
         SetSportLevel.remove(user_id:, sport_id:)
       end

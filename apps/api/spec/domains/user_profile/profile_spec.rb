@@ -17,6 +17,7 @@ RSpec.describe "UserProfile::Api", :real_consumers do
 
   before do
     user_id
+    Identity::Api.grant_consent(user_id:, purpose: "health_data", version: 1)
     deliver
   end
 
@@ -179,6 +180,7 @@ RSpec.describe "UserProfile::Api", :real_consumers do
       sport = api.set_sport(user_id:, sport: "swimming", level: "beginner")
       other = Identity::Api.register(email: "bia@example.test", password: "correct horse battery", adult_confirmed: true,
                                      time_zone: "UTC", client: "mobile", device_label: nil, ip: nil).user_id
+      Identity::Api.grant_consent(user_id: other, purpose: "health_data", version: 1)
       deliver
 
       expect(api.remove_sport(user_id: other, sport_id: sport.id)).to eq(:not_found)
@@ -227,7 +229,9 @@ RSpec.describe "UserProfile::Api", :real_consumers do
   describe "erasure on consent.revoked" do
     let(:other_id) do
       Identity::Api.register(email: "bia@example.test", password: "correct horse battery", adult_confirmed: true,
-                             time_zone: "UTC", client: "mobile", device_label: nil, ip: nil).user_id
+                             time_zone: "UTC", client: "mobile", device_label: nil, ip: nil).user_id.tap do |id|
+        Identity::Api.grant_consent(user_id: id, purpose: "health_data", version: 1)
+      end
     end
 
     def revoke(purpose, who = user_id, version: 1)

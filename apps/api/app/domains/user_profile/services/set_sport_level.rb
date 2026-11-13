@@ -1,7 +1,7 @@
 module UserProfile
   # Sets the level of a sport, or ends it. Changing a level ends the active row
   # and starts another, so the history is never rewritten. The profile row is
-  # locked, which puts one person's changes in a row.
+  # locked, which puts one person's changes in a row, and health_data is checked under that lock.
   module SetSportLevel
     def self.call(user_id:, sport:, level:)
       invalid = { "sport" => [ sport, SportProfile::SPORTS ], "level" => [ level, SportProfile::LEVELS ] }
@@ -9,9 +9,7 @@ module UserProfile
                 .map { |field, _| { field:, code: "inclusion" } }
       return Api::Errors.new(code: "validation_failed", details: invalid) if invalid.any?
 
-      SportProfile.transaction do
-        next :pending unless Profile.lock.exists?(user_id:)
-
+      LockedProfile.call(user_id:) do
         current = SportProfile.active.find_by(user_id:, sport:)
         next Api.present_sport(current) if current&.level == level
 
@@ -24,9 +22,7 @@ module UserProfile
     end
 
     def self.remove(user_id:, sport_id:)
-      SportProfile.transaction do
-        next :pending unless Profile.lock.exists?(user_id:)
-
+      LockedProfile.call(user_id:) do
         sport = SportProfile.active.find_by(user_id:, id: sport_id) if sport_id.to_s.match?(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/)
         next :not_found unless sport
 

@@ -17,6 +17,7 @@ module Api
         fields = params.to_unsafe_h.slice("display_name", "time_zone", "motivations")
         result = UserProfile::Api.update_profile(user_id: current_user_id, attrs: fields)
         return render_error(:conflict, "profile_pending") if result == :pending
+        return render_error(:forbidden, "consent_required") if result == :consent_required
         return render_error(:unprocessable_content, result.code, details: result.details) unless result.ok?
 
         render json: serialize(result)

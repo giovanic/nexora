@@ -14,6 +14,7 @@ module Api
         fields = params.permit(:sport, :level)
         result = UserProfile::Api.set_sport(user_id: current_user_id, sport: fields[:sport], level: fields[:level])
         return render_error(:conflict, "profile_pending") if result == :pending
+        return render_error(:forbidden, "consent_required") if result == :consent_required
         return render_error(:unprocessable_content, result.code, details: result.details) unless result.ok?
 
         render json: serialize(result), status: :created
@@ -22,6 +23,7 @@ module Api
       def destroy
         result = UserProfile::Api.remove_sport(user_id: current_user_id, sport_id: params[:id])
         return render_error(:conflict, "profile_pending") if result == :pending
+        return render_error(:forbidden, "consent_required") if result == :consent_required
         return render_error(:not_found) if result == :not_found
 
         head :no_content
