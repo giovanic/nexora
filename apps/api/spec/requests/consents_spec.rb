@@ -24,6 +24,17 @@ RSpec.describe "consents", :identity do
       expect_response_to_match_contract
     end
 
+    it "lists the consent as outdated when the text in force changed after the grant" do
+      grant(purpose: "health_data")
+      stub_const("Identity::ConsentTexts::CURRENT_VERSIONS", Identity::ConsentTexts::CURRENT_VERSIONS.merge("health_data" => 2))
+
+      get "/api/v1/consents", headers: bearer(token)
+
+      consent = response.parsed_body.fetch("consents").find { |item| item["purpose"] == "health_data" }
+      expect(consent).to include("state" => "outdated", "accepted_version" => 1, "current_version" => 2)
+      expect_response_to_match_contract
+    end
+
     it "shows only the signed-in person's consents" do
       grant(purpose: "usage_metrics")
       other = mobile_token(email: "bia@example.test")
@@ -167,6 +178,24 @@ RSpec.describe "consents", :identity do
       get "/consent_probe", headers: bearer(token)
 
       expect(response).to have_http_status(:ok)
+    end
+
+    describe "when the text in force changes after the grant" do
+      before do
+        Identity::Api.grant_consent(user_id:, purpose: "health_data", version: 1)
+        stub_const("Identity::ConsentTexts::CURRENT_VERSIONS", Identity::ConsentTexts::CURRENT_VERSIONS.merge("health_data" => 2))
+      end
+
+      it "no longer counts the old grant" do
+        expect(Identity::Api.consent_granted?(user_id:, purpose: "health_data")).to be(false)
+      end
+
+      it "answers 403 consent_required on a health_data route" do
+        get "/consent_probe", headers: bearer(token)
+
+        expect(response).to have_http_status(:forbidden)
+        expect(response.parsed_body.dig("error", "code")).to eq("consent_required")
+      end
     end
 
     it "answers 401 before checking the consent when there is no session" do

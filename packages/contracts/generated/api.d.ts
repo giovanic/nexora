@@ -487,11 +487,16 @@ export interface components {
         };
         Consent: {
             purpose: components["schemas"]["ConsentPurpose"];
-            /** @enum {string} */
-            state: "granted" | "revoked" | "pending";
+            /**
+             * @description outdated: the latest record is a grant of an older version than the one in force. It does
+             *     not count as consent (routes that need it answer 403 consent_required) until the person
+             *     accepts the current version.
+             * @enum {string}
+             */
+            state: "granted" | "outdated" | "revoked" | "pending";
             /** @description The version of the text in force now. */
             current_version: number;
-            /** @description The version the person accepted, while granted. Null when revoked or pending. */
+            /** @description The version the person accepted, while granted or outdated. Null when revoked or pending. */
             accepted_version: number | null;
             /**
              * Format: date-time

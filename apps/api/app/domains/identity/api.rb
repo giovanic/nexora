@@ -13,8 +13,9 @@ module Identity
       def ok? = false
     end
     SessionInfo = Data.define(:id, :user_id, :client, :device_label, :created_at, :last_used_at)
-    # state: granted, revoked or pending (never answered). accepted_version is
-    # set only while granted.
+    # state: granted, outdated (granted for a version that is not the one in
+    # force), revoked or pending (never answered). accepted_version is set
+    # while granted or outdated.
     Consent = Data.define(:purpose, :state, :current_version, :accepted_version, :decided_at) do
       def ok? = true
     end
@@ -92,7 +93,7 @@ module Identity
       def consent_granted?(user_id:, purpose:)
         raise ArgumentError, "unknown consent purpose" unless ConsentTexts.purpose?(purpose)
 
-        ConsentRecord.latest(user_id:, purpose:)&.granted? || false
+        consent_info(purpose, ConsentRecord.latest(user_id:, purpose:)).state == "granted"
       end
 
       # Every purpose, in the order of ConsentTexts::PURPOSES, from one query.
@@ -157,8 +158,13 @@ module Identity
       end
 
       def consent_info(purpose, latest)
-        state = latest ? latest.action : "pending"
-        Consent.new(purpose:, state:, current_version: ConsentTexts.current_version(purpose),
+        current = ConsentTexts.current_version(purpose)
+        state = if latest.nil? then "pending"
+        elsif !latest.granted? then "revoked"
+        elsif latest.text_version == current then "granted"
+        else "outdated"
+        end
+        Consent.new(purpose:, state:, current_version: current,
                     accepted_version: latest&.granted? ? latest.text_version : nil, decided_at: latest&.occurred_at)
       end
     end
