@@ -7,6 +7,8 @@ module Api
 
       limit_attempts_by_ip :export
       limit_attempts_by_ip :destroy
+      limit_attempts_by_account :export
+      limit_attempts_by_account :destroy
 
       # The password is asked again. The body holds personal data, so it is
       # built on the fly and never cached.

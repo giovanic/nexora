@@ -5,11 +5,19 @@ module AuthenticationRateLimits
 
   BY_IP = { to: 10, within: 3.minutes }.freeze
   BY_EMAIL = { to: 5, within: 15.minutes }.freeze
+  BY_ACCOUNT = { to: 5, within: 15.minutes }.freeze
 
   class_methods do
     def limit_attempts_by_ip(action)
       rate_limit(**BY_IP, name: "#{action}_ip", only: action,
                  by: -> { rate_limit_key(request.remote_ip) }, with: -> { refuse_attempt(BY_IP[:within]) })
+    end
+
+    # Re-authentication (export, deletion): a stolen session token must not
+    # allow unlimited password guesses by rotating IPs. Needs the session.
+    def limit_attempts_by_account(action)
+      rate_limit(**BY_ACCOUNT, name: "#{action}_account", only: action,
+                 by: -> { rate_limit_key("account:#{current_user_id}") }, with: -> { refuse_attempt(BY_ACCOUNT[:within]) })
     end
 
     def limit_attempts_by_email(action)

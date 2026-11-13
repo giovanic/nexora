@@ -112,6 +112,23 @@ RSpec.describe "account deletion", :identity, :real_consumers do
       expect_response_to_match_contract
     end
 
+    it "limits attempts by account: 5 in 15 minutes, from any IP" do
+      5.times { |n| delete_account(password: "wrong password!", env: { "REMOTE_ADDR" => "198.51.100.#{n}" }) }
+      delete_account(env: { "REMOTE_ADDR" => "198.51.100.99" })
+
+      expect(response).to have_http_status(:too_many_requests)
+      expect(response.headers["Retry-After"]).to eq("900")
+      expect(Identity::AccountDeletion.count).to eq(0)
+    end
+
+    it "audits a wrong password as reauth_failed, without what was typed" do
+      delete_account(password: "wrong password!")
+
+      audit = Identity::AuditEvent.where(action: "reauth_failed").sole
+      expect(audit.metadata).to eq({ "for" => "deletion" })
+      expect(audit.attributes.values.join).not_to include("wrong password!")
+    end
+
     it "never logs the password" do
       log_path = Rails.root.join("log/test.log")
       offset = File.size(log_path)

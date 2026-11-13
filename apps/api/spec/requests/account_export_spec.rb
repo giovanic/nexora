@@ -15,14 +15,12 @@ RSpec.describe "account export", :identity, :real_consumers do
 
   describe "POST /api/v1/account/export" do
     it "wrong password is 401 and exports nothing" do
-      audits = Identity::AuditEvent.count
-
       export(password: "wrong password!")
 
       expect(response).to have_http_status(:unauthorized)
       expect(response.parsed_body.dig("error", "code")).to eq("invalid_credentials")
       expect(response.body).not_to include("ana@example.test")
-      expect(Identity::AuditEvent.count).to eq(audits)
+      expect(Identity::AuditEvent.where(action: "account_exported")).to be_empty
       expect_response_to_match_contract
     end
 
@@ -80,6 +78,24 @@ RSpec.describe "account export", :identity, :real_consumers do
       expect(response).to have_http_status(:too_many_requests)
       expect(response.headers["Retry-After"]).to eq("180")
       expect_response_to_match_contract
+    end
+
+    it "limits attempts by account: 5 in 15 minutes, from any IP" do
+      5.times { |n| export(password: "wrong password!", env: { "REMOTE_ADDR" => "198.51.100.#{n}" }) }
+      export(env: { "REMOTE_ADDR" => "198.51.100.99" })
+
+      expect(response).to have_http_status(:too_many_requests)
+      expect(response.headers["Retry-After"]).to eq("900")
+      expect_response_to_match_contract
+    end
+
+    it "audits a wrong password as reauth_failed, without what was typed" do
+      export(password: "wrong password!")
+
+      audit = Identity::AuditEvent.where(action: "reauth_failed").sole
+      expect(audit).to have_attributes(user_ref: user_id, metadata: { "for" => "export" })
+      expect(audit.ip_hmac).to be_present
+      expect(audit.attributes.values.join).not_to include("wrong password!")
     end
 
     it "response is no-store and never logged" do

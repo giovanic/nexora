@@ -10,6 +10,7 @@ module Identity
       "session_revoked" => {},
       "all_sessions_revoked" => {},
       "password_reset" => {},
+      "reauth_failed" => { "for" => %w[export deletion] },
       "account_exported" => {},
       "account_deletion_requested" => {},
       "consent_granted" => { "purpose" => ConsentTexts::PURPOSES },

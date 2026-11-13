@@ -9,7 +9,10 @@ module Identity
   module RequestDeletion
     def self.call(user_id:, password:, ip:)
       return :scheduled if AccountDeletion.exists?(user_id:)
-      return :invalid_password unless Api.verify_password(user_id:, password:)
+      unless Api.verify_password(user_id:, password:)
+        RecordAudit.call(action: "reauth_failed", user_ref: user_id, ip:, metadata: { for: "deletion" })
+        return :invalid_password
+      end
 
       deletion = create(user_id, ip)
       ActiveRecord.after_all_transactions_commit { enqueue(deletion.id) } if deletion
