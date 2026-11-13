@@ -1,7 +1,9 @@
 require "rails_helper"
 
 # Every table holding user data must be exported and erased with the account.
-# A table counts when it has a user_id column, and `users` always counts.
+# Every table of the database is either registered or listed, with a reason, in
+# TABLES_WITHOUT_USER_DATA. A user_id column is not the test: a table can hold
+# a person's data under another name (user_ref, an owner column, none at all).
 RSpec.describe "data registry coverage" do
   let(:connection) { ActiveRecord::Base.connection }
 
@@ -26,10 +28,32 @@ RSpec.describe "data registry coverage" do
     expect(Shared::DataRegistry.unregistered_tables(connection, registered:)).to eq([ "users" ])
   end
 
-  it "ignores a table without user data" do
+  it "fails for a new table without a user_id column that nobody listed" do
     connection.create_table(:planted_food_sources) { |t| t.string :name }
 
-    expect(Shared::DataRegistry.unregistered_tables(connection)).to eq([])
+    expect(Shared::DataRegistry.unregistered_tables(connection)).to eq([ "planted_food_sources" ])
+  end
+
+  it "accepts a table listed as without user data" do
+    connection.create_table(:planted_food_sources) { |t| t.string :name }
+    listed = Shared::DataRegistry::TABLES_WITHOUT_USER_DATA.merge("planted_food_sources" => "reference data")
+
+    expect(Shared::DataRegistry.unregistered_tables(connection, without_user_data: listed)).to eq([])
+  end
+
+  it "never counts the Rails internal tables" do
+    expect(Shared::DataRegistry.user_data_tables(connection)).not_to include("schema_migrations", "ar_internal_metadata")
+  end
+
+  describe "TABLES_WITHOUT_USER_DATA" do
+    it "gives a one-line reason per table, and only for tables that exist, are unregistered and have no user_id" do
+      listed = Shared::DataRegistry::TABLES_WITHOUT_USER_DATA
+
+      expect(listed.values).to all(match(/\A[^\n]{10,}\z/))
+      expect(listed.keys - connection.tables).to eq([])
+      expect(listed.keys & Shared::DataRegistry.registered_tables).to eq([])
+      expect(listed.keys.select { |table| connection.column_exists?(table, :user_id) }).to eq([])
+    end
   end
 
   describe "contexts" do

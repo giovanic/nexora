@@ -2,7 +2,7 @@ require "rails_helper"
 require "support/outbox_helpers"
 
 # AC-02-04: after the whole deletion flow, no table keeps the person's data.
-# Every table with user data, by the rule of the coverage spec, gets a row of
+# Every table not listed as without user data (DataRegistry, coverage spec), gets a row of
 # the person and a unique marker in every text, string, JSON and array column
 # the database lets it hold. Then every table of the database, whatever its
 # shape, is searched for the marker and for the UUID.
@@ -38,10 +38,7 @@ RSpec.describe "account deletion scan", :real_consumers do
   def column_name(column) = connection.quote_column_name(column)
 
   def user_tables
-    with_user_data = connection.tables.select do |table|
-      Shared::DataRegistry::ALWAYS_USER_DATA.include?(table) || connection.column_exists?(table, :user_id)
-    end
-    (with_user_data | (Shared::DataRegistry.registered_tables & connection.tables)).sort
+    (Shared::DataRegistry.user_data_tables(connection) | (Shared::DataRegistry.registered_tables & connection.tables)).sort
   end
 
   # A different value per row, so unique indexes do not refuse it.

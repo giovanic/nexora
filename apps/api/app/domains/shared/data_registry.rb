@@ -8,8 +8,14 @@ module Shared
   module DataRegistry
     Entry = Data.define(:context, :tables, :exporter, :eraser)
 
-    # Tables that hold user data even without a user_id column.
-    ALWAYS_USER_DATA = %w[users].freeze
+    # Rails' own bookkeeping, never user data.
+    RAILS_INTERNAL_TABLES = %w[schema_migrations ar_internal_metadata].freeze
+    # Every other table must be registered by a context, or be listed here with
+    # the reason it holds no data about a person. A user_id column is not what
+    # decides it (users has none, audit_events uses user_ref).
+    TABLES_WITHOUT_USER_DATA = {
+      "consumed_events" => "Only a consumer name and an event id; its rows go with outbox_events (ON DELETE CASCADE)."
+    }.freeze
 
     @entries = {}
 
@@ -56,13 +62,16 @@ module Shared
         @entries.values.flat_map(&:tables).uniq.sort
       end
 
-      # Tables with user data that no context registered. The coverage spec
-      # requires it to be empty.
-      def unregistered_tables(connection, registered: registered_tables)
-        user_tables = connection.tables.select do |table|
-          ALWAYS_USER_DATA.include?(table) || connection.column_exists?(table, :user_id)
-        end
-        (user_tables - registered).sort
+      # Every table of the database that is not Rails-internal and not listed as
+      # without user data. All of them must be registered.
+      def user_data_tables(connection, without_user_data: TABLES_WITHOUT_USER_DATA)
+        (connection.tables - RAILS_INTERNAL_TABLES - without_user_data.keys).sort
+      end
+
+      # Tables that no context registered and nobody listed as without user
+      # data. The coverage spec requires it to be empty.
+      def unregistered_tables(connection, registered: registered_tables, without_user_data: TABLES_WITHOUT_USER_DATA)
+        (user_data_tables(connection, without_user_data:) - registered).sort
       end
 
       # Lets specs register handlers without leaking them into other examples.
