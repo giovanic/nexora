@@ -8,10 +8,10 @@ RSpec.describe "production boot" do
       "REDIS_URL" => "redis://127.0.0.1:1/0",
       "SECRET_KEY_BASE" => "test-only-value",
       "ALLOWED_ORIGINS" => "https://example.test",
-      "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY" => "boot-spec-primary-key",
-      "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY" => "boot-spec-deterministic-key",
-      "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT" => "boot-spec-key-derivation-salt",
-      "AUDIT_IP_HMAC_KEY" => "boot-spec-audit-ip-hmac-key",
+      "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY" => "boot-spec-primary-key-0123456789abcdef",
+      "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY" => "boot-spec-deterministic-key-0123456789abcdef",
+      "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT" => "boot-spec-key-derivation-salt-0123456789abcdef",
+      "AUDIT_IP_HMAC_KEY" => "boot-spec-audit-ip-hmac-key-0123456789abcdef",
       "APP_WEB_URL" => "https://app.example.test"
     }
   end
@@ -73,6 +73,36 @@ RSpec.describe "production boot" do
     end
   end
 
+  %w[
+    ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+    ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+    ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+    AUDIT_IP_HMAC_KEY
+  ].each do |name|
+    it "refuses to boot when #{name} is shorter than 32 characters, naming it and not the value" do
+      output, status = boot(complete.merge(name => "short-secret-value"))
+
+      expect(status).not_to be_success
+      expect(output).to include(name)
+      expect(output).not_to include("short-secret-value")
+    end
+  end
+
+  {
+    "http://app.example.test" => "not https",
+    "https://app.example.test/" => "trailing slash",
+    "app.example.test" => "no scheme",
+    "https://app.example.test/path" => "with a path"
+  }.each do |value, why|
+    it "refuses to boot when APP_WEB_URL is #{why}, naming it and not the value" do
+      output, status = boot(complete.merge("APP_WEB_URL" => value))
+
+      expect(status).not_to be_success
+      expect(output).to include("APP_WEB_URL")
+      expect(output).not_to include(value)
+    end
+  end
+
   it "refuses to boot without the encryption keys" do
     output, status = boot(complete.reject { |name, _| name.start_with?("ACTIVE_RECORD_ENCRYPTION") })
 
@@ -92,6 +122,6 @@ RSpec.describe "production boot" do
     output, status = boot(complete, script)
 
     expect(status).to be_success, output
-    expect(output.lines.last.strip).to eq("boot-spec-primary-key,boot-spec-deterministic-key,boot-spec-key-derivation-salt")
+    expect(output.lines.last.strip).to eq("boot-spec-primary-key-0123456789abcdef,boot-spec-deterministic-key-0123456789abcdef,boot-spec-key-derivation-salt-0123456789abcdef")
   end
 end
