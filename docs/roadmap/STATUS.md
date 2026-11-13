@@ -10,7 +10,7 @@ A linha `05` é um resumo de `05.1` e `05.2`.
 |---|---|---|---|
 | 00 | Concluída | 2026-11-06 | [Relatório](reports/PHASE_00_REPORT.md) e mensagem do responsável de 2026-11-06, com a lacuna do check `scope` aceita |
 | 01 | Concluída | 2026-11-11 | [Relatório](reports/PHASE_01_REPORT.md) e mensagem do responsável de 2026-11-11: "Aprovo a Fase 01." Lacuna aceita: AC-01-07 sem envio real ao Sentry, pendente antes do M1 |
-| 02 | Em revisão | 2026-11-13 | [Relatório](reports/PHASE_02_REPORT.md), aguardando a aprovação dos textos de consentimento (AC-02-07 parcial), o aceite das ADRs 0004, 0005 e 0018, e a autorização de push e PR |
+| 02 | Concluída | 2026-11-13 | [Relatório](reports/PHASE_02_REPORT.md) e mensagem do responsável de 2026-11-13: "Aprovo a Fase 02." Lacuna aceita: AC-02-08 parcial (FR-PROFILE-001 e FR-PROFILE-003). PR #18 com CI verde |
 | 03 | Não iniciada | 2026-11-05 | — |
 | 04 | Não iniciada | 2026-11-05 | — |
 | 05 | Não iniciada | 2026-11-05 | — |
@@ -36,3 +36,4 @@ A linha `05` é um resumo de `05.1` e `05.2`.
 | 2026-11-11 | 02 | Não iniciada | Em planejamento | Mensagem do responsável de 2026-11-11: "Vamos iniciar a fase 02." |
 | 2026-11-11 | 02 | Em planejamento | Em desenvolvimento | [Plano](../superpowers/plans/2026-11-11-identity-security.md) e mensagem do responsável de 2026-11-11: "nova sessao com subagentes" (execução por subagent-driven-development, em sessão nova) |
 | 2026-11-13 | 02 | Em desenvolvimento | Em revisão | [Relatório](reports/PHASE_02_REPORT.md): todas as verificações executadas em 2026-11-13 no commit `6b832a4`, sem achado crítico ou importante em aberto; AC-02-07 parcial (textos aguardam aprovação), AC-02-08 parcial (FR-PROFILE-001 e 003), AC-02-11 aguarda o aceite das ADRs; CI do PR pendente da autorização de push |
+| 2026-11-13 | 02 | Em revisão | Concluída | [Relatório](reports/PHASE_02_REPORT.md) e mensagem do responsável de 2026-11-13: "Aprovo os textos de consentimento v1. Aceito as ADRs 0004, 0005 e 0018. Pode fazer o push e abrir o PR. Aprovo a Fase 02." Lacuna aceita: AC-02-08 parcial (FR-PROFILE-001: preferências de notificação na Fase 08 e unidades só `metric`; FR-PROFILE-003: metas e XP ainda não existem). [PR #18](https://github.com/giovanic/nexora/pull/18), [CI 43489537643](https://github.com/giovanic/nexora/actions/runs/43489537643) com 6 de 6 jobs verdes |

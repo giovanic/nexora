@@ -1,8 +1,8 @@
 # Relatório da Fase 02 — Identity, Security & Privacy
 
 - **Data:** 2026-11-13
-- **Estado:** `Em revisão`, aguardando aprovação do responsável
-- **Branch:** `phase/02-identity-security`, sem push nem PR (aguardando autorização)
+- **Estado:** `Concluída` em 2026-11-13, aprovada pelo responsável com a lacuna do `AC-02-08` aceita
+- **Branch:** `phase/02-identity-security`, [PR #18](https://github.com/giovanic/nexora/pull/18), sem merge
 
 ## 1. Resumo
 
@@ -34,7 +34,7 @@ Execuções do controlador em 2026-11-13, no commit `6b832a4`.
 | Mobile: typecheck, lint, testes | 0, 0, 0 | 98 testes |
 | `bash scripts/verify-harness.sh` | 0 | Aprovado |
 | `bash scripts/test-verify-harness.sh` | 0 | 93 testes |
-| Gitleaks e CI do PR | não executado | Roda no CI após o push, que aguarda autorização |
+| CI do PR #18 no commit `6a7aa3e` | n/a | 6 de 6 jobs verdes, incluindo `secrets` (Gitleaks) ([execução 43489537643](https://github.com/giovanic/nexora/actions/runs/43489537643)) |
 
 **Demonstrações reais.** Só contas fictícias (`example.test`), sem dado real. Capturas em [`evidence/phase-02/`](evidence/phase-02/).
 
@@ -58,11 +58,11 @@ Execuções do controlador em 2026-11-13, no commit `6b832a4`.
 | `AC-02-04` | `spec/integration/account_deletion_scan_spec.rb` (marcador em cada tabela, JSON incluído, tabela nova sem tratamento), `spec/requests/account_deletion_spec.rb`, `spec/domains/identity/deletion_delivery_race_spec.rb`; demonstração web-08 | Comprovado |
 | `AC-02-05` | `spec/requests/account_export_spec.rb` (duas contas), `spec/domains/shared/data_registry_coverage_spec.rb`; demonstração web-03/04 | Comprovado. O texto do critério diz "arquivo privado e de vida curta", e o desenho gera a exportação na hora, sem arquivo (R23) |
 | `AC-02-06` | `spec/requests/isolation_spec.rb`, `spec/contract/routes_spec.rb`, `spec/requests/internal_routes_spec.rb` | Comprovado |
-| `AC-02-07` | `spec/requests/consents_spec.rb`, `spec/domains/identity/consents_spec.rb`, `spec/domains/user_profile/revocation_race_spec.rb`; demonstração: mobile-03/04/10 e revogação de `health_data` na web (web-10, web-11) com a conferência no backend | **Parcial:** os quatro textos de consentimento (`apps/api/config/consents/*.v1.md`) aguardam sua aprovação e não têm revisão jurídica |
-| `AC-02-08` | `spec/domains/user_profile/profile_spec.rb`, `spec/requests/profiles_spec.rb` (inclui trocar e limpar motivações), testes do mobile | **Parcial.** FR-PROFILE-001: preferências de notificação não são expostas até a Fase 08 (R22) e unidades só `metric` no MVP. FR-PROFILE-003: metas e XP ainda não existem, então a regra de não reescrever histórico só é provada para o histórico de níveis |
+| `AC-02-07` | `spec/requests/consents_spec.rb`, `spec/domains/identity/consents_spec.rb`, `spec/domains/user_profile/revocation_race_spec.rb`; demonstração: mobile-03/04/10 e revogação de `health_data` na web (web-10, web-11) com a conferência no backend | Comprovado. Textos v1 aprovados pelo responsável em 2026-11-13; revisão jurídica no M1 |
+| `AC-02-08` | `spec/domains/user_profile/profile_spec.rb`, `spec/requests/profiles_spec.rb` (inclui trocar e limpar motivações), testes do mobile | **Parcial, lacuna aceita em 2026-11-13.** FR-PROFILE-001: preferências de notificação não são expostas até a Fase 08 (R22) e unidades só `metric` no MVP. FR-PROFILE-003: metas e XP ainda não existem, então a regra de não reescrever histórico só é provada para o histórico de níveis |
 | `AC-02-09` | `spec/requests/sessions_spec.rb`, `registrations_spec.rb`, `password_resets_spec.rb` (429), `spec/domains/identity/user_spec.rb` (cifragem), `spec/domains/identity/record_audit_spec.rb` | Comprovado |
 | `AC-02-10` | Tabela de direitos em [PRIVACY_AND_LGPD.md](../../security/PRIVACY_AND_LGPD.md), `spec/domains/identity/retention_job_spec.rb`, `spec/domains/shared/outbox/` | Comprovado como fluxo técnico. Adequação jurídica não verificada |
-| `AC-02-11` | ADRs [0005](../../architecture/decisions/0005-authentication-strategy.md) e [0018](../../architecture/decisions/0018-application-level-encryption.md) `Aceita`, com evidência; [0004](../../architecture/decisions/0004-domain-events-transactional-outbox.md) com evidência e `Proposta` | **Aguarda você:** as ADRs 0005 e 0018 foram marcadas `Aceita` pelo plano aprovado, e peço confirmação explícita. A 0004 está pronta para aceitação |
+| `AC-02-11` | ADRs [0005](../../architecture/decisions/0005-authentication-strategy.md) e [0018](../../architecture/decisions/0018-application-level-encryption.md) `Aceita`, com evidência; [0004](../../architecture/decisions/0004-domain-events-transactional-outbox.md) com evidência e `Proposta` | Comprovado. ADRs 0004, 0005 e 0018 aceitas pelo responsável em 2026-11-13 |
 | `AC-02-12` | `spec/integration/deletion_requested_delivery_spec.rb` (falha injetada, reprocessamento sem duplicar, conferência acusa consumidor faltante), `spec/domains/shared/outbox_spec.rb` | Comprovado |
 | `AC-02-13` | `spec/integration/logging_spec.rb` | Comprovado para `log/test.log`. O log do Sidekiq não é coberto pelo spec |
 
@@ -105,12 +105,14 @@ Nenhum achado crítico ou importante em aberto. A branch inteira passou por `sof
 
 ## 6. Pendências
 
-**(a) Decisões suas**
+**(a) Decisões suas (tomadas em 2026-11-13)**
 
-1. Aprovar os quatro textos de consentimento v1 (`apps/api/config/consents/*.v1.md`).
-2. Aceitar a ADR 0004.
-3. Confirmar as ADRs 0005 e 0018, marcadas `Aceita` pelo plano aprovado.
-4. Autorizar o push e o PR.
+Mensagem do responsável: "Aprovo os textos de consentimento v1. Aceito as ADRs 0004, 0005 e 0018. Pode fazer o push e abrir o PR. Aprovo a Fase 02."
+
+- Textos de consentimento v1 aprovados; a identificação do controlador e o contato do encarregado continuam pendentes nos textos.
+- ADRs 0004, 0005 e 0018 aceitas.
+- Push e PR #18 feitos; o merge continua com o responsável.
+- Lacuna aceita: `AC-02-08` parcial (FR-PROFILE-001: preferências de notificação na Fase 08 e unidades só `metric`; FR-PROFILE-003: metas e XP ainda não existem).
 
 **(b) Revisão jurídica (M1).** Nada aqui é parecer jurídico.
 
@@ -201,16 +203,6 @@ Tomadas em seu nome. Cada uma mostra o custo se estiver errada. O número R37 n�
 
 ## 8. Próximo passo
 
-A fase não pode ser encerrada antes das decisões da seção 6(a). Para decidir, envie as mensagens que valem:
-
-> Aprovo os textos de consentimento v1.
-
-> Aceito as ADRs 0004, 0005 e 0018.
-
-> Pode fazer o push e abrir o PR.
-
-> Aprovo a Fase 02.
-
-Depois da aprovação, a próxima linha do roadmap é a 03. Para começar:
+A fase está concluída. O merge do [PR #18](https://github.com/giovanic/nexora/pull/18) é seu. Depois dele, a próxima linha do roadmap é a 03. Para começar:
 
 > Vamos iniciar a fase 03.
