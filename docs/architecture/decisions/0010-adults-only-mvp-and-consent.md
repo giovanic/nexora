@@ -42,10 +42,6 @@ Reduz o risco no início e ainda atende ao público principal. O consentimento p
 - Exige textos claros e versionados.
 - Exclui deliberadamente menores de idade.
 
-## Nota de 2026-11-13
-
-O responsável decidiu que revogar `health_data` apaga os dados de saúde do perfil (esportes e níveis, motivações e nome de exibição) e mantém a conta, que volta à tela de consentimento. Fuso horário e unidades ficam, por serem dados técnicos. Isso mantém a implementação coerente com "revogar é tão fácil quanto consentir". O destino desses dados vai à revisão jurídica. Esta nota não muda o estado da decisão.
-
 ## Estado da decisão
 
 Aceita
