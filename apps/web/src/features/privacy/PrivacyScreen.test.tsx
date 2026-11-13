@@ -102,7 +102,7 @@ describe("PrivacyScreen panels and focus", () => {
     fireEvent.click(trigger);
     const heading = await item.findByRole("heading", { name: "Texto de Fotos de refeição para a IA" });
     expect(item.getByText("Texto do consentimento")).toBeTruthy();
-    expect(document.activeElement).toBe(heading);
+    await waitFor(() => expect(document.activeElement).toBe(heading));
     fireEvent.click(item.getByRole("button", { name: "Agora não" }));
     await waitFor(() => expect(document.activeElement).toBe(item.getByRole("button", { name: "Ler e conceder" })));
   });
@@ -112,7 +112,7 @@ describe("PrivacyScreen panels and focus", () => {
     const item = await row("Dados de saúde");
     fireEvent.click(item.getByRole("button", { name: "Retirar" }));
     const heading = item.getByRole("heading", { name: "Retirar o consentimento de dados de saúde" });
-    expect(document.activeElement).toBe(heading);
+    await waitFor(() => expect(document.activeElement).toBe(heading));
     fireEvent.click(item.getByRole("button", { name: "Manter" }));
     await waitFor(() => expect(document.activeElement).toBe(item.getByRole("button", { name: "Retirar" })));
   });
@@ -203,7 +203,8 @@ describe("PrivacyScreen account", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sair" }));
     const alert = await screen.findByText(/do nosso lado/);
     expect(alert.getAttribute("role")).toBe("alert");
-    expect(document.activeElement).toBe(alert);
+    // ErrorMessage moves focus in an effect, which can run after findByText resolves.
+    await waitFor(() => expect(document.activeElement).toBe(alert));
     expect(onSignedOut).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Tentar sair de novo" }));
     await waitFor(() => expect(onSignedOut).toHaveBeenCalled());

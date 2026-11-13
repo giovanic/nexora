@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { createApi } from "../../shared/api";
 import { errorBody, fakeFetch } from "../../shared/testing";
@@ -29,7 +29,8 @@ describe("SignInForm", () => {
     submit();
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toBe("E-mail ou senha incorretos.");
-    expect(document.activeElement).toBe(alert);
+    // ErrorMessage moves focus in an effect, which can run after findByRole resolves.
+    await waitFor(() => expect(document.activeElement).toBe(alert));
     expect(onSignedIn).not.toHaveBeenCalled();
   });
 
