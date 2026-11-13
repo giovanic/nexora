@@ -64,16 +64,31 @@ Toda fase que cria um novo tratamento atualiza esta tabela e testa a interrupç�
 
 Gratuitos (§5).
 
-| Direito | Fluxo | Fase |
+| Direito | Fluxo | Estado |
 |---|---|---|
-| Confirmação e acesso (I, II) | Telas do app e exportação | 02 |
-| Correção (III) | Edição de perfil e correção de refeições | 02, 03 |
-| Anonimização, bloqueio ou eliminação do desnecessário (IV) | Rotinas de retenção; contato com o encarregado | 02 |
-| Portabilidade (V) | Exportação em formato estruturado | 02 |
-| Eliminação de dados com consentimento (VI) | Exclusão de refeição e de conta | 02, 03 |
-| Informação sobre compartilhamento (VII) | Política de privacidade, com lista de operadores | M1 |
-| Informação sobre não consentir (VIII) | Texto das telas de consentimento | 02 |
-| Revogação (IX) | Tela de privacidade | 02 |
+| Confirmação da existência de tratamento (I) | `GET /api/v1/consents` mostra, por finalidade, o que está concedido; `POST /api/v1/account/export` lista o que há por contexto | Implementado na Fase 02 |
+| Acesso (II) | Exportação da conta (`POST /api/v1/account/export`, com a senha pedida de novo, resposta `no-store` e fora dos logs); perfil e sessões nas telas | Implementado na Fase 02. Dados de refeições e atividades entram na exportação quando a Fase 03 e a de Strava registrarem seus contextos |
+| Correção (III) | `PATCH /api/v1/profile` e `POST`/`DELETE /api/v1/sport_profiles` | Implementado na Fase 02 para perfil. Refeições: documentado, fora desta fase (Fase 03) |
+| Anonimização, bloqueio ou eliminação do desnecessário ou excessivo (IV) | Rotinas diárias de retenção: `Identity::RetentionJob` (sessões vencidas ou revogadas há mais de 30 dias; `audit_events` e `consent_records` além do prazo provisório de 5 anos) e `Shared::Outbox::CleanupJob` (eventos processados há mais de 30 dias). Pedidos fora do que as rotinas cobrem: contato com o encarregado | Rotinas implementadas na Fase 02. Contato com o encarregado: documentado, fora desta fase (indicação antes do M1) |
+| Portabilidade (V) | A exportação da conta devolve JSON estruturado | Implementado na Fase 02. A pendência jurídica sobre o alcance do direito segue aberta |
+| Eliminação dos dados tratados com consentimento (VI) | `DELETE /api/v1/account`: sessões revogadas na hora e apagamento por contexto em até 24 horas, com o resíduo mínimo descrito abaixo. Revogar uma finalidade interrompe o tratamento (tabela de efeitos) | Conta: implementado na Fase 02. Exclusão de refeição e de atividade: documentado, fora desta fase (Fase 03 e Strava) |
+| Informação sobre compartilhamento (VII) | Política de privacidade, com a lista de operadores | Documentado, fora desta fase (M1) |
+| Informação sobre a possibilidade de não consentir e suas consequências (VIII) | Texto de cada tela de consentimento (`GET /api/v1/consents/{purpose}/text`) e coluna "Sem ela" da tabela de finalidades | Implementado na Fase 02. Textos sem revisão jurídica |
+| Revogação do consentimento (IX) | `DELETE /api/v1/consents/{purpose}`, tão fácil quanto conceder, com registro e evento `consent.revoked`. Efeito na Fase 02: o consentimento passa a revogado e nenhum tratamento depende dele ainda; `health_data` responde `409 deletion_required` até a exclusão da conta | Implementado na Fase 02. Efeito sobre cada tratamento: documentado, fora desta fase (cada fase testa a interrupção) |
+
+Esta tabela descreve o fluxo técnico e **não é parecer jurídico**: a adequação de cada fluxo e os prazos continuam nas pendências da revisão jurídica. Os direitos são gratuitos (§5), e o canal e o prazo de resposta ao titular dependem da indicação do encarregado.
+
+### Retenção aplicada
+
+Prazos provisórios, a confirmar na revisão jurídica ([DATABASE_DESIGN.md](../architecture/DATABASE_DESIGN.md)). Duas rotinas diárias, agendadas em `config/schedule.yml`, apagam em lotes e podem rodar de novo sem efeito. O registro delas contém só contagens.
+
+| Dado | Prazo aplicado | Rotina |
+|---|---|---|
+| `sessions` | 30 dias após expirar ou ser revogada | `Identity::RetentionJob` |
+| `audit_events` | 5 anos (provisório) | `Identity::RetentionJob` |
+| `consent_records` | 5 anos (provisório). O último registro de cada finalidade de uma conta ativa permanece, porque é a prova do que está concedido hoje; o de conta excluída segue o prazo | `Identity::RetentionJob` |
+| `outbox_events` e `consumed_events` | 30 dias após o processamento (publicado ou morto); os eventos pendentes permanecem | `Shared::Outbox::CleanupJob` |
+| `account_deletions` concluídas | Já guardam só o UUID e as datas, como registro para reaplicar exclusões após restaurar backup; nenhuma rotina as apaga | n/a |
 
 ## Exclusão de conta
 

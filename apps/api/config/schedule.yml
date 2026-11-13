@@ -17,3 +17,15 @@ account_deletion_deadline:
   class: "Identity::DeletionDeadlineJob"
   queue: default
   description: "Enqueues unfinished account erasures again and alerts on those past 24 hours."
+
+outbox_cleanup:
+  cron: "30 3 * * *"
+  class: "Shared::Outbox::CleanupJob"
+  queue: default
+  description: "Removes outbox events, and their consumption marks, 30 days after they were processed."
+
+identity_retention:
+  cron: "45 3 * * *"
+  class: "Identity::RetentionJob"
+  queue: default
+  description: "Removes sessions, audit events and consent records past their retention period."

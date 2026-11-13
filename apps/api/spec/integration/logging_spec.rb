@@ -1,5 +1,7 @@
 require "rails_helper"
 require "support/sidekiq_process"
+require "support/identity_helpers"
+require "support/outbox_helpers"
 
 RSpec.describe "structured logging", type: :request do
   let(:log_path) { Rails.root.join("log/test.log") }
@@ -117,6 +119,75 @@ RSpec.describe "structured logging", type: :request do
 
       expect(text).not_to include("tok-secret-value")
       expect(json_lines(text).find { |line| line["path"] == "/health/live" }).to include("status" => 500, "error" => "RuntimeError")
+    end
+  end
+
+  # AC-02-13: sign up, sign in, recovery, export and deletion, failures
+  # included, at the most verbose level, with the jobs they start.
+  describe "account lifecycle", :identity, :real_consumers do
+    include OutboxHelpers
+
+    let(:email) { "lifecycle-ana@example.test" }
+    let(:other_email) { "lifecycle-nobody@example.test" }
+    let(:new_password) { "a brand new passphrase" }
+    let(:wrong_password) { "wrong password entirely" }
+
+    before do
+      ActionMailer::Base.deliveries.clear
+      allow(Identity::PasswordResetJob).to receive(:perform_async) { |user_id| Identity::PasswordResetJob.new.perform(user_id) }
+      allow(Identity::EraseAccountJob).to receive(:perform_async)
+    end
+
+    def mailed_link
+      ActionMailer::Base.deliveries.last.body.to_s[%r{\S+/reset-password#token=\S+}]
+    end
+
+    it "keeps e-mail, password, token and reset link out of every line, failures included" do
+      secrets = [ email, other_email, IdentityHelpers::PASSWORD, new_password, wrong_password ]
+      level = Rails.logger.level
+      Rails.logger.level = :debug
+
+      text = api_log_during do
+        sign_up(email:)
+        first_token = response.parsed_body.fetch("token")
+        secrets << first_token
+        sign_up(email:)
+        sign_up(email: other_email, adult_confirmed: false)
+        sign_in(email:)
+        secrets << response.parsed_body.fetch("token")
+        sign_in(email:, password: wrong_password)
+        sign_in(email: other_email)
+        sign_in(email:, client: "web")
+        secrets << session_cookie_header[/\A__Host-session=([^;]+)/, 1]
+        cookies.delete("__Host-session") # the next calls are the mobile app's, with no browser cookie
+        post "/api/v1/sessions/refresh", headers: bearer(first_token)
+        secrets << response.parsed_body.fetch("token")
+
+        post "/api/v1/password_resets", params: { email: }, as: :json
+        link = mailed_link
+        secrets.push(link, link[/#token=(\S+)\z/, 1])
+        post "/api/v1/password_resets", params: { email: other_email }, as: :json
+        patch "/api/v1/password_resets/#{secrets.last}", params: { password: new_password }, as: :json
+        patch "/api/v1/password_resets/#{secrets.last}", params: { password: new_password }, as: :json
+
+        sign_in(email:, password: new_password)
+        token = response.parsed_body.fetch("token")
+        secrets << token
+        post "/api/v1/account/export", params: { password: wrong_password }, headers: bearer(token), as: :json
+        post "/api/v1/account/export", params: { password: new_password }, headers: bearer(token), as: :json
+        delete "/api/v1/account", params: { password: wrong_password }, headers: bearer(token), as: :json
+        delete "/api/v1/account", params: { password: new_password }, headers: bearer(token), as: :json
+        run_publisher
+        Identity::EraseAccountJob.new.perform(Identity::AccountDeletion.sole.id)
+      end
+
+      lines = json_lines(text)
+      expect(lines.filter_map { |line| line["path"] }).to include("/api/v1/registrations", "/api/v1/sessions", "/api/v1/password_resets", "/api/v1/account/export", "/api/v1/account")
+      expect(lines.filter_map { |line| line["status"] }).to include(201, 401, 422, 202)
+      secrets.each { |secret| expect(text).not_to include(secret), "log holds #{secret.to_s.first(6)}..." }
+      expect(text).not_to include("reset-password")
+    ensure
+      Rails.logger.level = level
     end
   end
 end
