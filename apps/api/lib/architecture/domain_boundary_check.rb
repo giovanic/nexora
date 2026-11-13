@@ -30,11 +30,15 @@ module Architecture
       found
     end
 
-    # Every folder of app/ outside app/domains, plus lib/, so a new folder is checked as soon as it exists.
+    INITIALIZERS = "config/initializers".freeze
+    REGISTRATIONS_FILE = /\A(?<context>[a-z_]+)_registrations\.rb\z/
+
+    # Every folder of app/ outside app/domains, plus lib/ and config/initializers,
+    # so a new folder is checked as soon as it exists.
     def self.application_roots(rails_root)
       root = Pathname(rails_root)
       folders = root.join("app").children.select(&:directory?).reject { |path| path.basename.to_s == "domains" }
-      (folders + [ root.join("lib") ]).select(&:directory?).sort
+      (folders + [ root.join("lib"), root.join(INITIALIZERS) ]).select(&:directory?).sort
     end
 
     def initialize(root:, rules:, outside_roots: [])
@@ -46,7 +50,7 @@ module Architecture
 
     def violations
       inside = ruby_files(@root).flat_map { |file| check_file(file, context_of(file)) }
-      outside = @outside_roots.flat_map(&method(:ruby_files)).flat_map { |file| check_file(file, APPLICATION) }
+      outside = @outside_roots.flat_map(&method(:ruby_files)).flat_map { |file| check_file(file, outside_context_of(file)) }
       inside + outside
     end
 
@@ -74,6 +78,16 @@ module Architecture
       return context if context == SHARED || @rules.key?(context)
 
       raise UnknownContext, "#{context} has no rules in config/domain_boundaries.yml"
+    end
+
+    # config/initializers/<context>_registrations.rb is that context's own code
+    # (it wires its services into the outbox and the data registry); every other
+    # file outside app/domains may only use public APIs.
+    def outside_context_of(file)
+      return APPLICATION unless File.dirname(file).end_with?(INITIALIZERS)
+
+      context = File.basename(file).match(REGISTRATIONS_FILE)&.[](:context)
+      context && (@rules.key?(context) || context == SHARED) ? context : APPLICATION
     end
 
     def judge(file, from, name, line)

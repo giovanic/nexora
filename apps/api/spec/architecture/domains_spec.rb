@@ -41,6 +41,12 @@ RSpec.describe "domain boundaries" do
     end
   end
 
+  it "scans config/initializers, and the registration files are still clean" do
+    roots = Architecture::DomainBoundaryCheck.application_roots(Rails.root).map { |path| path.relative_path_from(Rails.root).to_s }
+
+    expect(roots).to include("config/initializers")
+  end
+
   it "defines rules for exactly the existing contexts" do
     contexts = root.children.select(&:directory?).map { |path| path.basename.to_s } - [ "shared" ]
 
