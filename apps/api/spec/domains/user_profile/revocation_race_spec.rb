@@ -73,4 +73,22 @@ RSpec.describe "health_data revoked during a profile write", :real_consumers do
 
     expect(health_data_left?).to be(false)
   end
+
+  it "does not erase data written after the person granted the consent again" do
+    Identity::Api.revoke_consent(user_id:, purpose: "health_data")
+    Identity::Api.grant_consent(user_id:, purpose: "health_data", version: 1)
+    api.set_sport(user_id:, sport: "cycling", level: "advanced")
+    run_publisher
+
+    expect(UserProfile::SportProfile.where(user_id:, sport: "cycling")).to exist
+  end
+
+  it "still erases when the consent stays revoked after a grant and a later revoke" do
+    Identity::Api.revoke_consent(user_id:, purpose: "health_data")
+    Identity::Api.grant_consent(user_id:, purpose: "health_data", version: 1)
+    Identity::Api.revoke_consent(user_id:, purpose: "health_data")
+    run_publisher
+
+    expect(health_data_left?).to be(false)
+  end
 end
