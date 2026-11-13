@@ -55,5 +55,6 @@ Lista sem valores. As da Fase 01 estão em uso; as demais são planejadas, e cad
 |---|---|---|
 | `EXPO_PUBLIC_API_URL` | 01 | URL da API |
 | `EXPO_PUBLIC_ERROR_TRACKING_DSN` | 01 | Monitoramento de erros |
+| `EXPO_PUBLIC_APP_WEB_URL` | 02 | URL do painel web, opcional, para o link "exportar pelo site" nas Configurações. Sem ela, o app mostra só o texto |
 
 Os DSNs públicos de monitoramento não são segredos, mas devem ter o envio de dados sensíveis desativado.

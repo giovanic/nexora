@@ -1,5 +1,9 @@
-import { ApiStatusScreen } from "../features/api-status/ApiStatusScreen";
+import { router } from "expo-router";
+import { api } from "../shared/api";
+import { ResumeGate } from "../features/onboarding/ResumeGate";
+
+const go = (path: string) => router.replace(path as never);
 
 export default function Index() {
-  return <ApiStatusScreen baseUrl={process.env.EXPO_PUBLIC_API_URL} showErrorTrigger={__DEV__} />;
+  return <ResumeGate api={api} onRoute={go} />;
 }
