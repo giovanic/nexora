@@ -6,8 +6,11 @@ module AuthenticationRateLimits
   BY_IP = { to: 10, within: 3.minutes }.freeze
   # Sign up: every request counts (nothing to lock out, the account does not exist yet).
   BY_EMAIL = { to: 5, within: 15.minutes }.freeze
-  # Sign in counts failed attempts only, so nobody can lock another person out
-  # by signing in as them. A correct password never adds to the count.
+  # Sign in counts failed attempts only: a correct password gives its slot back.
+  # Trade-off: five wrong passwords for an e-mail still refuse that person's
+  # sign in for 15 minutes, from any IP. The per-IP limit and the password hash
+  # cost are the other brakes; the slot is taken before the password check, so
+  # parallel requests cannot all get a check.
   FAILED_SIGN_INS_BY_EMAIL = { to: 5, within: 15.minutes }.freeze
   # Password reset always answers 202, so a failure cannot be seen and every
   # request counts. The value is generous (20 in an hour) so a person is never
@@ -38,11 +41,13 @@ module AuthenticationRateLimits
                  by: -> { rate_limit_key(Identity::Api.normalize_email(params[:email])) }, with: -> { refuse_attempt(RESETS_BY_EMAIL[:within]) })
     end
 
-    # Answers 429 once the e-mail has 5 failed attempts in the window. The
-    # action calls count_failed_sign_in when the credentials are wrong.
+    # Takes one slot of the e-mail before the password is checked (atomic
+    # increment) and answers 429 when the slot is beyond the limit. The action
+    # calls release_sign_in_slot when the password is right.
     def refuse_after_failed_sign_ins(action)
       before_action(only: action) do
-        refuse_attempt(FAILED_SIGN_INS_BY_EMAIL[:within]) if failed_sign_ins >= FAILED_SIGN_INS_BY_EMAIL[:to]
+        taken = Rails.cache.increment(failed_sign_in_key, 1, expires_in: FAILED_SIGN_INS_BY_EMAIL[:within])
+        refuse_attempt(FAILED_SIGN_INS_BY_EMAIL[:within]) if taken.to_i > FAILED_SIGN_INS_BY_EMAIL[:to]
       end
     end
   end
@@ -57,12 +62,8 @@ module AuthenticationRateLimits
     rate_limit_key("failed sign in:#{Identity::Api.normalize_email(params[:email])}")
   end
 
-  def failed_sign_ins
-    Rails.cache.read(failed_sign_in_key, raw: true).to_i
-  end
-
-  def count_failed_sign_in
-    Rails.cache.increment(failed_sign_in_key, 1, expires_in: FAILED_SIGN_INS_BY_EMAIL[:within])
+  def release_sign_in_slot
+    Rails.cache.decrement(failed_sign_in_key, 1, expires_in: FAILED_SIGN_INS_BY_EMAIL[:within])
   end
 
   def refuse_attempt(window)

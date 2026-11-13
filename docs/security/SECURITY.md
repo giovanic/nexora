@@ -17,7 +17,7 @@ Modelo de ameaças e controles do produto. O código ainda não existe; a coluna
 | Acesso a fotos | URL vazada, leitura por outra pessoa | Bucket privado; URLs assinadas curtas; nunca em logs; escopo por dono | 03 |
 | Imagem enviada à IA | Instrução maliciosa escrita na foto | Tratar a imagem como dado; validar saída por schema; sem ferramentas nem dados de terceiros no prompt | 03 |
 | API | Acesso a dados de outra pessoa (IDOR) | Consultas a partir do usuário autenticado; teste automático por recurso | 02 |
-| Autenticação | Força bruta, sessão roubada | Limite de tentativas; hash forte; token por dispositivo com digest no banco e revogação | 02 |
+| Autenticação | Força bruta, sessão roubada | Limite de tentativas (por IP; por e-mail só nas entradas com senha errada, reservado antes da conferência da senha; por conta na reautenticação); hash forte; token por dispositivo com digest no banco e revogação. Limite conhecido: cinco senhas erradas para um e-mail bloqueiam a entrada dessa pessoa por 15 minutos, de qualquer IP | 02 |
 | Clientes | Token roubado do aparelho ou navegador | Armazenamento seguro no mobile; cookie `HttpOnly` e `SameSite` na web | 02 |
 | Webhook do Strava | Evento forjado, excesso de requisições | Conferir `subscription_id`; nunca confiar no conteúdo, sempre buscar na API; limite de requisições | 04 |
 | OAuth do Strava | CSRF, código interceptado | `state` assinado de uso único; troca imediata; segredo só no backend | 04 |

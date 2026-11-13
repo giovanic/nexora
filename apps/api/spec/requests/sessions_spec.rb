@@ -271,6 +271,38 @@ RSpec.describe "sessions", :identity do
         expect(statuses).to contain_exactly(200, 401)
         expect(Identity::Session.where(revoked_at: nil).count).to eq(1)
       end
+
+      it "parallel wrong passwords for one e-mail: at most 5 reach the password check" do
+        mobile_token
+        checked = Concurrent::AtomicFixnum.new(0)
+        # Keeps every request inside the check, so they all overlap.
+        allow(Identity::Api).to receive(:authenticate).and_wrap_original do |original, *arguments, **keywords|
+          checked.increment
+          sleep 0.3
+          original.call(*arguments, **keywords)
+        end
+
+        clients = Array.new(12) { open_session.tap(&:https!) }
+        statuses = clients.each_with_index.map do |client, n|
+          Thread.new do
+            client.post "/api/v1/sessions", params: { email: "ana@example.test", password: "wrong password!", client: "mobile" },
+                                            env: { "REMOTE_ADDR" => "198.51.100.#{n + 1}" }, as: :json
+            client.response.status
+          end
+        end.map(&:value)
+
+        expect(checked.value).to be <= 5
+        expect(statuses.count(429)).to be >= 7
+      end
+
+      it "a successful sign in gives its slot back" do
+        mobile_token
+        4.times { |n| sign_in(password: "wrong password!", env: { "REMOTE_ADDR" => "198.51.100.#{n}" }) }
+        3.times { |n| sign_in(env: { "REMOTE_ADDR" => "198.51.101.#{n}" }) }
+        sign_in(password: "wrong password!", env: { "REMOTE_ADDR" => "198.51.102.1" })
+
+        expect(response).to have_http_status(:unauthorized)
+      end
     end
   end
 

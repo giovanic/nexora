@@ -20,15 +20,15 @@ module Api
       def create
         fields = params.permit(:email, :password, :client, :device_label)
         unless Identity::Api.client?(fields[:client])
+          release_sign_in_slot
           return render_error(:unprocessable_content, details: [ { field: "client", code: "inclusion" } ])
         end
 
         result = Identity::Api.authenticate(email: fields[:email], password: fields[:password], client: fields[:client],
                                             device_label: fields[:device_label], ip: request.remote_ip)
-        if result == :invalid
-          count_failed_sign_in
-          return render_error(:unauthorized, "invalid_credentials")
-        end
+        return render_error(:unauthorized, "invalid_credentials") if result == :invalid
+
+        release_sign_in_slot
 
         render_session(result, client: fields[:client], status: :created)
       end
