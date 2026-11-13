@@ -17,6 +17,8 @@ Shared::Outbox::Event.where(id:).pluck(:name, :version, :attempts, :occurred_at,
 Shared::Outbox::ConsumedEvent.where(event_id: id).pluck(:consumer, :consumed_at)  # consumidores que já aplicaram
 ```
 
+Registre quem rodou cada comando de console, quando e por quê, no relatório da fase ou numa nota de incidente. Comando de console em produção sem esse registro não deixa rastro.
+
 Nunca use `Event.find(id)` ou `inspect` na sessão: isso imprime o payload. Procure a causa pela classe do erro nos logs do worker (`event_id=<id>`), e reproduza com um usuário de teste, nunca com dado real.
 
 ## Reenfileirar (causa corrigida)

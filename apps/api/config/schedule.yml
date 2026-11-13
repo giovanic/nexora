@@ -22,7 +22,7 @@ outbox_cleanup:
   cron: "30 3 * * *"
   class: "Shared::Outbox::CleanupJob"
   queue: default
-  description: "Removes outbox events, and their consumption marks, 30 days after they were processed."
+  description: "Removes published outbox events, and their consumption marks, 30 days after publication. Dead events are kept until resolved."
 
 identity_retention:
   cron: "45 3 * * *"

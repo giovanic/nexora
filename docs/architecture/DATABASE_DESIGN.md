@@ -303,7 +303,7 @@ Métricas de ativação e retenção, somente com o consentimento `usage_metrics
 - **Índices:** parcial em `(occurred_at) WHERE published_at IS NULL AND dead_at IS NULL`, para o publicador e a conferência; em `user_id`, para a exclusão de conta.
 - **Registro de dados:** inscrita no `shared/data_registry` pelo contexto `shared`. A exportação devolve vazio, porque o payload só tem IDs; o apagador remove os eventos da pessoa, exceto `user.deletion_requested`.
 - **Descarte:** evento cuja regra registrada em `Shared::Outbox.discard_if` responda verdadeiro é apagado sem entrega. `user.deletion_requested` nunca é descartado. Se a regra falhar, o evento não é entregue e a falha conta como tentativa, com o consumidor `outbox.discard_rule` no alerta.
-- **Retenção:** apagar os publicados 30 dias depois do processamento. Eventos pendentes e mortos nunca são apagados pela rotina, porque não foram processados: um `consent.revoked` de `health_data` morto continua impedindo um novo consentimento até ser resolvido ([runbook](../operations/RUNBOOK_OUTBOX.md)). Eventos de usuário em exclusão são removidos pelo fluxo de exclusão.
+- **Retenção:** apagar os publicados 30 dias após a publicação. Eventos pendentes e mortos nunca são apagados pela rotina, porque não foram processados: um `consent.revoked` de `health_data` morto continua impedindo um novo consentimento até ser resolvido ([runbook](../operations/RUNBOOK_OUTBOX.md)). Eventos de usuário em exclusão são removidos pelo fluxo de exclusão.
 
 ### `consumed_events`
 
@@ -341,7 +341,7 @@ Prazos iniciais, a confirmar com a revisão jurídica ([PRIVACY_AND_LGPD.md](../
 | `activity_sync_events` | 30 dias | Apagados |
 | `outbox_events` e `consumed_events` | 30 dias após a publicação; pendentes e mortos ficam até serem resolvidos | Removidos ou anonimizados |
 | XP, metas, missões e conquistas | Enquanto a conta existir | Apagados |
-| `consent_records` e `audit_events` | Proposta provisória de 5 anos, a confirmar na revisão jurídica | Mantidos sem conteúdo de saúde, ligados ao mesmo UUID |
+| `consent_records` e `audit_events` | Proposta provisória de 5 anos, a confirmar na revisão jurídica. Em conta ativa, `consent_records` mantém o último registro de cada finalidade além dos 5 anos, porque prova o consentimento vigente; o de conta excluída segue o prazo | Mantidos sem conteúdo de saúde, ligados ao mesmo UUID |
 | `sessions` e `device_tokens` | Até expirar ou revogar, mais 30 dias | Apagados |
 | `notifications` | 90 dias | Apagadas |
 | `weekly_reports`, `progress_snapshots`, `weekly_plans` | Enquanto a conta existir | Apagados |

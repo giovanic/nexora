@@ -38,8 +38,8 @@ Modelo de ameaças e controles do produto. O código ainda não existe; a coluna
 
 - **Em trânsito:** TLS em toda comunicação externa.
 - **Em repouso:** banco, backups e armazenamento cifrados pela infraestrutura.
-- **Em nível de aplicação:** tokens de integração e de aparelho. Se outras colunas, como `raw_response`, também serão cifradas é decidido na Fase 02, por classe de dado, e registrado em ADR. A ferramenta (como a criptografia do Active Record) é confirmada na mesma fase.
-- **Chaves:** fora do repositório e do banco, com procedimento documentado de rotação.
+- **Em nível de aplicação:** tokens de integração e de aparelho (fases futuras) e, desde a Fase 02, `users.email` (determinística), `user_profiles.display_name` e `sessions.device_label`, pela criptografia do Active Record ([ADR 0018](../architecture/decisions/0018-application-level-encryption.md)). `raw_response` e outras colunas de fases futuras serão decididas por classe de dado.
+- **Chaves:** fora do repositório e do banco; em produção, `ACTIVE_RECORD_ENCRYPTION_*` e `AUDIT_IP_HMAC_KEY` com no mínimo 32 caracteres, verificado no boot. **A rotação ainda não tem procedimento** (pendência da ADR 0018, antes do M1).
 
 ## Segredos
 
@@ -51,6 +51,25 @@ Modelo de ameaças e controles do produto. O código ainda não existe; a coluna
 ### Limite conhecido das regras do Claude Code
 
 As regras `deny` de `Read` bloqueiam as ferramentas de arquivo, mas a documentação não declara que isso cobre `cat .env` via Bash. Os revisores têm `Bash` para rodar testes, e `tools` não restringe comandos individuais: a instrução deles proíbe alterar arquivos, mas **isso é instrução, não controle técnico**. As regras reduzem o risco e não são uma garantia. A proteção principal é não ter segredos reais na máquina de desenvolvimento além do necessário. A regra `Read(**/.env.*)` também bloqueia `.env.example`, então, para mudar esse arquivo, o Claude pede ao responsável.
+
+## Sessão, transporte e limites
+
+- **Token opaco:** o banco guarda só o digest. Sessão ociosa expira em 30 dias e a absoluta em 90 ([ADR 0005](../architecture/decisions/0005-authentication-strategy.md)).
+- **Web:** cookie `__Host-session`, assinado, `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`. Nenhum token em `localStorage`. **Mobile:** `Authorization: Bearer`, com o token no SecureStore do sistema.
+- **Origin:** a API não usa a proteção CSRF de formulário do Rails. Requisição que muda estado e usa ou pede o cookie só passa com `Origin` em `ALLOWED_ORIGINS`; senão, `403`. Requisição só com Bearer não depende de Origin.
+- **Respostas** sempre com `Cache-Control: no-store`.
+- **Limites** (`429` com `Retry-After`; chaves em HMAC no cache, sem IP nem e-mail em claro):
+
+| Rota | Limite |
+|---|---|
+| Cadastro | 10 por IP em 3 min; 5 por e-mail em 15 min |
+| Entrada | 10 por IP em 3 min; 5 **falhas** por e-mail em 15 min |
+| Renovação | 10 por IP em 3 min |
+| Recuperação de senha | 10 por IP em 3 min; 20 por e-mail em 1 h |
+| Exportação e exclusão | 10 por IP em 3 min; 5 por conta em 15 min |
+
+- **Trade-offs conhecidos:** (1) o limite de falhas por e-mail deixa um terceiro bloquear por 15 minutos a entrada de uma pessoa, de qualquer IP; a vaga é reservada de forma atômica antes de conferir a senha, para que requisições paralelas não ganhem tentativas, e é devolvida quando a senha está certa. (2) O limite por conta em exportação e exclusão impede que um token roubado teste senhas trocando de IP, ao custo de travar a própria pessoa por 15 minutos após cinco erros. (3) A recuperação sempre responde `202`, então toda requisição conta e o teto é alto. (4) O token de recuperação vai no caminho da rota: os logs da aplicação filtram o caminho, mas log de proxy à frente da API é pendência da Fase 09.
+- **Eventos mortos da outbox** têm procedimento em [RUNBOOK_OUTBOX.md](../operations/RUNBOOK_OUTBOX.md).
 
 ## Autorização
 

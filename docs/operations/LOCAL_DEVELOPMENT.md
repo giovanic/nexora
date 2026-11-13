@@ -52,6 +52,14 @@ npm run dev -w apps/web
 
 **Mobile:** veja a seção seguinte.
 
+### Identidade na Fase 02
+
+- **E-mails:** em desenvolvimento a API grava os e-mails (recuperação de senha) como arquivos em `apps/api/tmp/mails`, sem enviar nada. Abra o arquivo mais recente para pegar o link. O provedor real de e-mail é escolhido no M1.
+- **Sidekiq é necessário** para a entrega de eventos da outbox (`user.registered` cria o perfil, `consent.revoked` apaga dados de saúde) e para a exclusão de conta. Sem ele, o perfil fica em `409 profile_pending` e nada é entregue. O agendador (`sidekiq-cron`) sobe junto com o worker.
+- **Web:** o Vite encaminha `/api` para `http://localhost:3010`, então o navegador fala só com `http://localhost:5173` e o cookie `__Host-session` fica de primeira parte. Use o Node do `.nvmrc` (26.13.0, `nvm use`).
+- **Mobile:** `EXPO_PUBLIC_API_URL` aponta para a API. `EXPO_PUBLIC_APP_WEB_URL` (opcional) é a URL do painel web, usada no link "exportar pelo site" das Configurações; sem ela o app mostra só o texto.
+- **Chaves:** em desenvolvimento e teste, as chaves de cifragem e `AUDIT_IP_HMAC_KEY` têm valores públicos locais. Em produção são obrigatórias, com 32 caracteres ou mais ([ADR 0018](../architecture/decisions/0018-application-level-encryption.md)).
+
 ## Conferir
 
 ```bash

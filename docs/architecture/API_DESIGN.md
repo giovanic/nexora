@@ -11,11 +11,30 @@ Contrato entre o backend e os clientes. **Nenhum endpoint é implementado na Fas
 
 ## Autenticação e autorização
 
-- Estratégia de sessão e tokens decidida na [ADR 0005](decisions/0005-authentication-strategy.md). Mobile e web têm necessidades diferentes de armazenamento.
+- Estratégia de sessão e tokens na [ADR 0005](decisions/0005-authentication-strategy.md) (`Aceita`). **Web:** cookie `__Host-session`, sem token no corpo; requisição que muda estado exige `Origin` permitido. **Mobile:** `Authorization: Bearer`, com o token no corpo da resposta de cadastro, entrada e renovação.
+- **Campo `client`:** obrigatório (`web` ou `mobile`) em `POST /registrations` e `POST /sessions`, e escolhe o transporte da sessão. Valor desconhecido responde `422` com detalhe no campo `client`.
+- Toda resposta leva `Cache-Control: no-store`.
 - Toda rota, salvo cadastro, login, recuperação de senha, webhook, callback OAuth (validado pelo `state`) e saúde, exige autenticação.
-- Exportação e exclusão de conta exigem reautenticação recente, porque uma sessão roubada não pode levar todo o histórico.
+- Exportação e exclusão de conta exigem a senha na própria requisição (reautenticação); senha errada responde `401 invalid_credentials`, sem encerrar a sessão. Porque uma sessão roubada não pode levar todo o histórico.
 - **Isolamento:** consultas partem sempre do usuário autenticado, pela API do contexto, como `Nutrition::Api.find_entry(user_id: current_user.id, id:)`. Recurso de outra pessoa responde `404`, nunca `403`, para não confirmar a existência.
-- Rotas que dependem de consentimento respondem `403` com o código `consent_required`.
+- Rotas que dependem de consentimento respondem `403` com o código `consent_required`. Sem `health_data`, só ficam liberadas sessão, consentimentos, exportação, exclusão e saída.
+
+**Códigos de erro da Fase 02** (campo `error.code`):
+
+| Status e código | Quando |
+|---|---|
+| `401` (sem código) | Sessão ausente, inválida, revogada ou expirada; token de renovação já usado |
+| `401 invalid_credentials` | E-mail ou senha errados na entrada, ou senha errada em exportação e exclusão. Não diz qual dos dois errou |
+| `403 consent_required` | Rota que exige um consentimento que não está vigente |
+| `403` (sem código) | `Origin` não permitido numa requisição com cookie que muda estado |
+| `404` | Recurso inexistente ou de outra pessoa; finalidade desconhecida |
+| `409 profile_pending` | Perfil ainda não criado a partir do cadastro (o app tenta de novo) |
+| `409 revocation_pending` | Novo consentimento de `health_data` enquanto a revogação anterior ainda não foi aplicada |
+| `409 outdated_version` | Consentimento concedido numa versão que não é a vigente |
+| `422 validation_failed` | Campos inválidos, com `details`; inclui senha fraca na recuperação |
+| `422 invalid_time_zone` | Fuso que não é IANA |
+| `422 invalid_token` | Token de recuperação desconhecido, usado ou expirado |
+| `429` | Limite de tentativas excedido, com `Retry-After` em segundos |
 
 ## Formato de erro
 
@@ -73,15 +92,16 @@ Os valores acima são apenas ilustrativos.
 
 | Método e rota | Função |
 |---|---|
-| `POST /api/v1/registrations` | Criar conta, exigindo confirmação de maioridade |
-| `POST /api/v1/sessions`, `DELETE /api/v1/sessions/:id` | Entrar, sair, revogar dispositivo |
-| `POST /api/v1/sessions/refresh` | Renovar sessão, conforme a ADR 0005 |
+| `POST /api/v1/registrations` | Criar conta, exigindo confirmação de maioridade, `time_zone` IANA e `client`. Cria a sessão |
+| `POST /api/v1/sessions` | Entrar (`email`, `password`, `client`) |
+| `GET /api/v1/sessions`, `DELETE /api/v1/sessions/:id`, `DELETE /api/v1/sessions/current` | Listar os dispositivos, revogar um deles, sair deste aparelho. Sessão de outra pessoa responde `404` |
+| `POST /api/v1/sessions/refresh` | Renovar a sessão: troca o token. Duas renovações simultâneas com o mesmo token, só uma vence; a outra recebe `401` |
 | `POST /api/v1/password_resets` | Pedir o link de recuperação de senha; responde sempre `202` |
 | `PATCH /api/v1/password_resets/:token` | Trocar a senha com o token do link; encerra todas as sessões |
 | `GET`/`POST /api/v1/consents`, `DELETE /api/v1/consents/:purpose` | Consultar, conceder, revogar. Versão diferente da vigente responde `409 outdated_version`; revogar `health_data` responde `204` como as outras finalidades, e as rotas de saúde passam a responder `403 consent_required` |
 | `GET /api/v1/consents/:purpose/text` | Texto da versão vigente, em Markdown |
-| `POST /api/v1/account/export` | Solicitar exportação |
-| `DELETE /api/v1/account` | Solicitar exclusão |
+| `POST /api/v1/account/export` | Exportação gerada na hora, em JSON, com a senha; sem arquivo guardado |
+| `DELETE /api/v1/account` | Solicitar exclusão, com a senha. Revoga todas as sessões na hora e apaga por contexto em até 24 horas |
 
 ### User Profile (Fase 02)
 
@@ -165,7 +185,7 @@ O servidor nunca recebe a foto pela API, o que reduz custo e superfície de ataq
 
 ## Limites de uso
 
-Limite de tentativas em autenticação, de requisições por usuário e de análises por período. Excedido, responde `429` com `Retry-After` e, no caso de análises, com o código `analysis_quota_exceeded`.
+Limite de tentativas em autenticação, de requisições por usuário e de análises por período. Na Fase 02: cadastro, entrada, renovação, recuperação de senha, exportação e exclusão têm limite por IP; cadastro, entrada e recuperação, também por e-mail; exportação e exclusão, também por conta (valores e trade-offs em [SECURITY.md](../security/SECURITY.md)). Excedido, responde `429` com `Retry-After` e, no caso de análises, com o código `analysis_quota_exceeded`.
 
 ## Compatibilidade entre clientes
 

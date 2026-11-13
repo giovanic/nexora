@@ -60,6 +60,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Serviços:** `RegisterUser`, `Authenticate`, `RevokeSession`, `GrantConsent`, `RevokeConsent`, `RequestAccountDeletion`, `ConfirmDeletion`, `ExportUserData`.
 - **Publica:** `user.registered`, `consent.granted`, `consent.revoked`, `user.deletion_requested`.
 - **Consome:** nada.
+- **Registra no registro de dados** (`Shared::DataRegistry`): as tabelas `users`, `sessions`, `consent_records`, `audit_events`, `account_deletions`, com exportador e apagador. Registra também a regra de descarte da outbox: evento de usuário com exclusão pedida (`account_deletions` existe) é descartado, exceto `user.deletion_requested`.
 - **Permitido:** nenhum outro contexto.
 - **Proibido:** conhecer dados de saúde. Exportação e exclusão passam pelo registro da regra 8.
 
@@ -69,7 +70,8 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Modelos:** `UserProfile`, `SportProfile`.
 - **Serviços:** `UpdateProfile`, `SetSportLevel`.
 - **Publica:** `sport_profile.changed`.
-- **Consome:** `user.registered`, `user.deletion_requested`.
+- **Consome:** `user.registered` (consumidor `user_profile.create_profile`, cria o perfil com o fuso do cadastro) e `consent.revoked` (consumidor `user_profile.erase_health_data`, quando a finalidade é `health_data`: apaga esportes, motivações e nome de exibição e mantém fuso e unidades). A exclusão de conta chega pelo registro de dados, não por evento.
+- **Registra no registro de dados:** `user_profiles` e `sport_profiles`.
 - **Permitido:** Identity & Access.
 - **Proibido:** guardar peso, medidas ou metas corporais.
 
@@ -204,11 +206,15 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 
 **Nenhum evento carrega** calorias, macronutrientes, peso, duração ou distância. Quem precisa de detalhes e tem permissão consulta a API pública do contexto. `food_entry.confirmed` informa que houve confirmação, não o que foi comido.
 
+## Registro de dados
+
+`Shared::DataRegistry` (em `apps/api/app/domains/shared`) é o único ponto de exportação e exclusão de conta. Cada contexto registra, no boot, as tabelas com dado de usuário, um exportador e um apagador; `outbox_events` é registrada por `shared`. Testes (`data_registry_coverage_spec.rb`) falham se existir tabela com dado de usuário sem registro, ou contexto sem exportador. Contexto novo precisa se registrar.
+
 ## Entrega, ordem e idempotência
 
 - **Publicação:** todo evento da tabela acima é gravado em `outbox_events` na mesma transação da mudança. Um job publica os pendentes ([ADR 0004](decisions/0004-domain-events-transactional-outbox.md)). A Fase 02 é a dona da implementação, porque `user.deletion_requested` não pode se perder.
 - **Entrega:** pelo menos uma vez. Sem garantia de ordem global, porque a API é assíncrona. Consumidores usam `occurred_at` e consultam a API pública quando a ordem importa.
 - **Idempotência:** cada consumidor registra `(consumer, event_id)` numa tabela com índice único, na mesma transação do efeito. Evento repetido é ignorado.
-- **Falhas:** retentativas com espera crescente. Após o limite, o evento fica marcado como morto e dispara alerta. Pode ser reprocessado manualmente. Uma conferência periódica compara eventos publicados, consumidores esperados e `consumed_events`, com alerta por consumidor.
-- **Fora de ordem:** quem recebe uma exclusão antes da criação grava um marcador por entidade e ignora a concessão posterior. Eventos de usuário em exclusão são descartados.
+- **Falhas:** retentativas com espera crescente. Após o limite (8), o evento fica marcado como morto e dispara alerta. A rotina de limpeza nunca o apaga. Procedimento de reprocessamento em [RUNBOOK_OUTBOX.md](../operations/RUNBOOK_OUTBOX.md). Enquanto um `consent.revoked` de `health_data` está morto, um novo consentimento de `health_data` responde `409 revocation_pending`. Uma conferência periódica compara eventos publicados, consumidores esperados e `consumed_events`, com alerta por consumidor.
+- **Fora de ordem:** quem recebe uma exclusão antes da criação grava um marcador por entidade e ignora a concessão posterior. Eventos de usuário com exclusão pedida são descartados na entrega, exceto `user.deletion_requested`; o consumidor também é idempotente.
 - **Versão:** mudança incompatível de payload incrementa `version`, e os consumidores passam a aceitar as duas durante a transição.

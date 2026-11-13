@@ -50,6 +50,7 @@ docs/architecture/decisions/0014-api-contract-tooling.md
 docs/architecture/decisions/0015-hosting-and-deployment.md
 docs/architecture/decisions/0016-closed-beta-milestone.md
 docs/architecture/decisions/0017-derived-data-after-source-removal.md
+docs/architecture/decisions/0018-application-level-encryption.md
 docs/security/SECURITY.md
 docs/security/PRIVACY_AND_LGPD.md
 docs/security/HEALTH_DATA_SAFETY.md

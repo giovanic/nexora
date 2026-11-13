@@ -4,6 +4,10 @@ module Shared
   # consumer, at least once. Each consumer runs in its own savepoint together
   # with its consumed_events row, so a repeated delivery has no effect.
   #
+  # Delivery is at least once and not ordered: an event can arrive twice, and
+  # events of one person can arrive in any order (retries, several workers).
+  # Consumers must be idempotent and tolerate any order.
+  #
   # A consumer runs inside that transaction, so it only writes to the database:
   # external calls go to a job it enqueues after commit, or to another event.
   #
