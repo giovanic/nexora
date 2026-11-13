@@ -12,7 +12,7 @@ PostgreSQL. Versão decidida na [ADR 0002](decisions/0002-technology-baseline.md
 - **Estimativas:** toda grandeza estimada usa colunas `_min`, `_likely` e `_max`, mais `confidence`. Nunca há coluna única que pareça medição.
 - **Soft delete:** só onde indicado. O padrão é apagar de verdade, conforme a [política de privacidade](../security/PRIVACY_AND_LGPD.md).
 - **Índices:** cada um precisa de uma consulta que o justifique.
-- **Exclusão de conta:** cada contexto trata `user.deletion_requested`. A coluna `users.id` sofre anonimização ou remoção apenas no fim do processo.
+- **Exclusão de conta:** um job de Identity percorre o registro compartilhado de apagadores (`shared/data_registry`), no qual cada contexto inscreve o seu `eraser`. A linha de `users` permanece, anonimizada, ao fim do processo.
 
 ## Mapa de relacionamentos
 
@@ -47,10 +47,10 @@ erDiagram
 
 Conta e autenticação.
 
-- **Colunas:** `id`, `email`, `password_digest`, `adult_confirmed_at`, `deletion_requested_at`, `deleted_at`.
+- **Colunas:** `id`, `email`, `password_digest` (na exclusão, trocado pelo hash de um segredo aleatório que ninguém guarda, sem valor utilizável), `adult_confirmed_at`, `deleted_at`. O pedido de exclusão fica em `account_deletions`.
 - **Constraints:** `email` único e sem diferença entre maiúsculas e minúsculas; `adult_confirmed_at NOT NULL`, o que impede criar conta sem a declaração de maioridade. A declaração não comprova a idade.
-- **Índices:** único em `lower(email)`; parcial em `deletion_requested_at` para a rotina de exclusão.
-- **Soft delete:** sim, curto, apenas durante o processo de exclusão (`deleted_at`). Ao final, o registro é anonimizado.
+- **Índices:** único em `lower(email)`.
+- **Soft delete:** `deleted_at` marca a conta excluída. Ao final do processo a linha permanece com o mesmo UUID, o e-mail trocado por um valor aleatório (mantém o `NOT NULL` e o índice único), sem senha. `consent_records` e `audit_events` seguem ligados a esse UUID, sem conteúdo de saúde. O mesmo e-mail pode criar outra conta.
 
 ### `sessions`
 
@@ -71,15 +71,17 @@ Histórico de inclusão apenas: nunca atualizado nem apagado enquanto a conta ex
 
 Trilha de ações sensíveis, de inclusão apenas.
 
-- **Colunas:** `id`, `user_ref` (identificador sem outros dados, anonimizado na exclusão), `action`, `metadata` (lista fechada de campos por `action`, sem texto livre, e-mail digitado ou dado de saúde), `ip_hmac` (HMAC com chave rotativa, pois hash simples de IPv4 é reversível), `occurred_at`.
+- **Colunas:** `id`, `user_ref` (UUID do usuário, sem outros dados; na exclusão da conta continua ligado ao mesmo UUID), `action`, `metadata` (lista fechada de campos por `action`, sem texto livre, e-mail digitado ou dado de saúde), `ip_hmac` (HMAC com chave rotativa, pois hash simples de IPv4 é reversível), `occurred_at`.
 - **Índices:** `(user_ref, occurred_at)`.
 
 ### `account_deletions`
 
 Acompanha a exclusão de conta até a conclusão.
 
-- **Colunas:** `id`, `user_id`, `requested_at`, `pending_contexts`, `completed_at`.
-- **Fluxo:** cada contexto chama `IdentityAccess::Api.confirm_deletion`. Sem conclusão no prazo, dispara alerta. A anonimização final de `users` só ocorre com tudo confirmado. Mantém-se um registro mínimo de exclusões para reaplicar após restauração de backup.
+- **Colunas:** `id`, `user_id` (FK), `requested_at`, `pending_contexts` (nomes de contexto do registro, sem texto livre), `completed_at`. O prazo de 24 horas é contado a partir de `requested_at`.
+- **Constraints:** único em `user_id`, o que torna o pedido repetido, mesmo simultâneo, inofensivo; `pending_contexts` só com nomes no formato de contexto; `completed_at` só com `pending_contexts` vazio.
+- **Índices:** parcial em `requested_at WHERE completed_at IS NULL`, para a rotina horária do prazo.
+- **Fluxo:** o pedido revoga as sessões, cria a linha com `pending_contexts` vindo do registro e publica `user.deletion_requested`, na mesma transação. A partir daí a conta não entra, não redefine senha nem consente, e a outbox descarta os eventos da pessoa, exceto `user.deletion_requested`. Um job de Identity (`EraseAccountJob`) percorre os `erasers` do registro compartilhado (`shared/data_registry`), sem que os contextos chamem Identity. Cada apagador concluído sai de `pending_contexts`, e uma falha repete só o que falta. A rotina horária (`DeletionDeadlineJob`) enfileira de novo as exclusões não concluídas e, passadas 24 horas, dispara alerta só com o id da exclusão. A anonimização final de `users` só ocorre com tudo concluído. A linha permanece como registro mínimo (só o UUID e as datas) para reaplicar exclusões após restauração de backup; por isso não é apagada nem exportada.
 
 ## User Profile
 
@@ -87,15 +89,16 @@ Acompanha a exclusão de conta até a conclusão.
 
 Dados pessoais e preferências.
 
-- **Colunas:** `user_id` (PK e FK), `display_name`, `time_zone`, `units`, `notification_preferences` (JSONB), `quiet_hours`.
+- **Colunas:** `user_id` (PK e FK), `display_name`, `time_zone`, `units`, `notification_preferences` (JSONB), `quiet_hours`, `motivations` (lista fechada de 0 a 4 itens, opcional, sem texto livre).
 - **Constraints:** `time_zone NOT NULL`.
 
 ### `sport_profiles`
 
 Nível por esporte.
 
-- **Colunas:** `id`, `user_id` (FK), `sport`, `level`, `started_at`.
-- **Constraints:** único em `(user_id, sport)`; `level` em `beginner`, `intermediate` ou `advanced`.
+- **Colunas:** `id`, `user_id` (FK), `sport`, `level`, `started_at`, `ended_at` (nulo na linha vigente).
+- **Histórico:** mudar o nível encerra a linha atual (`ended_at`) e cria outra, preservando o histórico.
+- **Constraints:** único em `(user_id, sport)` com `ended_at` nulo; `level` em `beginner`, `intermediate` ou `advanced`.
 
 ## Nutrition
 
@@ -295,14 +298,17 @@ Métricas de ativação e retenção, somente com o consentimento `usage_metrics
 
 ### `outbox_events`
 
-- **Colunas:** `id`, `name`, `version`, `user_id`, `correlation_id`, `payload` (JSONB), `occurred_at`, `published_at`, `attempts`, `dead_at`.
-- **Índices:** parcial em `(occurred_at) WHERE published_at IS NULL`.
-- **Retenção:** apagar publicados e mortos após o prazo da tabela abaixo. Eventos de usuário em exclusão são removidos pelo fluxo de exclusão.
+- **Colunas:** `id`, `name`, `version`, `user_id`, `correlation_id`, `payload` (JSONB), `occurred_at`, `published_at`, `attempts`, `next_attempt_at`, `dead_at`. `next_attempt_at` guarda a espera crescente entre tentativas (1, 2, 4… 64 minutos); na oitava falha, `dead_at`.
+- **Constraints:** `CHECK` no formato de `name` (`contexto.fato`), em `version >= 1`, `attempts >= 0` e `payload` como objeto JSON. `user_id` sem chave estrangeira, porque `shared/` não referencia outro contexto.
+- **Índices:** parcial em `(occurred_at) WHERE published_at IS NULL AND dead_at IS NULL`, para o publicador e a conferência; em `user_id`, para a exclusão de conta.
+- **Registro de dados:** inscrita no `shared/data_registry` pelo contexto `shared`. A exportação devolve vazio, porque o payload só tem IDs; o apagador remove os eventos da pessoa, exceto `user.deletion_requested`.
+- **Descarte:** evento cuja regra registrada em `Shared::Outbox.discard_if` responda verdadeiro é apagado sem entrega. `user.deletion_requested` nunca é descartado. Se a regra falhar, o evento não é entregue e a falha conta como tentativa, com o consumidor `outbox.discard_rule` no alerta.
+- **Retenção:** apagar os publicados 30 dias após a publicação. Eventos pendentes e mortos nunca são apagados pela rotina, porque não foram processados: um `consent.revoked` de `health_data` morto continua impedindo um novo consentimento até ser resolvido ([runbook](../operations/RUNBOOK_OUTBOX.md)). Eventos de usuário em exclusão são removidos pelo fluxo de exclusão.
 
 ### `consumed_events`
 
 - **Colunas:** `consumer`, `event_id`, `consumed_at`.
-- **Constraints:** chave primária em `(consumer, event_id)`, base da idempotência dos consumidores.
+- **Constraints:** chave primária em `(consumer, event_id)`, base da idempotência dos consumidores. Chave estrangeira para `outbox_events` com `ON DELETE CASCADE`, com índice em `event_id`.
 
 ## Concorrência
 
@@ -333,9 +339,9 @@ Prazos iniciais, a confirmar com a revisão jurídica ([PRIVACY_AND_LGPD.md](../
 | Atividades | Enquanto a conta existir e, no caso do Strava, enquanto a integração durar | Apagadas |
 | Tokens | Até a desconexão | Apagados |
 | `activity_sync_events` | 30 dias | Apagados |
-| `outbox_events` e `consumed_events` | 30 dias após o processamento | Removidos ou anonimizados |
+| `outbox_events` e `consumed_events` | 30 dias após a publicação; pendentes e mortos ficam até serem resolvidos | Removidos ou anonimizados |
 | XP, metas, missões e conquistas | Enquanto a conta existir | Apagados |
-| `consent_records` e `audit_events` | Proposta provisória de 5 anos, a confirmar na revisão jurídica | Mantidos sem conteúdo de saúde, com referência anonimizada |
+| `consent_records` e `audit_events` | Proposta provisória de 5 anos, a confirmar na revisão jurídica. Em conta ativa, `consent_records` mantém o último registro de cada finalidade além dos 5 anos, porque prova o consentimento vigente; o de conta excluída segue o prazo | Mantidos sem conteúdo de saúde, ligados ao mesmo UUID |
 | `sessions` e `device_tokens` | Até expirar ou revogar, mais 30 dias | Apagados |
 | `notifications` | 90 dias | Apagadas |
 | `weekly_reports`, `progress_snapshots`, `weekly_plans` | Enquanto a conta existir | Apagados |

@@ -20,7 +20,7 @@ Rails.application.configure do
 
   # Show full error reports.
   config.consider_all_requests_local = false
-  config.cache_store = :null_store
+  config.cache_store = :memory_store
 
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :all
@@ -39,4 +39,16 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Fixed, PUBLIC values for local use only. They protect nothing and must never
+  # be reused anywhere else; production reads these from the environment.
+  config.active_record.encryption.primary_key = ENV.fetch("ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY", "local-test-public-primary-key-0001")
+  config.active_record.encryption.deterministic_key = ENV.fetch("ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY", "local-test-public-deterministic-key-0001")
+  config.active_record.encryption.key_derivation_salt = ENV.fetch("ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT", "local-test-public-key-derivation-salt-0001")
+  config.x.audit_ip_hmac_key = ENV.fetch("AUDIT_IP_HMAC_KEY", "local-test-public-audit-ip-hmac-key-0001")
+  # Specs decide when the outbox publisher runs, instead of a queued job.
+  config.x.outbox_enqueue_after_commit = false
+  config.x.app_web_url = ENV.fetch("APP_WEB_URL", "http://localhost:5173")
+  # Mails stay in ActionMailer::Base.deliveries.
+  config.action_mailer.delivery_method = :test
 end

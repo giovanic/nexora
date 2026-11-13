@@ -1,0 +1,31 @@
+# Loaded by sidekiq-cron when a worker starts (config/initializers/sidekiq_cron.rb).
+# Jobs removed from this file are removed from the schedule.
+outbox_publish:
+  cron: "* * * * *"
+  class: "Shared::Outbox::PublishJob"
+  queue: default
+  description: "Safety net for the enqueue after commit: delivers pending outbox events."
+
+outbox_reconcile:
+  cron: "0 * * * *"
+  class: "Shared::Outbox::ReconcileJob"
+  queue: default
+  description: "Alerts on events older than an hour that a consumer has not applied."
+
+account_deletion_deadline:
+  cron: "0 * * * *"
+  class: "Identity::DeletionDeadlineJob"
+  queue: default
+  description: "Enqueues unfinished account erasures again and alerts on those past 24 hours."
+
+outbox_cleanup:
+  cron: "30 3 * * *"
+  class: "Shared::Outbox::CleanupJob"
+  queue: default
+  description: "Removes published outbox events, and their consumption marks, 30 days after publication. Dead events are kept until resolved."
+
+identity_retention:
+  cron: "45 3 * * *"
+  class: "Identity::RetentionJob"
+  queue: default
+  description: "Removes sessions, audit events and consent records past their retention period."

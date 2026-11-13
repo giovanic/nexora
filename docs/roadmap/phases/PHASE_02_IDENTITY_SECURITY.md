@@ -1,8 +1,8 @@
 # Fase 02 — Identity, Security & Privacy
 
 - **Estado:** ver [STATUS.md](../STATUS.md)
-- **Requisitos:** FR-ID-001, FR-ID-002, FR-ID-003, FR-ID-004, FR-ID-005, FR-ID-006, FR-ID-007, FR-ID-008, FR-PROFILE-001, FR-PROFILE-002, FR-PROFILE-003, NFR-SEC-001, NFR-SEC-003, NFR-SEC-006, NFR-PRIVACY-002, NFR-PRIVACY-003
-- **ADRs:** [0005](../../architecture/decisions/0005-authentication-strategy.md), [0010](../../architecture/decisions/0010-adults-only-mvp-and-consent.md)
+- **Requisitos:** FR-ID-001, FR-ID-002, FR-ID-003, FR-ID-004, FR-ID-005, FR-ID-006, FR-ID-007, FR-ID-008, FR-PROFILE-001, FR-PROFILE-002, FR-PROFILE-003, FR-PROFILE-004, NFR-SEC-001, NFR-SEC-003, NFR-SEC-006, NFR-PRIVACY-002, NFR-PRIVACY-003
+- **ADRs:** [0005](../../architecture/decisions/0005-authentication-strategy.md), [0010](../../architecture/decisions/0010-adults-only-mvp-and-consent.md), [0018](../../architecture/decisions/0018-application-level-encryption.md)
 
 ## Objetivo
 
@@ -59,7 +59,7 @@ packages/contracts/                      Rotas desta fase
 - `AC-02-05` (FR-ID-005): a exportação exige reautenticação, entrega todos os dados da pessoa e nenhum dado de outra, e o arquivo é privado e de vida curta. **Comprovado por:** teste com duas contas, e verificação que detecta contexto novo sem exportador.
 - `AC-02-06` (FR-ID-006): em todo recurso, outra pessoa recebe `404`, e nada é alterado. **Comprovado por:** teste por rota e verificação que detecta rota nova sem cobertura.
 - `AC-02-07` (FR-ID-007, FR-ID-008): conceder e revogar geram registros com versão e data, e a tabela de efeitos de revogação em [PRIVACY_AND_LGPD.md](../../security/PRIVACY_AND_LGPD.md) está implementada para o que já existe. **Comprovado por:** testes e demonstração no app. Cada fase seguinte testa a interrupção dos tratamentos que cria.
-- `AC-02-08` (FR-PROFILE-001, FR-PROFILE-002, FR-PROFILE-003): perfil e perfil esportivo funcionam, e mudar o nível não reescreve histórico. **Comprovado por:** testes.
+- `AC-02-08` (FR-PROFILE-001, FR-PROFILE-002, FR-PROFILE-003, FR-PROFILE-004): perfil e perfil esportivo funcionam, e mudar o nível não reescreve histórico. **Comprovado por:** testes.
 - `AC-02-09` (NFR-SEC-001, NFR-SEC-003, NFR-SEC-006): as colunas definidas em ADR estão cifradas, o limite de tentativas responde `429`, e ações sensíveis ficam em auditoria com lista fechada de campos. **Comprovado por:** testes, incluindo uma falha de login que não grava o e-mail digitado.
 - `AC-02-10` (NFR-PRIVACY-002, NFR-PRIVACY-003): cada direito do art. 18 tem fluxo implementado ou documentado, e a rotina de retenção apaga dados vencidos. **Comprovado por:** tabela de [PRIVACY_AND_LGPD.md](../../security/PRIVACY_AND_LGPD.md) atualizada e teste da rotina.
 - `AC-02-11`: ADR 0005 e a ADR de cifragem decididas, com evidência. **Comprovado por:** leitura das ADRs.

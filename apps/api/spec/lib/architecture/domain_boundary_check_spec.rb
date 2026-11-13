@@ -148,6 +148,26 @@ RSpec.describe Architecture::DomainBoundaryCheck do
 
       expect(outside_violations.first).to have_attributes(from: "application", to: "goals", reason: :private_constant)
     end
+
+    describe "config/initializers" do
+      it "treats <context>_registrations.rb as code of that context, which may use its own constants" do
+        write_outside("config/initializers/goals_registrations.rb", "Rails.application.config.to_prepare { Goals::Secret.call; Nutrition::Api }")
+
+        expect(outside_violations.map { |v| [ v.from, v.to, v.reason ] }).to eq([ [ "goals", "nutrition", :forbidden_dependency ] ])
+      end
+
+      it "rejects another context's private constant from a registrations file" do
+        write_outside("config/initializers/nutrition_registrations.rb", "Rails.application.config.to_prepare { FoodCatalog::Item.call }")
+
+        expect(outside_violations.first).to have_attributes(from: "nutrition", to: "food_catalog", reason: :private_constant)
+      end
+
+      it "treats any other initializer as outside the domains" do
+        write_outside("config/initializers/other.rb", "Goals::Secret.call")
+
+        expect(outside_violations.first).to have_attributes(from: "application", to: "goals", reason: :private_constant)
+      end
+    end
   end
 
   it "does not fail on a constant reached through a runtime value" do

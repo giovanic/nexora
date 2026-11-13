@@ -37,6 +37,7 @@ Requisitos do art. 11, I, e do art. 8:
 - **Revogável** a qualquer momento, de forma gratuita e facilitada (art. 8, §5).
 - **Versionado:** `consent_records` guarda a versão do texto, a data e a ação.
 - **Só o necessário bloqueia:** recusar a análise de fotos não bloqueia o registro manual.
+- **Textos:** versionados em `apps/api/config/consents/<purpose>.v<N>.md`. Os da versão 1 foram aprovados pelo responsável em 2026-11-13 e não têm revisão jurídica (M1). A identificação do controlador e o contato do encarregado continuam pendentes nos próprios textos.
 
 | Finalidade (`purpose`) | Quando é pedida | Sem ela |
 |---|---|---|
@@ -53,7 +54,9 @@ Requisitos do art. 11, I, e do art. 8:
 | `food_photo_ai` | Food AI bloqueia novos envios e cancela análises em andamento | Refeições permanecem; a pessoa pode apagá-las |
 | `strava_integration` | Strava Integration desconecta | Apagados, como na desconexão |
 | `usage_metrics` | Progress & Analytics para a coleta | `usage_facts` da pessoa apagados |
-| `health_data` | Todo o tratamento, porque é a função do produto | Tela explica e leva à exclusão de conta, após confirmação. A revisão jurídica confirma esse destino |
+| `health_data` | Todo o tratamento, porque é a função do produto | O contexto de perfil apaga esportes (com histórico), níveis, motivações e nome de exibição; ficam fuso horário e unidades, e a conta continua. As funções de saúde ficam bloqueadas até nova concessão. Decisão do responsável de 2026-11-13; a revisão jurídica confirma |
+
+**Estado na Fase 02:** só existe a Identity. Revogar `health_data` funciona como as outras finalidades: registro, evento `consent.revoked` e apagamento das informações de saúde do perfil (esportes, níveis, motivações e nome de exibição), sem exigir a exclusão da conta. As demais finalidades já podem ser concedidas e revogadas, com registro e evento `consent.revoked`, mas ainda não têm tratamento a interromper. Um novo consentimento de `health_data` só é aceito depois que a retirada anterior foi aplicada (em geral em menos de um minuto); antes disso a API responde `409 revocation_pending`, para que nada escrito antes da retirada sobreviva a ela.
 
 Toda fase que cria um novo tratamento atualiza esta tabela e testa a interrupção.
 
@@ -61,28 +64,43 @@ Toda fase que cria um novo tratamento atualiza esta tabela e testa a interrupç�
 
 Gratuitos (§5).
 
-| Direito | Fluxo | Fase |
+| Direito | Fluxo | Estado |
 |---|---|---|
-| Confirmação e acesso (I, II) | Telas do app e exportação | 02 |
-| Correção (III) | Edição de perfil e correção de refeições | 02, 03 |
-| Anonimização, bloqueio ou eliminação do desnecessário (IV) | Rotinas de retenção; contato com o encarregado | 02 |
-| Portabilidade (V) | Exportação em formato estruturado | 02 |
-| Eliminação de dados com consentimento (VI) | Exclusão de refeição e de conta | 02, 03 |
-| Informação sobre compartilhamento (VII) | Política de privacidade, com lista de operadores | M1 |
-| Informação sobre não consentir (VIII) | Texto das telas de consentimento | 02 |
-| Revogação (IX) | Tela de privacidade | 02 |
+| Confirmação da existência de tratamento (I) | `GET /api/v1/consents` mostra, por finalidade, o que está concedido; `POST /api/v1/account/export` lista o que há por contexto | Implementado na Fase 02 |
+| Acesso (II) | Exportação da conta (`POST /api/v1/account/export`, com a senha pedida de novo, resposta `no-store` e fora dos logs); perfil e sessões nas telas | Implementado na Fase 02. Dados de refeições e atividades entram na exportação quando a Fase 03 e a de Strava registrarem seus contextos |
+| Correção (III) | `PATCH /api/v1/profile` e `POST`/`DELETE /api/v1/sport_profiles` | Implementado na Fase 02 para perfil. Refeições: documentado, fora desta fase (Fase 03) |
+| Anonimização, bloqueio ou eliminação do desnecessário ou excessivo (IV) | Rotinas diárias de retenção: `Identity::RetentionJob` (sessões vencidas ou revogadas há mais de 30 dias; `audit_events` e `consent_records` além do prazo provisório de 5 anos) e `Shared::Outbox::CleanupJob` (só eventos publicados há mais de 30 dias; eventos mortos ficam até serem resolvidos). Pedidos fora do que as rotinas cobrem: contato com o encarregado | Rotinas implementadas na Fase 02. Contato com o encarregado: documentado, fora desta fase (indicação antes do M1) |
+| Portabilidade (V) | A exportação da conta devolve JSON estruturado | Implementado na Fase 02. A pendência jurídica sobre o alcance do direito segue aberta |
+| Eliminação dos dados tratados com consentimento (VI) | `DELETE /api/v1/account`: sessões revogadas na hora e apagamento por contexto em até 24 horas, com o resíduo mínimo descrito abaixo. Revogar uma finalidade interrompe o tratamento (tabela de efeitos) | Conta: implementado na Fase 02. Exclusão de refeição e de atividade: documentado, fora desta fase (Fase 03 e Strava) |
+| Informação sobre compartilhamento (VII) | Política de privacidade, com a lista de operadores | Documentado, fora desta fase (M1) |
+| Informação sobre a possibilidade de não consentir e suas consequências (VIII) | Texto de cada tela de consentimento (`GET /api/v1/consents/{purpose}/text`) e coluna "Sem ela" da tabela de finalidades | Implementado na Fase 02. Textos sem revisão jurídica |
+| Revogação do consentimento (IX) | `DELETE /api/v1/consents/{purpose}`, tão fácil quanto conceder, com registro e evento `consent.revoked`. Efeito na Fase 02: o consentimento passa a revogado e nenhum tratamento depende dele ainda; `health_data` também é revogado assim e apaga as informações de saúde do perfil, sem exigir a exclusão da conta | Implementado na Fase 02. Efeito sobre cada tratamento: documentado, fora desta fase (cada fase testa a interrupção) |
+
+Esta tabela descreve o fluxo técnico e **não é parecer jurídico**: a adequação de cada fluxo e os prazos continuam nas pendências da revisão jurídica. Os direitos são gratuitos (§5), e o canal e o prazo de resposta ao titular dependem da indicação do encarregado.
+
+### Retenção aplicada
+
+Prazos provisórios, a confirmar na revisão jurídica ([DATABASE_DESIGN.md](../architecture/DATABASE_DESIGN.md)). Duas rotinas diárias, agendadas em `config/schedule.yml`, apagam em lotes e podem rodar de novo sem efeito. O registro delas contém só contagens.
+
+| Dado | Prazo aplicado | Rotina |
+|---|---|---|
+| `sessions` | 30 dias após expirar ou ser revogada | `Identity::RetentionJob` |
+| `audit_events` | 5 anos (provisório) | `Identity::RetentionJob` |
+| `consent_records` | 5 anos (provisório). O último registro de cada finalidade de uma conta ativa permanece, porque é a prova do que está concedido hoje; o de conta excluída segue o prazo | `Identity::RetentionJob` |
+| `outbox_events` e `consumed_events` | 30 dias após a publicação; os eventos pendentes e os mortos permanecem até serem resolvidos ([runbook](../operations/RUNBOOK_OUTBOX.md)) | `Shared::Outbox::CleanupJob` |
+| `account_deletions` concluídas | Já guardam só o UUID e as datas, como registro para reaplicar exclusões após restaurar backup; nenhuma rotina as apaga | n/a |
 
 ## Exclusão de conta
 
 Fluxo por eventos, com estado acompanhado:
 
-1. A pessoa confirma, com reautenticação. Sessões são revogadas, `account_deletions` é criado, e `user.deletion_requested` é publicado.
-2. Cada contexto apaga os próprios dados e confirma com `IdentityAccess::Api.confirm_deletion`. Eventos que cheguem depois são descartados. Sem conclusão no prazo, dispara alerta.
+1. A pessoa confirma, com reautenticação. Na mesma transação, as sessões de todos os aparelhos são revogadas, `account_deletions` é criado, e `user.deletion_requested` é publicado. Desde o pedido, a conta não entra, não redefine a senha nem consente.
+2. Um job de Identity percorre o registro compartilhado de apagadores (`shared/data_registry`), no qual cada contexto com dados de usuário inscreve o seu `eraser` ao iniciar. Os contextos não chamam Identity, e nem Identity nem `shared/` citam constantes de outros contextos. Cada apagador concluído é marcado em `account_deletions.pending_contexts`, e uma falha repete só o que falta. Eventos da pessoa que cheguem depois do pedido são descartados, exceto `user.deletion_requested`. O prazo é de 24 horas: uma rotina horária enfileira de novo o que não terminou e, passado o prazo, dispara alerta só com o id da exclusão, nunca o e-mail.
 3. Fotos são removidas do armazenamento. A integração com o Strava é revogada.
-4. Os registros necessários para comprovar conformidade permanecem, sem conteúdo de saúde e com referência anonimizada.
+4. Os registros necessários para comprovar conformidade permanecem, sem conteúdo de saúde. O que sobra da conta: a linha de `users` com o mesmo UUID, o e-mail trocado por um valor aleatório, sem senha e com `deleted_at`; `consent_records` e `audit_events` seguem ligados a esse UUID. Para reaplicar exclusões após restaurar backup, guarda-se só o UUID e a data. O mesmo e-mail pode criar outra conta. A revisão jurídica ainda precisa confirmar que esse resíduo é o mínimo necessário.
 5. Backups: os dados expiram com a rotação, cujo prazo fica na política. Qualquer restauração reaplica a lista de exclusões antes de voltar ao ar. Operadores: registros do provedor de IA, monitoramento e e-mail seguem a política de cada um, informada na lista de operadores.
 
-O prazo de conclusão é definido na Fase 02. Um teste automático semeia cada tabela, inclusive campos JSON, com um marcador, e confirma que nada de usuário permanece, salvo os registros mínimos do passo 4.
+O prazo de conclusão é de 24 horas, definido na Fase 02. Um teste automático semeia cada tabela, inclusive campos JSON, com um marcador, e confirma que nada de usuário permanece, salvo os registros mínimos do passo 4.
 
 ## Transferência internacional (art. 33)
 
@@ -126,3 +144,5 @@ Provedor de IA, hospedagem, armazenamento, e-mail, monitoramento e serviço de p
 11. Pessoas e menores que apareçam em fotos, e aviso na tela de consentimento.
 12. Retorno do beta (conversas e pedidos): categoria de dado e destinação ao encerrar.
 13. Normas além da LGPD citadas na revisão interna, sem verificação na fonte: resolução da ANPD sobre prazo de incidente, ECA Digital e regras da Anvisa sobre software como dispositivo médico.
+14. Marco Civil da Internet (Lei 12.965/2014, art. 15), sem verificação na fonte: se o dever de guardar registros de acesso à aplicação conflita com o `ip_hmac` não reversível de `audit_events`, que não permite recuperar o IP. Não decidido.
+15. Retenção de evento morto da outbox sem resolução: hoje ele fica até alguém resolver (não há prazo), e o evento carrega só identificadores. Se isso exige um prazo máximo, a revisão jurídica define. Não decidido.

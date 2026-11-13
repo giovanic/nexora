@@ -70,7 +70,7 @@ Leia o que a tarefa pedir, sem carregar tudo.
 | Como escrever e testar | [Padrões](docs/engineering/CODING_STANDARDS.md), [Testes](docs/engineering/TESTING_STRATEGY.md), [Pronto](docs/engineering/DEFINITION_OF_DONE.md) |
 | CI e observabilidade | [CI/CD](docs/engineering/CI_CD.md), [Observabilidade](docs/engineering/OBSERVABILITY.md) |
 | Fases e ordem | [Roadmap](docs/roadmap/ROADMAP.md), documentos em [`docs/roadmap/phases/`](docs/roadmap/phases/) |
-| Ambiente e liberação | [Local](docs/operations/LOCAL_DEVELOPMENT.md), [Variáveis](docs/operations/ENVIRONMENT_VARIABLES.md), [Checklists](docs/operations/RELEASE_CHECKLIST.md) |
+| Ambiente e liberação | [Local](docs/operations/LOCAL_DEVELOPMENT.md), [Variáveis](docs/operations/ENVIRONMENT_VARIABLES.md), [Checklists](docs/operations/RELEASE_CHECKLIST.md), [Runbook da outbox](docs/operations/RUNBOOK_OUTBOX.md) |
 | Origem de tudo | [Master Prompt](docs/product/MASTER_PROMPT.md), [Design da Fase 00](docs/superpowers/specs/2026-11-05-engineering-harness-design.md) |
 
 ## Verificação do harness

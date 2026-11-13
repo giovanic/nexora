@@ -30,6 +30,7 @@ Antes de convidar as pessoas. Detalhes no [documento do marco](../roadmap/phases
 - [ ] Monitoramento de erros ativo em API, jobs e app.
 - [ ] Limite de análises por usuário e alerta de gasto configurados.
 - [ ] Procedimento de incidente preparado.
+- [ ] Alerta de evento morto da outbox testado, e o [runbook da outbox](RUNBOOK_OUTBOX.md) lido por quem fará o plantão.
 - [ ] Armazenamento privado confirmado por tentativa de acesso sem assinatura.
 - [ ] `RAILS_ENV=production` fixado na imagem. Sem ele, as rotas `/internal` existem e `RequiredEnv` não verifica nada.
 - [ ] `config.hosts` definido pelo domínio de deploy, com exclusão de `/health/*`.

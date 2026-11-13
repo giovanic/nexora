@@ -30,8 +30,15 @@ Rails.application.configure do
   # Don't log any deprecations.
   config.active_support.report_deprecations = false
 
-  # Replace the default in-process memory cache store with a durable alternative.
-  # config.cache_store = :mem_cache_store
+  # The queue service (Valkey) also backs the cache.
+  config.cache_store = :redis_cache_store, { url: config.x.queue_url, namespace: "cache" }
+
+  # Secrets come only from the environment; RequiredEnv refuses to boot without them.
+  config.active_record.encryption.primary_key = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"]
+  config.active_record.encryption.deterministic_key = ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"]
+  config.active_record.encryption.key_derivation_salt = ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"]
+  config.x.audit_ip_hmac_key = ENV["AUDIT_IP_HMAC_KEY"]
+  config.x.app_web_url = ENV["APP_WEB_URL"]
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).

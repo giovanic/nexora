@@ -69,4 +69,8 @@ RSpec.configure do |config|
   config.filter_rails_from_backtrace!
   # arbitrary gems may also be filtered via:
   # config.filter_gems_from_backtrace("gem name")
+
+  # rate_limit counts in Rails.cache, a memory store that lives for the whole
+  # run, so each example starts with no attempts counted.
+  config.before { Rails.cache.clear }
 end

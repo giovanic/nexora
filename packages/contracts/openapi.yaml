@@ -2,11 +2,15 @@ openapi: 3.1.1
 info:
   title: Product API
   version: 0.1.0
-  description: Source of truth for the API. Change this file first, then the implementation and clients.
+  description: Source of truth for the API. Change this file first, then the implementation and clients. Every response of the API (success or error) carries Cache-Control no-store, since each one is about one person.
+security:
+  - bearerSession: []
+  - cookieSession: []
 paths:
   /health/live:
     get:
       operationId: getHealthLive
+      security: []
       summary: Confirms the process responds, without touching dependencies.
       responses:
         "200":
@@ -20,6 +24,7 @@ paths:
   /health/ready:
     get:
       operationId: getHealthReady
+      security: []
       summary: Reports whether the database and the queue service are reachable.
       responses:
         "200":
@@ -36,8 +41,505 @@ paths:
                 $ref: "#/components/schemas/HealthReady"
         default:
           $ref: "#/components/responses/Error"
+  /api/v1/registrations:
+    post:
+      operationId: createRegistration
+      summary: Creates an account and its first session. Requires the adult declaration.
+      description: |
+        With client "mobile" the body carries the token. With client "web" the session goes in the
+        __Host-session cookie (HttpOnly, Secure, SameSite=Lax) and the body has no token; the request
+        then needs an allowed Origin. An existing e-mail answers 422 email_taken.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistrationRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/SessionGranted"
+        "403":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/sessions:
+    get:
+      operationId: listSessions
+      summary: Lists the active sessions of the signed-in person, one per device.
+      responses:
+        "200":
+          description: The active sessions, most recently used first.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionList"
+        "401":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createSession
+      summary: Signs in with e-mail and password.
+      description: |
+        Same transport rules as the registration. A wrong password and an unknown e-mail both
+        answer 401 invalid_credentials, with the same message.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/SessionGranted"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/sessions/refresh:
+    post:
+      operationId: refreshSession
+      summary: Swaps the current session token for a new one and revokes the old one.
+      description: |
+        Of two refreshes with the same token, only one succeeds; the other answers 401. The new
+        session keeps the absolute deadline of the old one. The token comes from the Bearer header
+        (the new token is in the body) or from the cookie (a new cookie is set).
+      responses:
+        "200":
+          $ref: "#/components/responses/SessionGranted"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/sessions/current:
+    delete:
+      operationId: deleteCurrentSession
+      summary: Signs out of this device.
+      responses:
+        "204":
+          description: The session was revoked, and the cookie, if any, cleared.
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/sessions/{id}:
+    delete:
+      operationId: deleteSession
+      summary: Signs another device out. Another person's session answers 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: The session was revoked.
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/password_resets:
+    post:
+      operationId: requestPasswordReset
+      summary: Sends a password reset link, valid for 15 minutes and for one use.
+      description: |
+        Always answers 202 with no body, whether the e-mail has an account or not, so the answer
+        never tells if an account exists. The link points to the web page at APP_WEB_URL and carries
+        the token in the fragment (#token=...), which browsers do not send to servers.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequest"
+      responses:
+        "202":
+          description: Accepted. A link is sent only if the e-mail has an account.
+        "403":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/password_resets/{token}:
+    patch:
+      operationId: resetPassword
+      summary: Sets a new password with the token from the reset link.
+      description: |
+        Ends every session of the account and does not sign in; the person signs in again with the
+        new password. A used, expired or unknown token answers 422 invalid_token. A password that
+        breaks the rules answers 422 validation_failed, and the token stays usable.
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: The token from the link fragment. It only has URL-safe characters.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetConfirmation"
+      responses:
+        "204":
+          description: The password was changed and every session revoked.
+        "403":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/account:
+    delete:
+      operationId: deleteAccount
+      summary: Deletes the signed-in person's account, after the password is typed again.
+      description: |
+        Works without the health_data consent. Every session of the account, on every device, ends
+        at once, and the web cookie is cleared. The data of every context is then erased in the
+        background, within 24 hours; what stays is the account's UUID with no e-mail or password,
+        and the consent and audit records linked to it, with no content. The same e-mail can sign
+        up again once the erasure ends. A wrong or missing password answers 401
+        invalid_credentials and deletes nothing. Attempts are limited per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountDeletionRequest"
+      responses:
+        "202":
+          description: Accepted. The sessions are revoked and the erasure is scheduled.
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/account/export:
+    post:
+      operationId: exportAccount
+      summary: Exports all the signed-in person's data, after the password is typed again.
+      description: |
+        Works without the health_data consent. The body is built on the spot from every context
+        that holds the person's data, keyed by context, and is never stored; the answer carries
+        Cache-Control no-store. It holds no password, token or key digest. A wrong or missing
+        password answers 401 invalid_credentials and exports nothing. Attempts are limited per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountExportRequest"
+      responses:
+        "200":
+          description: The person's data, one entry per context.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum: [no-store]
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountExport"
+        "401":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/consents:
+    get:
+      operationId: listConsents
+      summary: Lists every purpose of consent with its state for the signed-in person.
+      description: |
+        The state comes from the latest record of each purpose. Every grant and revoke is kept as
+        history. Pending means the person was never asked or never answered.
+      responses:
+        "200":
+          description: One entry per purpose, always in the same order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentList"
+        "401":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: grantConsent
+      summary: Grants a purpose, accepting the current version of its text.
+      description: |
+        A version other than the current one answers 409 outdated_version, so the app shows the
+        current text again. Granting a purpose already granted with that version writes nothing new.
+        An unknown purpose answers 422 validation_failed. Granting health_data again while its earlier
+        withdrawal is not yet applied (the profile's health information is still being erased,
+        usually under a minute) answers 409 revocation_pending; the app tries again shortly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsentGrantRequest"
+      responses:
+        "201":
+          description: The purpose is granted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Consent"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/consents/{purpose}:
+    delete:
+      operationId: revokeConsent
+      summary: Revokes a purpose. Revoking one that is not granted writes nothing.
+      description: |
+        health_data is revoked like any other purpose (owner decision of 2026-11-13): the profile's
+        health information is erased afterwards, the account stays, and the health routes answer
+        403 consent_required until it is granted again. An unknown purpose answers 404.
+      parameters:
+        - name: purpose
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: The purpose is revoked.
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/consents/{purpose}/text:
+    get:
+      operationId: getConsentText
+      summary: The text of the current version of a purpose, in Markdown. An unknown purpose answers 404.
+      parameters:
+        - name: purpose
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The current text, to show before asking for the consent.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentText"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/profile:
+    get:
+      operationId: getProfile
+      summary: The profile of the signed-in person. Needs the health_data consent.
+      description: |
+        The profile is created from the sign-up, shortly after it. Until then this answers
+        409 profile_pending; try again in a moment. Without health_data it answers 403 consent_required.
+      responses:
+        "200":
+          description: The profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    patch:
+      operationId: updateProfile
+      summary: Changes the fields sent and leaves the others as they are.
+      description: |
+        Nothing is saved unless every field is valid. A time zone unknown to the IANA database answers
+        422 invalid_time_zone. Motivations outside the list, or more than 4, answer 422 validation_failed.
+        Needs the health_data consent. Before the profile exists it answers 409 profile_pending.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: The profile after the change.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/sport_profiles:
+    get:
+      operationId: listSportProfiles
+      summary: The sports the signed-in person practices now, with the level of each.
+      description: Needs the health_data consent. Before the profile exists it answers 409 profile_pending.
+      responses:
+        "200":
+          description: One entry per active sport.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SportProfileList"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: setSportProfile
+      summary: Adds a sport or changes its level.
+      description: |
+        Changing the level ends the current entry and starts a new one, so the history is kept. Sending
+        the level already set changes nothing. A sport or level outside the lists answers 422
+        validation_failed. Needs the health_data consent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SportProfileRequest"
+      responses:
+        "201":
+          description: The entry in force.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SportProfile"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/sport_profiles/{id}:
+    delete:
+      operationId: removeSportProfile
+      summary: Stops a sport. The entry is ended, not erased, so the history stays.
+      description: Another person's entry, an ended one or an unknown id answers 404. Needs the health_data consent.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: The sport was stopped.
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
 components:
+  securitySchemes:
+    bearerSession:
+      type: http
+      scheme: bearer
+      description: Session token of the mobile app.
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+      description: Session cookie of the web app. State-changing requests need an allowed Origin.
   responses:
+    SessionGranted:
+      description: A session was opened. Mobile gets the token in the body; web gets the cookie.
+      headers:
+        Set-Cookie:
+          description: Only for the web client, __Host-session with HttpOnly, Secure, SameSite=Lax and Path=/.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SessionGrant"
+    TooManyRequests:
+      description: Too many attempts. Retry after the given number of seconds.
+      headers:
+        Retry-After:
+          required: true
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     Error:
       description: Any error, in the central format.
       content:
@@ -45,6 +547,271 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
   schemas:
+    Client:
+      type: string
+      enum: [web, mobile]
+      description: Decides the transport, the token in the body (mobile) or the cookie (web).
+    RegistrationRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, adult_confirmed, time_zone, client]
+      properties:
+        email:
+          type: string
+          maxLength: 254
+        password:
+          type: string
+          minLength: 12
+          description: From 12 characters to 72 bytes, the bcrypt limit.
+        adult_confirmed:
+          type: boolean
+          description: Must be true. The declaration does not prove age.
+        time_zone:
+          type: string
+          description: IANA time zone of the device, such as America/Sao_Paulo. Unknown zones answer 422 invalid_time_zone.
+        client:
+          $ref: "#/components/schemas/Client"
+        device_label:
+          type: [string, "null"]
+          maxLength: 100
+    SignInRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, client]
+      properties:
+        email:
+          type: string
+          maxLength: 254
+        password:
+          type: string
+        client:
+          $ref: "#/components/schemas/Client"
+        device_label:
+          type: [string, "null"]
+          maxLength: 100
+    PasswordResetRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          maxLength: 254
+    PasswordResetConfirmation:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 12
+          description: From 12 characters to 72 bytes, the bcrypt limit.
+    SessionGrant:
+      type: object
+      additionalProperties: false
+      required: [user_id, expires_at]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+          description: Absolute deadline of the session. Inactivity for 30 days ends it sooner.
+        token:
+          type: string
+          description: Only for the mobile client. Send it as Authorization Bearer.
+    SessionList:
+      type: object
+      additionalProperties: false
+      required: [sessions]
+      properties:
+        sessions:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/DeviceSession"
+    DeviceSession:
+      type: object
+      additionalProperties: false
+      required: [id, client, device_label, created_at, last_used_at, current]
+      properties:
+        id:
+          type: string
+          format: uuid
+        client:
+          $ref: "#/components/schemas/Client"
+        device_label:
+          type: [string, "null"]
+        created_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
+        current:
+          type: boolean
+          description: True for the session that made this request.
+    Motivation:
+      type: string
+      enum: [start_caring, training_consistency, understand_food, track_progress]
+    Profile:
+      type: object
+      additionalProperties: false
+      required: [display_name, time_zone, units, motivations]
+      properties:
+        display_name:
+          type: [string, "null"]
+          maxLength: 60
+        time_zone:
+          type: string
+          description: IANA time zone, such as America/Sao_Paulo.
+        units:
+          type: string
+          enum: [metric]
+        motivations:
+          type: array
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/Motivation"
+    ProfileUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        display_name:
+          type: [string, "null"]
+          maxLength: 60
+        time_zone:
+          type: string
+          description: IANA time zone. Unknown zones answer 422 invalid_time_zone.
+        motivations:
+          type: array
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/Motivation"
+    Sport:
+      type: string
+      enum: [running, walking, cycling, strength, swimming, other]
+    SportLevel:
+      type: string
+      enum: [beginner, intermediate, advanced]
+    SportProfileRequest:
+      type: object
+      additionalProperties: false
+      required: [sport, level]
+      properties:
+        sport:
+          $ref: "#/components/schemas/Sport"
+        level:
+          $ref: "#/components/schemas/SportLevel"
+    SportProfile:
+      type: object
+      additionalProperties: false
+      required: [id, sport, level, started_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sport:
+          $ref: "#/components/schemas/Sport"
+        level:
+          $ref: "#/components/schemas/SportLevel"
+        started_at:
+          type: string
+          format: date-time
+    SportProfileList:
+      type: object
+      additionalProperties: false
+      required: [sport_profiles]
+      properties:
+        sport_profiles:
+          type: array
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/SportProfile"
+    ConsentPurpose:
+      type: string
+      enum: [health_data, food_photo_ai, strava_integration, usage_metrics]
+    ConsentGrantRequest:
+      type: object
+      additionalProperties: false
+      required: [purpose, version]
+      properties:
+        purpose:
+          $ref: "#/components/schemas/ConsentPurpose"
+        version:
+          type: integer
+          minimum: 1
+          description: The version of the text the person read, from GET /api/v1/consents/{purpose}/text.
+    AccountExportRequest:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
+    AccountDeletionRequest:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
+    AccountExport:
+      type: object
+      description: One entry per context that holds the person's data. Each entry is that context's own shape.
+      additionalProperties:
+        type: object
+        additionalProperties: true
+    ConsentList:
+      type: object
+      additionalProperties: false
+      required: [consents]
+      properties:
+        consents:
+          type: array
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/Consent"
+    Consent:
+      type: object
+      additionalProperties: false
+      required: [purpose, state, current_version, accepted_version, decided_at]
+      properties:
+        purpose:
+          $ref: "#/components/schemas/ConsentPurpose"
+        state:
+          type: string
+          enum: [granted, outdated, revoked, pending]
+          description: |
+            outdated: the latest record is a grant of an older version than the one in force. It does
+            not count as consent (routes that need it answer 403 consent_required) until the person
+            accepts the current version.
+        current_version:
+          type: integer
+          minimum: 1
+          description: The version of the text in force now.
+        accepted_version:
+          type: [integer, "null"]
+          minimum: 1
+          description: The version the person accepted, while granted or outdated. Null when revoked or pending.
+        decided_at:
+          type: [string, "null"]
+          format: date-time
+          description: When the latest grant or revoke happened. Null when pending.
+    ConsentText:
+      type: object
+      additionalProperties: false
+      required: [purpose, version, text]
+      properties:
+        purpose:
+          $ref: "#/components/schemas/ConsentPurpose"
+        version:
+          type: integer
+          minimum: 1
+        text:
+          type: string
+          description: Markdown, in Brazilian Portuguese.
     HealthLive:
       type: object
       additionalProperties: false

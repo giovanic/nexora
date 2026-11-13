@@ -6,17 +6,18 @@ Requisitos: [FUNCTIONAL_REQUIREMENTS.md](../product/FUNCTIONAL_REQUIREMENTS.md).
 
 | Requisito | Fase | ADR | Implementação | Teste | Critério de aceite |
 |---|---|---|---|---|---|
-| FR-ID-001 | 02 | 0010 | — | — | AC-02-01 |
-| FR-ID-002 | 02 | 0005 | — | — | AC-02-02 |
-| FR-ID-003 | 02 | 0005 | — | — | AC-02-03 |
-| FR-ID-004 | 02 | — | — | — | AC-02-04 |
-| FR-ID-005 | 02 | — | — | — | AC-02-05 |
-| FR-ID-006 | 02 | — | — | — | AC-02-06 |
-| FR-ID-007 | 02 | 0010 | — | — | AC-02-07 |
-| FR-ID-008 | 02 | 0010 | — | — | AC-02-07 |
-| FR-PROFILE-001 | 02 | — | — | — | AC-02-08 |
-| FR-PROFILE-002 | 02 | — | — | — | AC-02-08 |
-| FR-PROFILE-003 | 02 | — | — | — | AC-02-08 |
+| FR-ID-001 | 02 | 0010 | `apps/api/app/domains/identity/services/register.rb`, `apps/api/app/controllers/api/v1/registrations_controller.rb`, `apps/api/app/domains/identity/models/user.rb`, `apps/api/db/migrate/20261112120000_create_users.rb` | `apps/api/spec/requests/registrations_spec.rb`, `apps/api/spec/domains/identity/user_spec.rb` | AC-02-01 |
+| FR-ID-002 | 02 | 0005 | `apps/api/app/domains/identity/services/authenticate.rb`, `apps/api/app/domains/identity/services/refresh_session.rb`, `apps/api/app/domains/identity/services/revoke_session.rb`, `apps/api/app/domains/identity/models/session.rb`, `apps/api/app/controllers/api/v1/sessions_controller.rb`, `apps/api/app/controllers/concerns/authentication.rb`, `apps/mobile/src/shared/session.ts` | `apps/api/spec/requests/sessions_spec.rb`, `apps/api/spec/domains/identity/session_device_label_spec.rb`, `apps/web/src/features/auth/SignInForm.test.tsx`, `apps/mobile/src/features/auth/__tests__/auth.test.tsx`, `apps/mobile/src/shared/__tests__/session.test.ts` | AC-02-02 |
+| FR-ID-003 | 02 | 0005 | `apps/api/app/domains/identity/services/request_password_reset.rb`, `apps/api/app/domains/identity/services/reset_password.rb`, `apps/api/app/domains/identity/jobs/password_reset_job.rb`, `apps/api/app/controllers/api/v1/password_resets_controller.rb`, `apps/web/src/features/reset-password/ResetPasswordScreen.tsx`, `apps/mobile/src/features/auth/ForgotPasswordScreen.tsx` | `apps/api/spec/requests/password_resets_spec.rb`, `apps/web/src/features/reset-password/ResetPasswordScreen.test.tsx` | AC-02-03 |
+| FR-ID-004 | 02 | 0004 | `apps/api/app/domains/identity/services/request_deletion.rb`, `apps/api/app/domains/identity/jobs/erase_account_job.rb`, `apps/api/app/domains/identity/jobs/deletion_deadline_job.rb`, `apps/api/app/domains/identity/models/account_deletion.rb`, `apps/api/app/controllers/api/v1/accounts_controller.rb` | `apps/api/spec/requests/account_deletion_spec.rb`, `apps/api/spec/domains/identity/account_deletion_spec.rb`, `apps/api/spec/integration/account_deletion_scan_spec.rb`, `apps/api/spec/integration/deletion_requested_delivery_spec.rb`, `apps/api/spec/domains/identity/deletion_delivery_race_spec.rb` | AC-02-04, AC-02-12 |
+| FR-ID-005 | 02 | 0004 | `apps/api/app/domains/identity/services/export_account.rb`, `apps/api/app/domains/identity/services/user_data.rb`, `apps/api/app/domains/user_profile/services/user_data.rb`, `apps/api/app/controllers/api/v1/accounts_controller.rb` | `apps/api/spec/requests/account_export_spec.rb`, `apps/api/spec/domains/shared/data_registry_coverage_spec.rb`, `apps/api/spec/requests/isolation_spec.rb` | AC-02-05 |
+| FR-ID-006 | 02 | — | `apps/api/app/controllers/concerns/authentication.rb`, `apps/api/lib/api_error_app.rb` | `apps/api/spec/requests/isolation_spec.rb`, `apps/api/spec/contract/routes_spec.rb`, `apps/api/spec/requests/internal_routes_spec.rb` | AC-02-06 |
+| FR-ID-007 | 02 | 0010 | `apps/api/app/domains/identity/services/grant_consent.rb`, `apps/api/app/domains/identity/models/consent_record.rb`, `apps/api/app/domains/identity/consent_texts.rb`, `apps/api/app/controllers/api/v1/consents_controller.rb`, `apps/api/config/consents/food_photo_ai.v1.md` | `apps/api/spec/requests/consents_spec.rb`, `apps/api/spec/domains/identity/consents_spec.rb` | AC-02-07 |
+| FR-ID-008 | 02 | 0010 | `apps/api/app/domains/identity/services/revoke_consent.rb`, `apps/api/app/domains/user_profile/services/erase_health_data.rb`, `apps/api/app/controllers/api/v1/consents_controller.rb`, `apps/web/src/features/privacy/ConsentsSection.tsx`, `apps/mobile/src/features/settings/ConsentsSection.tsx` | `apps/api/spec/requests/consents_spec.rb`, `apps/api/spec/domains/identity/consents_spec.rb`, `apps/api/spec/domains/user_profile/revocation_race_spec.rb`, `apps/web/src/features/privacy/PrivacyScreen.test.tsx` | AC-02-07 |
+| FR-PROFILE-001 | 02 | — | `apps/api/app/domains/user_profile/models/profile.rb`, `apps/api/app/domains/user_profile/services/create_profile.rb`, `apps/api/app/domains/user_profile/services/update_profile.rb`, `apps/api/app/controllers/api/v1/profiles_controller.rb`, `apps/mobile/src/features/settings/ProfileSection.tsx` | `apps/api/spec/requests/profiles_spec.rb`, `apps/api/spec/domains/user_profile/profile_spec.rb`, `apps/mobile/src/features/settings/__tests__/settings.test.tsx`. Lacuna aceita em 2026-11-13 | AC-02-08 |
+| FR-PROFILE-002 | 02 | — | `apps/api/app/domains/user_profile/models/sport_profile.rb`, `apps/api/app/domains/user_profile/services/set_sport_level.rb`, `apps/api/app/controllers/api/v1/sport_profiles_controller.rb` | `apps/api/spec/requests/profiles_spec.rb`, `apps/api/spec/domains/user_profile/profile_spec.rb` | AC-02-08 |
+| FR-PROFILE-003 | 02 | — | `apps/api/app/domains/user_profile/models/sport_profile.rb`, `apps/api/app/domains/user_profile/services/set_sport_level.rb`, `apps/api/db/migrate/20261113120100_create_sport_profiles.rb` | `apps/api/spec/domains/user_profile/profile_spec.rb`. Lacuna aceita em 2026-11-13 | AC-02-08 |
+| FR-PROFILE-004 | 02 | — | `apps/api/app/domains/user_profile/services/update_profile.rb`, `apps/api/app/controllers/api/v1/profiles_controller.rb`, `apps/mobile/src/features/onboarding/ConsentStep.tsx` | `apps/api/spec/domains/user_profile/profile_spec.rb`, `apps/api/spec/requests/profiles_spec.rb` | AC-02-08 |
 | FR-FOOD-001 | 03 | — | — | — | AC-03-01 |
 | FR-FOOD-002 | 03 | — | — | — | AC-03-01 |
 | FR-FOOD-003 | 03 | 0006 | — | — | AC-03-02 |
@@ -90,16 +91,16 @@ Requisitos: [FUNCTIONAL_REQUIREMENTS.md](../product/FUNCTIONAL_REQUIREMENTS.md).
 | FR-MOBILE-002 | 03 | — | — | — | AC-03-15 |
 | FR-MOBILE-003 | 04 | — | — | — | AC-04-12 |
 | FR-MOBILE-004 | 07 | — | — | — | AC-07-04 |
-| NFR-SEC-001 | 02 | — | — | — | AC-02-09, AC-04-03 |
+| NFR-SEC-001 | 02 | 0018 | `apps/api/app/domains/identity/models/user.rb`, `apps/api/app/domains/identity/models/session.rb`, `apps/api/app/domains/user_profile/models/profile.rb`, `docs/architecture/decisions/0018-application-level-encryption.md` | `apps/api/spec/domains/identity/user_spec.rb`, `apps/api/spec/domains/identity/session_device_label_spec.rb`, `apps/api/spec/domains/user_profile/profile_spec.rb` | AC-02-09, AC-02-11, AC-04-03 |
 | NFR-SEC-002 | 03 | — | — | — | AC-03-01 |
-| NFR-SEC-003 | 02 | 0005 | — | — | AC-02-09 |
+| NFR-SEC-003 | 02 | 0005 | `apps/api/app/controllers/concerns/authentication_rate_limits.rb` | `apps/api/spec/requests/registrations_spec.rb`, `apps/api/spec/requests/sessions_spec.rb`, `apps/api/spec/requests/password_resets_spec.rb` | AC-02-09 |
 | NFR-SEC-004 | 01 | — | `.github/workflows/ci.yml` | `docs/roadmap/reports/PHASE_01_REPORT.md` | AC-01-06 |
 | NFR-SEC-005 | 01 | — | `.github/workflows/ci.yml` | `docs/roadmap/reports/PHASE_01_REPORT.md` | AC-01-06 |
-| NFR-SEC-006 | 02 | — | — | — | AC-02-09 |
+| NFR-SEC-006 | 02 | — | `apps/api/app/domains/identity/models/audit_event.rb`, `apps/api/app/domains/identity/services/record_audit.rb`, `apps/api/db/migrate/20261112120200_create_audit_events.rb` | `apps/api/spec/domains/identity/record_audit_spec.rb`, `apps/api/spec/requests/sessions_spec.rb`, `apps/api/spec/requests/password_resets_spec.rb`, `apps/api/spec/domains/identity/account_deletion_spec.rb`, `apps/api/spec/integration/logging_spec.rb` | AC-02-09, AC-02-13 |
 | NFR-SEC-007 | 04 | — | — | — | AC-04-11 |
 | NFR-PRIVACY-001 | 03 | 0010 | — | — | AC-03-10 |
-| NFR-PRIVACY-002 | 02 | — | — | — | AC-02-10 |
-| NFR-PRIVACY-003 | 02 | — | — | — | AC-02-10 |
+| NFR-PRIVACY-002 | 02 | — | `docs/security/PRIVACY_AND_LGPD.md`, `apps/api/app/domains/identity/services/export_account.rb`, `apps/api/app/domains/identity/services/request_deletion.rb`, `apps/api/app/domains/identity/services/revoke_consent.rb` | `apps/api/spec/requests/account_export_spec.rb`, `apps/api/spec/requests/account_deletion_spec.rb`, `apps/api/spec/requests/consents_spec.rb` | AC-02-10 |
+| NFR-PRIVACY-003 | 02 | — | `apps/api/app/domains/identity/jobs/retention_job.rb`, `docs/security/PRIVACY_AND_LGPD.md` | `apps/api/spec/domains/identity/retention_job_spec.rb` | AC-02-10 |
 | NFR-PRIVACY-004 | 03 | — | — | — | AC-03-11 |
 | NFR-PRIVACY-005 | 03 | 0006 | — | — | AC-03-10 |
 | NFR-PRIVACY-006 | 04 | 0008 | — | — | AC-04-10, AC-08-06 |

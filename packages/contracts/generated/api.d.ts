@@ -38,10 +38,480 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/registrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates an account and its first session. Requires the adult declaration.
+         * @description With client "mobile" the body carries the token. With client "web" the session goes in the
+         *     __Host-session cookie (HttpOnly, Secure, SameSite=Lax) and the body has no token; the request
+         *     then needs an allowed Origin. An existing e-mail answers 422 email_taken.
+         */
+        post: operations["createRegistration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists the active sessions of the signed-in person, one per device. */
+        get: operations["listSessions"];
+        put?: never;
+        /**
+         * Signs in with e-mail and password.
+         * @description Same transport rules as the registration. A wrong password and an unknown e-mail both
+         *     answer 401 invalid_credentials, with the same message.
+         */
+        post: operations["createSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Swaps the current session token for a new one and revokes the old one.
+         * @description Of two refreshes with the same token, only one succeeds; the other answers 401. The new
+         *     session keeps the absolute deadline of the old one. The token comes from the Bearer header
+         *     (the new token is in the body) or from the cookie (a new cookie is set).
+         */
+        post: operations["refreshSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Signs out of this device. */
+        delete: operations["deleteCurrentSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Signs another device out. Another person's session answers 404. */
+        delete: operations["deleteSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/password_resets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sends a password reset link, valid for 15 minutes and for one use.
+         * @description Always answers 202 with no body, whether the e-mail has an account or not, so the answer
+         *     never tells if an account exists. The link points to the web page at APP_WEB_URL and carries
+         *     the token in the fragment (#token=...), which browsers do not send to servers.
+         */
+        post: operations["requestPasswordReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/password_resets/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Sets a new password with the token from the reset link.
+         * @description Ends every session of the account and does not sign in; the person signs in again with the
+         *     new password. A used, expired or unknown token answers 422 invalid_token. A password that
+         *     breaks the rules answers 422 validation_failed, and the token stays usable.
+         */
+        patch: operations["resetPassword"];
+        trace?: never;
+    };
+    "/api/v1/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Deletes the signed-in person's account, after the password is typed again.
+         * @description Works without the health_data consent. Every session of the account, on every device, ends
+         *     at once, and the web cookie is cleared. The data of every context is then erased in the
+         *     background, within 24 hours; what stays is the account's UUID with no e-mail or password,
+         *     and the consent and audit records linked to it, with no content. The same e-mail can sign
+         *     up again once the erasure ends. A wrong or missing password answers 401
+         *     invalid_credentials and deletes nothing. Attempts are limited per IP.
+         */
+        delete: operations["deleteAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/account/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exports all the signed-in person's data, after the password is typed again.
+         * @description Works without the health_data consent. The body is built on the spot from every context
+         *     that holds the person's data, keyed by context, and is never stored; the answer carries
+         *     Cache-Control no-store. It holds no password, token or key digest. A wrong or missing
+         *     password answers 401 invalid_credentials and exports nothing. Attempts are limited per IP.
+         */
+        post: operations["exportAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists every purpose of consent with its state for the signed-in person.
+         * @description The state comes from the latest record of each purpose. Every grant and revoke is kept as
+         *     history. Pending means the person was never asked or never answered.
+         */
+        get: operations["listConsents"];
+        put?: never;
+        /**
+         * Grants a purpose, accepting the current version of its text.
+         * @description A version other than the current one answers 409 outdated_version, so the app shows the
+         *     current text again. Granting a purpose already granted with that version writes nothing new.
+         *     An unknown purpose answers 422 validation_failed. Granting health_data again while its earlier
+         *     withdrawal is not yet applied (the profile's health information is still being erased,
+         *     usually under a minute) answers 409 revocation_pending; the app tries again shortly.
+         */
+        post: operations["grantConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/consents/{purpose}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revokes a purpose. Revoking one that is not granted writes nothing.
+         * @description health_data is revoked like any other purpose (owner decision of 2026-11-13): the profile's
+         *     health information is erased afterwards, the account stays, and the health routes answer
+         *     403 consent_required until it is granted again. An unknown purpose answers 404.
+         */
+        delete: operations["revokeConsent"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/consents/{purpose}/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The text of the current version of a purpose, in Markdown. An unknown purpose answers 404. */
+        get: operations["getConsentText"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The profile of the signed-in person. Needs the health_data consent.
+         * @description The profile is created from the sign-up, shortly after it. Until then this answers
+         *     409 profile_pending; try again in a moment. Without health_data it answers 403 consent_required.
+         */
+        get: operations["getProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Changes the fields sent and leaves the others as they are.
+         * @description Nothing is saved unless every field is valid. A time zone unknown to the IANA database answers
+         *     422 invalid_time_zone. Motivations outside the list, or more than 4, answer 422 validation_failed.
+         *     Needs the health_data consent. Before the profile exists it answers 409 profile_pending.
+         */
+        patch: operations["updateProfile"];
+        trace?: never;
+    };
+    "/api/v1/sport_profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The sports the signed-in person practices now, with the level of each.
+         * @description Needs the health_data consent. Before the profile exists it answers 409 profile_pending.
+         */
+        get: operations["listSportProfiles"];
+        put?: never;
+        /**
+         * Adds a sport or changes its level.
+         * @description Changing the level ends the current entry and starts a new one, so the history is kept. Sending
+         *     the level already set changes nothing. A sport or level outside the lists answers 422
+         *     validation_failed. Needs the health_data consent.
+         */
+        post: operations["setSportProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sport_profiles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Stops a sport. The entry is ended, not erased, so the history stays.
+         * @description Another person's entry, an ended one or an unknown id answers 404. Needs the health_data consent.
+         */
+        delete: operations["removeSportProfile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description Decides the transport, the token in the body (mobile) or the cookie (web).
+         * @enum {string}
+         */
+        Client: "web" | "mobile";
+        RegistrationRequest: {
+            email: string;
+            /** @description From 12 characters to 72 bytes, the bcrypt limit. */
+            password: string;
+            /** @description Must be true. The declaration does not prove age. */
+            adult_confirmed: boolean;
+            /** @description IANA time zone of the device, such as America/Sao_Paulo. Unknown zones answer 422 invalid_time_zone. */
+            time_zone: string;
+            client: components["schemas"]["Client"];
+            device_label?: string | null;
+        };
+        SignInRequest: {
+            email: string;
+            password: string;
+            client: components["schemas"]["Client"];
+            device_label?: string | null;
+        };
+        PasswordResetRequest: {
+            email: string;
+        };
+        PasswordResetConfirmation: {
+            /** @description From 12 characters to 72 bytes, the bcrypt limit. */
+            password: string;
+        };
+        SessionGrant: {
+            /** Format: uuid */
+            user_id: string;
+            /**
+             * Format: date-time
+             * @description Absolute deadline of the session. Inactivity for 30 days ends it sooner.
+             */
+            expires_at: string;
+            /** @description Only for the mobile client. Send it as Authorization Bearer. */
+            token?: string;
+        };
+        SessionList: {
+            sessions: components["schemas"]["DeviceSession"][];
+        };
+        DeviceSession: {
+            /** Format: uuid */
+            id: string;
+            client: components["schemas"]["Client"];
+            device_label: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            last_used_at: string;
+            /** @description True for the session that made this request. */
+            current: boolean;
+        };
+        /** @enum {string} */
+        Motivation: "start_caring" | "training_consistency" | "understand_food" | "track_progress";
+        Profile: {
+            display_name: string | null;
+            /** @description IANA time zone, such as America/Sao_Paulo. */
+            time_zone: string;
+            /** @enum {string} */
+            units: "metric";
+            motivations: components["schemas"]["Motivation"][];
+        };
+        ProfileUpdate: {
+            display_name?: string | null;
+            /** @description IANA time zone. Unknown zones answer 422 invalid_time_zone. */
+            time_zone?: string;
+            motivations?: components["schemas"]["Motivation"][];
+        };
+        /** @enum {string} */
+        Sport: "running" | "walking" | "cycling" | "strength" | "swimming" | "other";
+        /** @enum {string} */
+        SportLevel: "beginner" | "intermediate" | "advanced";
+        SportProfileRequest: {
+            sport: components["schemas"]["Sport"];
+            level: components["schemas"]["SportLevel"];
+        };
+        SportProfile: {
+            /** Format: uuid */
+            id: string;
+            sport: components["schemas"]["Sport"];
+            level: components["schemas"]["SportLevel"];
+            /** Format: date-time */
+            started_at: string;
+        };
+        SportProfileList: {
+            sport_profiles: components["schemas"]["SportProfile"][];
+        };
+        /** @enum {string} */
+        ConsentPurpose: "health_data" | "food_photo_ai" | "strava_integration" | "usage_metrics";
+        ConsentGrantRequest: {
+            purpose: components["schemas"]["ConsentPurpose"];
+            /** @description The version of the text the person read, from GET /api/v1/consents/{purpose}/text. */
+            version: number;
+        };
+        AccountExportRequest: {
+            password: string;
+        };
+        AccountDeletionRequest: {
+            password: string;
+        };
+        /** @description One entry per context that holds the person's data. Each entry is that context's own shape. */
+        AccountExport: {
+            [key: string]: {
+                [key: string]: unknown;
+            };
+        };
+        ConsentList: {
+            consents: components["schemas"]["Consent"][];
+        };
+        Consent: {
+            purpose: components["schemas"]["ConsentPurpose"];
+            /**
+             * @description outdated: the latest record is a grant of an older version than the one in force. It does
+             *     not count as consent (routes that need it answer 403 consent_required) until the person
+             *     accepts the current version.
+             * @enum {string}
+             */
+            state: "granted" | "outdated" | "revoked" | "pending";
+            /** @description The version of the text in force now. */
+            current_version: number;
+            /** @description The version the person accepted, while granted or outdated. Null when revoked or pending. */
+            accepted_version: number | null;
+            /**
+             * Format: date-time
+             * @description When the latest grant or revoke happened. Null when pending.
+             */
+            decided_at: string | null;
+        };
+        ConsentText: {
+            purpose: components["schemas"]["ConsentPurpose"];
+            version: number;
+            /** @description Markdown, in Brazilian Portuguese. */
+            text: string;
+        };
         HealthLive: {
             /** @enum {string} */
             status: "ok";
@@ -69,6 +539,27 @@ export interface components {
         };
     };
     responses: {
+        /** @description A session was opened. Mobile gets the token in the body; web gets the cookie. */
+        SessionGranted: {
+            headers: {
+                /** @description Only for the web client, __Host-session with HttpOnly, Secure, SameSite=Lax and Path=/. */
+                "Set-Cookie"?: string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["SessionGrant"];
+            };
+        };
+        /** @description Too many attempts. Retry after the given number of seconds. */
+        TooManyRequests: {
+            headers: {
+                "Retry-After": number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Any error, in the central format. */
         Error: {
             headers: {
@@ -134,6 +625,469 @@ export interface operations {
                     "application/json": components["schemas"]["HealthReady"];
                 };
             };
+            default: components["responses"]["Error"];
+        };
+    };
+    createRegistration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationRequest"];
+            };
+        };
+        responses: {
+            201: components["responses"]["SessionGranted"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    listSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The active sessions, most recently used first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionList"];
+                };
+            };
+            401: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    createSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignInRequest"];
+            };
+        };
+        responses: {
+            201: components["responses"]["SessionGranted"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    refreshSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["SessionGranted"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteCurrentSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The session was revoked, and the cookie, if any, cleared. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The session was revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    requestPasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted. A link is sent only if the e-mail has an account. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token from the link fragment. It only has URL-safe characters. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetConfirmation"];
+            };
+        };
+        responses: {
+            /** @description The password was changed and every session revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountDeletionRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted. The sessions are revoked and the erasure is scheduled. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    exportAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountExportRequest"];
+            };
+        };
+        responses: {
+            /** @description The person's data, one entry per context. */
+            200: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountExport"];
+                };
+            };
+            401: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    listConsents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One entry per purpose, always in the same order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentList"];
+                };
+            };
+            401: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    grantConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description The purpose is granted. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Consent"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    revokeConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purpose: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The purpose is revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    getConsentText: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purpose: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current text, to show before asking for the consent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentText"];
+                };
+            };
+            401: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    getProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description The profile after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    listSportProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One entry per active sport. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportProfileList"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    setSportProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SportProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description The entry in force. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportProfile"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    removeSportProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sport was stopped. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
     };

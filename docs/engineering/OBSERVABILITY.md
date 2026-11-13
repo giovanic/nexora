@@ -40,7 +40,7 @@ A verificação própria do Sidekiq entra no M1, com o deploy.
 | API | Taxa de erro 5xx, p95 | Erro acima do normal | M1 |
 | Filas | Tamanho e tempo de espera por fila | Espera acima de um limite | M1 |
 | Jobs mortos | Contagem | Qualquer novo em fila crítica | M1 |
-| Outbox | Pendentes mais antigos; mortos | Atraso acima de 5 minutos; qualquer morto | Primeira fase que usar a outbox |
+| Outbox | Pendentes mais antigos; mortos | Atraso acima de 5 minutos; qualquer morto. O que fazer: [runbook da outbox](../operations/RUNBOOK_OUTBOX.md) | Primeira fase que usar a outbox |
 | Food AI | Duração, taxa de falha, schema inválido | Falha acima de um limite | Fase 03 |
 | **Custo de IA** | Custo por dia e por usuário | **Gasto acima do valor configurado** | Fase 03 |
 | Webhook do Strava | Recebidos, atraso, erros | Sem eventos há tempo incomum; atraso alto | Fase 04 |

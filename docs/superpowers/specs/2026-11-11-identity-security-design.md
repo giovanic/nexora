@@ -87,8 +87,8 @@ As chaves vêm de variáveis de ambiente (`ACTIVE_RECORD_ENCRYPTION_*`), sem `cr
 ### 4.5 Consentimentos
 
 - **Textos:** versionados no repositório, em `apps/api/config/consents/<finalidade>.v<N>.md`. O app mostra o texto da versão vigente e registra a versão aceita.
-- **Aprovação:** **os textos são rascunhos do Claude e precisam da aprovação do responsável** durante a fase, antes do encerramento. A revisão jurídica fica para o M1.
-- **Efeitos de revogação nesta fase:** revogar `health_data` leva à tela de exclusão de conta, com confirmação. Se a pessoa cancelar, nada muda e o consentimento continua. As outras finalidades ainda não têm tratamento a interromper.
+- **Aprovação:** **os textos eram rascunhos do Claude e foram aprovados pelo responsável em 2026-11-13**, no encerramento. A revisão jurídica fica para o M1.
+- **Efeitos de revogação nesta fase:** revogar `health_data` é como revogar qualquer finalidade (`204`, registro, evento `consent.revoked`, auditoria), por decisão do responsável de 2026-11-13, em coerência com a ADR 0010. O contexto `user_profile` escuta o evento e apaga as informações de saúde do perfil: `sport_profiles` (histórico incluído), `motivations` e `display_name`. A linha de `user_profiles` fica, com `time_zone` e `units` (ajustes técnicos), e a conta continua. As rotas de saúde respondem `403 consent_required` até nova concessão, que devolve o acesso com o perfil vazio. As outras finalidades ainda não têm tratamento a interromper. Um novo consentimento de `health_data` só é aceito depois que a retirada anterior foi aplicada (em geral em menos de um minuto); antes disso, `POST /api/v1/consents` responde `409 revocation_pending`.
 - **Sem `health_data` ativo:** a conta existe a partir do passo 1, antes do consentimento. Até consentir, a API só permite sessão, consentimentos, exportação, exclusão e saída. Perfil, motivações e esportes respondem `403` com `consent_required`, por um filtro no backend. A primeira entrada recomeça do passo 2 quando a pessoa volta.
 
 ### 4.6 Perfil

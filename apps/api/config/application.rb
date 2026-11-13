@@ -7,7 +7,8 @@ require "active_model/railtie"
 require "active_record/railtie"
 # require "active_storage/engine"
 require "action_controller/railtie"
-# require "action_mailer/railtie"
+# Action Mailer also loads Active Job; jobs still run on Sidekiq::Job.
+require "action_mailer/railtie"
 # require "action_mailbox/engine"
 # require "action_text/engine"
 require "action_view/railtie"
@@ -36,6 +37,8 @@ module Backend
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+    # The web app keeps its session in a signed cookie (design 4.1).
+    config.middleware.use ActionDispatch::Cookies
 
     require "api_error_app"
     require "middleware/correlation_id"
@@ -57,5 +60,8 @@ module Backend
     # the name Sidekiq reads, even though the service is Valkey.
     local_queue_urls = { "development" => "redis://127.0.0.1:6380/0", "test" => "redis://127.0.0.1:6380/1" }
     config.x.queue_url = ENV.fetch("REDIS_URL") { local_queue_urls[Rails.env] }
+
+    # Sender of the account e-mails. The real e-mail provider is chosen in M1 (design 3).
+    config.action_mailer.default_options = { from: ENV.fetch("MAIL_FROM", "no-reply@localhost") }
   end
 end
