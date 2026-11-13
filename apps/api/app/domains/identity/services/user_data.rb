@@ -20,8 +20,9 @@ module Identity
 
     # Only the sessions go here. The users row is anonymized by the deletion
     # flow after every context is erased, and audit_events and consent_records
-    # stay linked to the same UUID, with no health content (design 4.4). Safe
-    # to run again.
+    # stay linked to the same UUID, with no health content (design 4.4).
+    # account_deletions stays as the record for backup restores, and is not
+    # exported: an account with one can no longer sign in. Safe to run again.
     def self.erase(user_id)
       Session.where(user_id:).delete_all
     end

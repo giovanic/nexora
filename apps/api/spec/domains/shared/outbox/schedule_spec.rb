@@ -15,6 +15,10 @@ RSpec.describe "outbox schedule" do
     expect(schedule.fetch("outbox_reconcile")).to include("class" => "Shared::Outbox::ReconcileJob", "cron" => "0 * * * *")
   end
 
+  it "watches the 24-hour deadline of account deletions every hour" do
+    expect(schedule.fetch("account_deletion_deadline")).to include("class" => "Identity::DeletionDeadlineJob", "cron" => "0 * * * *")
+  end
+
   # Fugit is the parser sidekiq-cron uses; building a Sidekiq::Cron::Job would read Valkey.
   it "defines valid jobs" do
     schedule.each do |name, options|

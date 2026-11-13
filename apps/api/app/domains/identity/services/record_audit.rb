@@ -11,6 +11,7 @@ module Identity
       "all_sessions_revoked" => {},
       "password_reset" => {},
       "account_exported" => {},
+      "account_deletion_requested" => {},
       "consent_granted" => { "purpose" => ConsentTexts::PURPOSES },
       "consent_revoked" => { "purpose" => ConsentTexts::PURPOSES }
     }.freeze

@@ -4,7 +4,7 @@ module Identity
   module Api
     CLIENTS = Session::CLIENTS
     MAX_SESSIONS_LISTED = 100
-    USER_DATA_TABLES = %w[users sessions audit_events consent_records].freeze
+    USER_DATA_TABLES = %w[users sessions audit_events consent_records account_deletions].freeze
     Result = Data.define(:session_token, :user_id, :expires_at) do
       def ok? = true
     end
@@ -127,6 +127,18 @@ module Identity
       # never stored, or :invalid_password. Records that the export happened.
       def export(user_id:, password:, ip: nil)
         ExportAccount.call(user_id:, password:, ip:)
+      end
+
+      # :scheduled or :invalid_password. Ends every session at once; the data
+      # goes away in the background, within 24 hours (design 4.4).
+      def request_deletion(user_id:, password:, ip: nil)
+        RequestDeletion.call(user_id:, password:, ip:)
+      end
+
+      # True from the request on, before the erasure ends. The outbox discards
+      # the person's events from then on.
+      def deletion_requested?(user_id:)
+        AccountDeletion.exists?(user_id:)
       end
 
       def export_user_data(user_id)

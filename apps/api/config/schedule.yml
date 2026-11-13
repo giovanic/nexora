@@ -11,3 +11,9 @@ outbox_reconcile:
   class: "Shared::Outbox::ReconcileJob"
   queue: default
   description: "Alerts on events older than an hour that a consumer has not applied."
+
+account_deletion_deadline:
+  cron: "0 * * * *"
+  class: "Identity::DeletionDeadlineJob"
+  queue: default
+  description: "Enqueues unfinished account erasures again and alerts on those past 24 hours."

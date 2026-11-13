@@ -182,6 +182,31 @@ export interface paths {
         patch: operations["resetPassword"];
         trace?: never;
     };
+    "/api/v1/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Deletes the signed-in person's account, after the password is typed again.
+         * @description Works without the health_data consent. Every session of the account, on every device, ends
+         *     at once, and the web cookie is cleared. The data of every context is then erased in the
+         *     background, within 24 hours; what stays is the account's UUID with no e-mail or password,
+         *     and the consent and audit records linked to it, with no content. The same e-mail can sign
+         *     up again once the erasure ends. A wrong or missing password answers 401
+         *     invalid_credentials and deletes nothing. Attempts are limited per IP.
+         */
+        delete: operations["deleteAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/account/export": {
         parameters: {
             query?: never;
@@ -446,6 +471,9 @@ export interface components {
             version: number;
         };
         AccountExportRequest: {
+            password: string;
+        };
+        AccountDeletionRequest: {
             password: string;
         };
         /** @description One entry per context that holds the person's data. Each entry is that context's own shape. */
@@ -767,6 +795,32 @@ export interface operations {
             };
             403: components["responses"]["Error"];
             422: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountDeletionRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted. The sessions are revoked and the erasure is scheduled. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
             429: components["responses"]["TooManyRequests"];
             default: components["responses"]["Error"];
         };

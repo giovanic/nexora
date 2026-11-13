@@ -47,9 +47,9 @@ erDiagram
 
 Conta e autenticação.
 
-- **Colunas:** `id`, `email`, `password_digest` (nulo após a exclusão), `adult_confirmed_at`, `deletion_requested_at`, `deleted_at`.
+- **Colunas:** `id`, `email`, `password_digest` (na exclusão, trocado pelo hash de um segredo aleatório que ninguém guarda, sem valor utilizável), `adult_confirmed_at`, `deleted_at`. O pedido de exclusão fica em `account_deletions`.
 - **Constraints:** `email` único e sem diferença entre maiúsculas e minúsculas; `adult_confirmed_at NOT NULL`, o que impede criar conta sem a declaração de maioridade. A declaração não comprova a idade.
-- **Índices:** único em `lower(email)`; parcial em `deletion_requested_at` para a rotina de exclusão.
+- **Índices:** único em `lower(email)`.
 - **Soft delete:** `deleted_at` marca a conta excluída. Ao final do processo a linha permanece com o mesmo UUID, o e-mail trocado por um valor aleatório (mantém o `NOT NULL` e o índice único), sem senha. `consent_records` e `audit_events` seguem ligados a esse UUID, sem conteúdo de saúde. O mesmo e-mail pode criar outra conta.
 
 ### `sessions`
@@ -78,8 +78,10 @@ Trilha de ações sensíveis, de inclusão apenas.
 
 Acompanha a exclusão de conta até a conclusão.
 
-- **Colunas:** `id`, `user_id`, `requested_at`, `due_at` (`requested_at` + 24 horas), `pending_contexts`, `completed_at`.
-- **Fluxo:** um job de Identity percorre os `erasers` do registro compartilhado (`shared/data_registry`), sem que os contextos chamem Identity. Cada apagador concluído sai de `pending_contexts`, e uma falha repete só o que falta. Sem conclusão em 24 horas, dispara alerta. A anonimização final de `users` só ocorre com tudo concluído. Mantém-se um registro mínimo (só o UUID e a data) para reaplicar exclusões após restauração de backup.
+- **Colunas:** `id`, `user_id` (FK), `requested_at`, `pending_contexts` (nomes de contexto do registro, sem texto livre), `completed_at`. O prazo de 24 horas é contado a partir de `requested_at`.
+- **Constraints:** único em `user_id`, o que torna o pedido repetido, mesmo simultâneo, inofensivo; `pending_contexts` só com nomes no formato de contexto; `completed_at` só com `pending_contexts` vazio.
+- **Índices:** parcial em `requested_at WHERE completed_at IS NULL`, para a rotina horária do prazo.
+- **Fluxo:** o pedido revoga as sessões, cria a linha com `pending_contexts` vindo do registro e publica `user.deletion_requested`, na mesma transação. A partir daí a conta não entra, não redefine senha nem consente, e a outbox descarta os eventos da pessoa, exceto `user.deletion_requested`. Um job de Identity (`EraseAccountJob`) percorre os `erasers` do registro compartilhado (`shared/data_registry`), sem que os contextos chamem Identity. Cada apagador concluído sai de `pending_contexts`, e uma falha repete só o que falta. A rotina horária (`DeletionDeadlineJob`) enfileira de novo as exclusões não concluídas e, passadas 24 horas, dispara alerta só com o id da exclusão. A anonimização final de `users` só ocorre com tudo concluído. A linha permanece como registro mínimo (só o UUID e as datas) para reaplicar exclusões após restauração de backup; por isso não é apagada nem exportada.
 
 ## User Profile
 

@@ -10,9 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_13_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_13_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "account_deletions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.datetime "requested_at", null: false
+    t.text "pending_contexts", default: [], null: false, array: true
+    t.datetime "completed_at"
+    t.index ["requested_at"], name: "index_account_deletions_unfinished", where: "(completed_at IS NULL)"
+    t.index ["user_id"], name: "index_account_deletions_on_user_id", unique: true
+    t.check_constraint "array_to_string(pending_contexts, ','::text) ~ '^([a-z][a-z_]*(,|$))*$'::text", name: "account_deletions_contexts_format"
+    t.check_constraint "completed_at IS NULL OR cardinality(pending_contexts) = 0", name: "account_deletions_completed_when_empty"
+  end
 
   create_table "audit_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "user_ref"
@@ -33,9 +44,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_120100) do
     t.string "source"
     t.datetime "occurred_at", null: false
     t.index ["user_id", "purpose", "occurred_at"], name: "index_consent_records_on_user_id_and_purpose_and_occurred_at", unique: true, order: { occurred_at: :desc }
-    t.check_constraint "action::text = ANY (ARRAY['granted'::character varying, 'revoked'::character varying]::text[])", name: "consent_records_action_known"
-    t.check_constraint "purpose::text = ANY (ARRAY['health_data'::character varying, 'food_photo_ai'::character varying, 'strava_integration'::character varying, 'usage_metrics'::character varying]::text[])", name: "consent_records_purpose_known"
-    t.check_constraint "source::text = ANY (ARRAY['web'::character varying, 'mobile'::character varying]::text[])", name: "consent_records_source_known"
+    t.check_constraint "action::text = ANY (ARRAY['granted'::character varying::text, 'revoked'::character varying::text])", name: "consent_records_action_known"
+    t.check_constraint "purpose::text = ANY (ARRAY['health_data'::character varying::text, 'food_photo_ai'::character varying::text, 'strava_integration'::character varying::text, 'usage_metrics'::character varying::text])", name: "consent_records_purpose_known"
+    t.check_constraint "source::text = ANY (ARRAY['web'::character varying::text, 'mobile'::character varying::text])", name: "consent_records_source_known"
     t.check_constraint "text_version > 0", name: "consent_records_text_version_positive"
   end
 
@@ -79,7 +90,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_120100) do
     t.index ["token_digest"], name: "index_sessions_on_token_digest", unique: true
     t.index ["user_id"], name: "index_sessions_on_user_id"
     t.check_constraint "char_length(device_label::text) <= 100", name: "sessions_device_label_length"
-    t.check_constraint "client::text = ANY (ARRAY['web'::character varying, 'mobile'::character varying]::text[])", name: "sessions_client_known"
+    t.check_constraint "client::text = ANY (ARRAY['web'::character varying::text, 'mobile'::character varying::text])", name: "sessions_client_known"
     t.check_constraint "idle_expires_at <= absolute_expires_at", name: "sessions_idle_within_absolute"
   end
 
@@ -94,8 +105,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_120100) do
     t.index ["user_id", "sport"], name: "index_sport_profiles_active", unique: true, where: "(ended_at IS NULL)"
     t.index ["user_id", "started_at"], name: "index_sport_profiles_on_user_id_and_started_at"
     t.check_constraint "ended_at IS NULL OR ended_at >= started_at", name: "sport_profiles_period_ordered"
-    t.check_constraint "level::text = ANY (ARRAY['beginner'::character varying, 'intermediate'::character varying, 'advanced'::character varying]::text[])", name: "sport_profiles_level_known"
-    t.check_constraint "sport::text = ANY (ARRAY['running'::character varying, 'walking'::character varying, 'cycling'::character varying, 'strength'::character varying, 'swimming'::character varying, 'other'::character varying]::text[])", name: "sport_profiles_sport_known"
+    t.check_constraint "level::text = ANY (ARRAY['beginner'::character varying::text, 'intermediate'::character varying::text, 'advanced'::character varying::text])", name: "sport_profiles_level_known"
+    t.check_constraint "sport::text = ANY (ARRAY['running'::character varying::text, 'walking'::character varying::text, 'cycling'::character varying::text, 'strength'::character varying::text, 'swimming'::character varying::text, 'other'::character varying::text])", name: "sport_profiles_sport_known"
   end
 
   create_table "user_profiles", primary_key: "user_id", id: :uuid, default: nil, force: :cascade do |t|
@@ -122,6 +133,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_120100) do
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
+  add_foreign_key "account_deletions", "users"
   add_foreign_key "consent_records", "users"
   add_foreign_key "consumed_events", "outbox_events", column: "event_id", on_delete: :cascade
   add_foreign_key "sessions", "users"

@@ -27,6 +27,8 @@ module Identity
     # has_secure_password already refuses more than 72 bytes, the bcrypt limit.
     validates :password, length: { minimum: MIN_PASSWORD_LENGTH }, allow_nil: true
 
-    scope :active, -> { where(deleted_at: nil) }
+    # Not deleted, and no deletion requested: from the request on, the account
+    # cannot sign in, reset the password or consent while it is erased.
+    scope :active, -> { where(deleted_at: nil).where.not(id: AccountDeletion.select(:user_id)) }
   end
 end

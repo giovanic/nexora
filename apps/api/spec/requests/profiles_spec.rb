@@ -155,7 +155,7 @@ RSpec.describe "profile and sports", :identity, :real_consumers do
     CONSENT_EXEMPT = %w[
       sessions#index sessions#create sessions#refresh sessions#destroy sessions#destroy_current
       consents#index consents#create consents#destroy consents#text
-      accounts#export
+      accounts#export accounts#destroy
     ].freeze
     PUBLIC_CONTROLLERS = %w[api/v1/registrations api/v1/password_resets health].freeze
 

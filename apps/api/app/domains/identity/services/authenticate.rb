@@ -1,11 +1,11 @@
 module Identity
-  # Signs in with e-mail and password. Wrong password, unknown e-mail and a
-  # deleted account all answer :invalid, and authenticate_by spends the same
-  # bcrypt time when no account matches. The failure audit holds only the
-  # action and the IP hash, never the typed e-mail (design 4.7).
+  # Signs in with e-mail and password. Wrong password, unknown e-mail and an
+  # account deleted or being deleted all answer :invalid, and authenticate_by
+  # spends the same bcrypt time when no account matches. The failure audit
+  # holds only the action and the IP hash, never the typed e-mail (design 4.7).
   module Authenticate
     def self.call(email:, password:, client:, device_label:, ip:)
-      user = User.authenticate_by(email:, password:, deleted_at: nil) if email.is_a?(String) && password.is_a?(String)
+      user = User.active.authenticate_by(email:, password:) if email.is_a?(String) && password.is_a?(String)
       return failed(ip) unless user
 
       User.transaction do

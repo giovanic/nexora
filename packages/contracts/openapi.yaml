@@ -219,6 +219,34 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         default:
           $ref: "#/components/responses/Error"
+  /api/v1/account:
+    delete:
+      operationId: deleteAccount
+      summary: Deletes the signed-in person's account, after the password is typed again.
+      description: |
+        Works without the health_data consent. Every session of the account, on every device, ends
+        at once, and the web cookie is cleared. The data of every context is then erased in the
+        background, within 24 hours; what stays is the account's UUID with no e-mail or password,
+        and the consent and audit records linked to it, with no content. The same e-mail can sign
+        up again once the erasure ends. A wrong or missing password answers 401
+        invalid_credentials and deletes nothing. Attempts are limited per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountDeletionRequest"
+      responses:
+        "202":
+          description: Accepted. The sessions are revoked and the erasure is scheduled.
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
   /api/v1/account/export:
     post:
       operationId: exportAccount
@@ -716,6 +744,13 @@ components:
           minimum: 1
           description: The version of the text the person read, from GET /api/v1/consents/{purpose}/text.
     AccountExportRequest:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
+    AccountDeletionRequest:
       type: object
       additionalProperties: false
       required: [password]
