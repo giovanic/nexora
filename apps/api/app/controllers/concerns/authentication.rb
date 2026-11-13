@@ -10,6 +10,7 @@ module Authentication
   included do
     include ActionController::Cookies
 
+    before_action :send_no_store
     before_action :refuse_foreign_origin
     before_action :require_authentication
   end
@@ -58,6 +59,12 @@ module Authentication
     bearer_token.nil? && (cookie_token.present? || params[:client] == "web")
   end
 
+  # Every answer of the API is about one person: no cache, shared or private,
+  # keeps it (set once here, before any filter can answer).
+  def send_no_store
+    response.headers["Cache-Control"] = "no-store"
+  end
+
   def require_authentication
     render_error(:unauthorized) unless current_session
   end
@@ -77,7 +84,6 @@ module Authentication
       body[:token] = result.session_token
     end
 
-    response.headers["Cache-Control"] = "no-store"
     render json: body, status:
   end
 

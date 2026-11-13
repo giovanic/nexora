@@ -11,12 +11,11 @@ module Api
       limit_attempts_by_account :destroy
 
       # The password is asked again. The body holds personal data, so it is
-      # built on the fly and never cached.
+      # built on the fly (every response is no-store, see Authentication).
       def export
         data = Identity::Api.export(user_id: current_user_id, password: params[:password], ip: request.remote_ip)
         return render_error(:unauthorized, "invalid_credentials") if data == :invalid_password
 
-        response.headers["Cache-Control"] = "no-store"
         render json: data
       end
 

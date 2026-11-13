@@ -2,7 +2,7 @@ openapi: 3.1.1
 info:
   title: Product API
   version: 0.1.0
-  description: Source of truth for the API. Change this file first, then the implementation and clients.
+  description: Source of truth for the API. Change this file first, then the implementation and clients. Every response of the API (success or error) carries Cache-Control no-store, since each one is about one person.
 security:
   - bearerSession: []
   - cookieSession: []
