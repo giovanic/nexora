@@ -202,6 +202,7 @@ RSpec.describe "password resets", :identity do
       audit = Identity::AuditEvent.find_by!(action: "password_reset")
       expect(audit).to have_attributes(user_ref: Identity::User.sole.id, metadata: {})
       expect(audit.ip_hmac).to be_present
+      expect(Identity::AuditEvent.where(user_ref: audit.user_ref, action: "all_sessions_revoked").sole.metadata).to eq({})
       expect(Identity::AuditEvent.connection.select_all("SELECT * FROM audit_events").to_a.to_s).not_to include("ana@", token)
     end
 

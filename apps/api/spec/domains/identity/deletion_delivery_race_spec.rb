@@ -19,7 +19,7 @@ RSpec.describe "account deletion requested during an event delivery", :real_cons
     # Today the outbox eraser runs before User Profile's and waits for the
     # locked event row, which would hide the race. The guarantee must not rest
     # on the order of the registry, so the outbox eraser does nothing here.
-    Shared::DataRegistry.register(context: "shared", tables: %w[outbox_events], exporter: ->(_user_id) { {} }, eraser: ->(_user_id) {})
+    Shared::DataRegistry.register(context: "shared", tables: %w[outbox_events], exporter: ->(_user_id) { {} }, eraser: ->(_user_id) { })
   end
 
   after do

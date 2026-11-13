@@ -61,6 +61,26 @@ RSpec.describe "profile and sports", :identity, :real_consumers do
       expect_response_to_match_contract
     end
 
+    it "replaces the motivations with another set" do
+      patch_profile({ motivations: %w[start_caring track_progress] })
+
+      patch_profile({ motivations: %w[understand_food] })
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["motivations"]).to eq(%w[understand_food])
+      expect_response_to_match_contract
+    end
+
+    it "clears the motivations with an empty list" do
+      patch_profile({ display_name: "Ana", motivations: %w[start_caring] })
+
+      patch_profile({ motivations: [] })
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include("display_name" => "Ana", "motivations" => [])
+      expect_response_to_match_contract
+    end
+
     it "invalid time zone is 422 and nothing is saved" do
       patch_profile({ display_name: "Ana", time_zone: "Marte/Base" })
 

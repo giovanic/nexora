@@ -51,6 +51,23 @@ RSpec.describe "UserProfile::Api", :real_consumers do
       expect(api.time_zone(user_id:)).to eq("Europe/Lisbon")
     end
 
+    it "replaces the motivations with another set" do
+      api.update_profile(user_id:, attrs: { motivations: %w[start_caring track_progress] })
+
+      api.update_profile(user_id:, attrs: { motivations: %w[understand_food] })
+
+      expect(api.profile(user_id:)).to have_attributes(motivations: %w[understand_food])
+    end
+
+    it "clears the motivations with an empty list" do
+      api.update_profile(user_id:, attrs: { display_name: "Ana", motivations: %w[start_caring] })
+
+      result = api.update_profile(user_id:, attrs: { motivations: [] })
+
+      expect(result).to have_attributes(display_name: "Ana", motivations: [])
+      expect(api.profile(user_id:)).to have_attributes(motivations: [])
+    end
+
     it "only changes the fields sent" do
       api.update_profile(user_id:, attrs: { display_name: "Ana", motivations: %w[start_caring] })
 

@@ -52,6 +52,7 @@ RSpec.describe "account deletion", :real_consumers do
       event = Shared::Outbox::Event.where(name: "user.deletion_requested").sole
       expect(event).to have_attributes(user_id:, payload: {})
       expect(Identity::AuditEvent.where(user_ref: user_id, action: "account_deletion_requested").sole.metadata).to eq({})
+      expect(Identity::AuditEvent.where(user_ref: user_id, action: "all_sessions_revoked").sole.metadata).to eq({})
       expect(Identity::EraseAccountJob).to have_received(:perform_async).with(deletion.id)
     end
 
