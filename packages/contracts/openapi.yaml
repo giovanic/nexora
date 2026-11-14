@@ -549,7 +549,9 @@ paths:
         (other types, such as image/heic, answer 422 unsupported_media_type) and byte_size is at most
         10 MB. Creates a pending meal and returns a signed PUT URL valid for 15 minutes; the PUT must send
         exactly upload_headers. Repeating a client_request_id returns the same meal with a new URL and
-        counts once. The URL is a secret: never log it.
+        counts once (201), as long as the photo still awaits its upload. Once it does not, the repeat
+        answers 200 with the same food_entry_id and the meal status, and no URL (upload_url, upload_headers
+        and expires_at are null). The URL is a secret: never log it.
       requestBody:
         required: true
         content:
@@ -557,6 +559,12 @@ paths:
             schema:
               $ref: "#/components/schemas/FoodEntryUploadRequest"
       responses:
+        "200":
+          description: The client_request_id was already used and its photo is past the upload. No new URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntryUpload"
         "201":
           description: The meal was started and the upload is authorized.
           content:
@@ -571,6 +579,44 @@ paths:
           $ref: "#/components/responses/Error"
         "429":
           $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/food_entries/{id}/analysis:
+    post:
+      operationId: requestFoodEntryAnalysis
+      summary: Asks for the analysis of the photo of a meal, once the photo was uploaded.
+      description: |
+        The meal must be pending or failed (a failed one can be asked again). FoodAi checks the object
+        against what was authorized and that food_photo_ai is still granted, then the work runs in the
+        background: the answer is 202 and the meal is processing. Another person's or an unknown meal
+        answers 404; a meal in any other state answers 409 entry_not_analyzable; 422 not_uploaded when
+        the object was not sent, 422 invalid_photo (details: field photo, code size_mismatch or
+        type_mismatch) when it differs from the authorization; 403 consent_required or
+        consent_operator_mismatch. A refusal leaves the meal as it was.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "202":
+          description: The analysis was queued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntryAnalysisAccepted"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
         default:
           $ref: "#/components/responses/Error"
 components:
@@ -839,22 +885,37 @@ components:
     FoodEntryUpload:
       type: object
       additionalProperties: false
-      required: [food_entry_id, upload_url, upload_headers, expires_at]
+      required: [food_entry_id, status, upload_url, upload_headers, expires_at]
       properties:
         food_entry_id:
           type: string
           format: uuid
-        upload_url:
+        status:
           type: string
-          description: Signed PUT URL. A secret; never log it.
+          enum: [pending, processing, analyzed, failed, confirmed]
+          description: The status of the meal. pending right after the first request.
+        upload_url:
+          type: [string, "null"]
+          description: Signed PUT URL. A secret; never log it. Null when the photo is past the upload.
         upload_headers:
-          type: object
+          type: [object, "null"]
           additionalProperties:
             type: string
-          description: Content-Type and Content-Length, to send exactly as given.
+          description: Content-Type and Content-Length, to send exactly as given. Null with no URL.
         expires_at:
-          type: string
+          type: [string, "null"]
           format: date-time
+    FoodEntryAnalysisAccepted:
+      type: object
+      additionalProperties: false
+      required: [food_entry_id, status]
+      properties:
+        food_entry_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [processing]
     FoodCatalogItem:
       type: object
       additionalProperties: false

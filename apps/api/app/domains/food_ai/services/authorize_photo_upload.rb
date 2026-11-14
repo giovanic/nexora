@@ -1,6 +1,7 @@
 module FoodAi
   # Authorizes one photo upload: consent, input, quota, then a row and a signed PUT URL.
-  # The same client_request_id gives back the same photo with a new URL, uncounted again.
+  # The same client_request_id gives back the same photo with a new URL, uncounted again, or with no URL
+  # once the photo is past the upload.
   # The person's advisory lock serializes the quota check and the insert; the unique index
   # on (user_id, client_request_id) stays the last defence. Signing is local, and it runs
   # outside the transaction.
@@ -18,7 +19,7 @@ module FoodAi
       return Api::Errors.new(code: "validation_failed", details: invalid) if invalid.any?
 
       photo = reserve(user_id:, client_request_id:, content_type:, byte_size:, day_start:, day_end:)
-      return photo if photo.is_a?(Api::Errors)
+      return photo if photo.is_a?(Api::Errors) || photo.is_a?(Api::UploadAuthorization)
 
       upload = FoodAi.storage.presigned_put(key: photo.object_key, content_type:, byte_size:)
       Api::UploadAuthorization.new(photo_id: photo.id, upload_url: upload.url, upload_headers: upload.headers, expires_at: upload.expires_at)
@@ -55,7 +56,8 @@ module FoodAi
     end
 
     def self.reuse(photo, content_type:, byte_size:)
-      return failure("validation_failed", field: "client_request_id", code: "already_used") unless photo.status == "awaiting_upload"
+      # Past the upload: the same meal, and no URL to upload to again.
+      return Api::UploadAuthorization.new(photo_id: photo.id, upload_url: nil, upload_headers: nil, expires_at: nil) unless photo.status == "awaiting_upload"
 
       photo.update!(content_type:, byte_size:) unless photo.content_type == content_type && photo.byte_size == byte_size
       photo

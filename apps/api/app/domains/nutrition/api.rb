@@ -3,7 +3,8 @@ module Nutrition
   # objects, never models.
   module Api
     USER_DATA_TABLES = %w[food_entries].freeze
-    EntryUpload = Data.define(:food_entry_id, :upload_url, :upload_headers, :expires_at) do
+    # upload_url, upload_headers and expires_at are nil when the photo is past the upload (a repeated request).
+    EntryUpload = Data.define(:food_entry_id, :status, :upload_url, :upload_headers, :expires_at) do
       def ok? = true
     end
     EntryInfo = Data.define(:id, :status, :local_date, :meal_at) do
@@ -26,6 +27,13 @@ module Nutrition
       def entry(user_id:, food_entry_id:)
         entry = FoodEntry.find_by(user_id:, id: food_entry_id)
         entry ? EntryInfo.new(id: entry.id, status: entry.status, local_date: entry.local_date, meal_at: entry.meal_at) : :not_found
+      end
+
+      # EntryInfo (now processing), :not_found (also for another person's meal) or Errors:
+      # entry_not_analyzable (not pending or failed), or what FoodAi refuses with (not_uploaded,
+      # invalid_photo, consent_required, consent_operator_mismatch). A refusal leaves the meal as it was.
+      def request_analysis(user_id:, food_entry_id:)
+        RequestEntryAnalysis.call(user_id:, food_entry_id:)
       end
 
       def export_user_data(user_id)

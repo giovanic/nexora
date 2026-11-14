@@ -413,9 +413,37 @@ export interface paths {
          *     (other types, such as image/heic, answer 422 unsupported_media_type) and byte_size is at most
          *     10 MB. Creates a pending meal and returns a signed PUT URL valid for 15 minutes; the PUT must send
          *     exactly upload_headers. Repeating a client_request_id returns the same meal with a new URL and
-         *     counts once. The URL is a secret: never log it.
+         *     counts once (201), as long as the photo still awaits its upload. Once it does not, the repeat
+         *     answers 200 with the same food_entry_id and the meal status, and no URL (upload_url, upload_headers
+         *     and expires_at are null). The URL is a secret: never log it.
          */
         post: operations["startFoodEntryUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/food_entries/{id}/analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Asks for the analysis of the photo of a meal, once the photo was uploaded.
+         * @description The meal must be pending or failed (a failed one can be asked again). FoodAi checks the object
+         *     against what was authorized and that food_photo_ai is still granted, then the work runs in the
+         *     background: the answer is 202 and the meal is processing. Another person's or an unknown meal
+         *     answers 404; a meal in any other state answers 409 entry_not_analyzable; 422 not_uploaded when
+         *     the object was not sent, 422 invalid_photo (details: field photo, code size_mismatch or
+         *     type_mismatch) when it differs from the authorization; 403 consent_required or
+         *     consent_operator_mismatch. A refusal leaves the meal as it was.
+         */
+        post: operations["requestFoodEntryAnalysis"];
         delete?: never;
         options?: never;
         head?: never;
@@ -541,14 +569,25 @@ export interface components {
         FoodEntryUpload: {
             /** Format: uuid */
             food_entry_id: string;
-            /** @description Signed PUT URL. A secret; never log it. */
-            upload_url: string;
-            /** @description Content-Type and Content-Length, to send exactly as given. */
+            /**
+             * @description The status of the meal. pending right after the first request.
+             * @enum {string}
+             */
+            status: "pending" | "processing" | "analyzed" | "failed" | "confirmed";
+            /** @description Signed PUT URL. A secret; never log it. Null when the photo is past the upload. */
+            upload_url: string | null;
+            /** @description Content-Type and Content-Length, to send exactly as given. Null with no URL. */
             upload_headers: {
                 [key: string]: string;
-            };
+            } | null;
             /** Format: date-time */
-            expires_at: string;
+            expires_at: string | null;
+        };
+        FoodEntryAnalysisAccepted: {
+            /** Format: uuid */
+            food_entry_id: string;
+            /** @enum {string} */
+            status: "processing";
         };
         FoodCatalogItem: {
             /** Format: uuid */
@@ -1234,6 +1273,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The client_request_id was already used and its photo is past the upload. No new URL. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntryUpload"];
+                };
+            };
             /** @description The meal was started and the upload is authorized. */
             201: {
                 headers: {
@@ -1247,6 +1295,34 @@ export interface operations {
             403: components["responses"]["Error"];
             422: components["responses"]["Error"];
             429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    requestFoodEntryAnalysis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The analysis was queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntryAnalysisAccepted"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
     };

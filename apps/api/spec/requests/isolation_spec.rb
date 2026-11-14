@@ -165,6 +165,19 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
       expect(response).to have_http_status(:forbidden)
       expect(Nutrition::FoodEntry.count + FoodAi::FoodPhoto.count).to eq(0)
     },
+    # A's meal has its photo in storage; B asks to analyze it and gets 404, and the meal stays pending.
+    "POST /api/v1/food_entries/:id/analysis" => lambda {
+      entry = Nutrition::FoodEntry.find_by!(user_id: a_id)
+      photo = FoodAi::FoodPhoto.find(entry.photo_id)
+      allow(FoodAi::AnalyzeJob).to receive(:perform_async)
+
+      post "/api/v1/food_entries/#{entry.id}/analysis", headers: b_headers, as: :json
+
+      expect(response).to have_http_status(:not_found)
+      expect(entry.reload.status).to eq("pending")
+      expect(photo.reload.status).to eq("awaiting_upload")
+      expect(FoodAi::AnalyzeJob).not_to have_received(:perform_async)
+    },
     "POST /api/v1/account/export" => lambda {
       post "/api/v1/account/export", params: { password: IdentityHelpers::PASSWORD }, headers: b_headers, as: :json
       expect(response).to have_http_status(:ok)
@@ -183,8 +196,19 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
     }
   }.freeze
 
+  # A's meal and photo for the cases that need them, made before the state is taken.
+  def a_meal
+    entry = Nutrition::FoodEntry.create!(user_id: a_id, client_request_id: "a-req", meal_at: Time.current, local_date: Date.current, status: "pending")
+    photo = FoodAi::FoodPhoto.create!(user_id: a_id, food_entry_id: entry.id, client_request_id: "a-req", object_key: "food-photos/#{SecureRandom.uuid}",
+                                      content_type: "image/jpeg", byte_size: 3, authorized_at: Time.current)
+    entry.update!(photo_id: photo.id)
+    FoodAi.storage.write(key: photo.object_key, bytes: "abc", content_type: "image/jpeg")
+    entry
+  end
+
   ISOLATION_CASES.each do |action, scenario|
     it "#{action}: B acts and nothing of A's changes" do
+      a_meal if action.include?("food_entries/:id")
       before = a_state
 
       instance_exec(&scenario)

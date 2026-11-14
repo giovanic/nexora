@@ -16,7 +16,7 @@ module Nutrition
 
       entry = find_or_create(user_id:, client_request_id:, photo_id: authorization.photo_id, meal_at: parsed, local_date: parsed.in_time_zone(zone).to_date)
       FoodAi::Api.link_photo(user_id:, photo_id: authorization.photo_id, food_entry_id: entry.id)
-      Api::EntryUpload.new(food_entry_id: entry.id, upload_url: authorization.upload_url, upload_headers: authorization.upload_headers,
+      Api::EntryUpload.new(food_entry_id: entry.id, status: entry.status, upload_url: authorization.upload_url, upload_headers: authorization.upload_headers,
                            expires_at: authorization.expires_at)
     end
 

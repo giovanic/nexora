@@ -20,8 +20,10 @@ module Api
                                                   content_type: params[:content_type], byte_size: params[:byte_size], meal_at: params[:meal_at])
         return render_refusal(result) unless result.ok?
 
-        render json: { food_entry_id: result.food_entry_id, upload_url: result.upload_url, upload_headers: result.upload_headers,
-                       expires_at: result.expires_at.iso8601 }, status: :created
+        # With no URL the photo is past the upload: the same meal again, 200 instead of 201.
+        render json: { food_entry_id: result.food_entry_id, status: result.status, upload_url: result.upload_url,
+                       upload_headers: result.upload_headers, expires_at: result.expires_at&.iso8601 },
+               status: result.upload_url ? :created : :ok
       end
 
       private

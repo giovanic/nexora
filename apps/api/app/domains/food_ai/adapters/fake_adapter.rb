@@ -6,7 +6,7 @@ module FoodAi
     class FakeAdapter < ProviderAdapter
       attr_reader :calls
 
-      def initialize(payload: nil, error: nil, provider: "fake", model: "fake-1", input_tokens: 1000, output_tokens: 200)
+      def initialize(payload: nil, error: nil, provider: "fake", model: "fake-1", input_tokens: 1000, output_tokens: 200, cost_usd: BigDecimal("0"))
         raise ArgumentError, "payload or error is required" if payload.nil? && error.nil?
 
         super()
@@ -16,6 +16,7 @@ module FoodAi
         @model = model
         @input_tokens = input_tokens
         @output_tokens = output_tokens
+        @cost_usd = cost_usd
         @calls = 0
       end
 
@@ -24,7 +25,7 @@ module FoodAi
         raise @error if @error
 
         ProviderResponse.new(payload: @payload, provider: @provider, model: @model, input_tokens: @input_tokens,
-                             output_tokens: @output_tokens, cost_usd: BigDecimal("0"))
+                             output_tokens: @output_tokens, cost_usd: @cost_usd)
       end
     end
   end

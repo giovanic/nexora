@@ -59,11 +59,15 @@ RSpec.describe "FoodAi::Api.authorize_photo_upload" do
       expect(FoodAi::FoodPhoto.where(user_id: user.id).count).to eq(1)
     end
 
-    it "does not reissue a URL for a photo that is no longer awaiting upload" do
+    it "does not reissue a URL for a photo that is no longer awaiting upload, and counts once" do
       first = authorize(client_request_id: "req-1")
       FoodAi::FoodPhoto.find(first.photo_id).update!(status: "stored")
 
-      expect(authorize(client_request_id: "req-1")).to have_attributes(code: "validation_failed")
+      again = authorize(client_request_id: "req-1")
+
+      expect(again).to be_ok
+      expect(again).to have_attributes(photo_id: first.photo_id, upload_url: nil, upload_headers: nil, expires_at: nil)
+      expect(FoodAi::FoodPhoto.where(user_id: user.id).count).to eq(1)
     end
 
     it "keeps one client_request_id per person" do

@@ -14,7 +14,32 @@ module FoodAi
       def ok? = false
     end
 
+    # status: succeeded, no_food, unreadable, failed, cancelled or running. items: [FoodAi::ItemInfo],
+    # empty unless succeeded. note_codes: closed list of the prompt schema.
+    AnalysisInfo = Data.define(:id, :status, :items, :note_codes)
+
     class << self
+      # :enqueued or Errors (not_uploaded, invalid_photo with details, consent_required,
+      # consent_operator_mismatch). The caller owns the meal; FoodAi checks the photo is the person's.
+      def request_analysis(user_id:, photo_id:, food_entry_id:)
+        RequestAnalysis.call(user_id:, photo_id:, food_entry_id:)
+      end
+
+      # AnalysisInfo, or :not_found. By identifier only: it comes from an event, never from a client.
+      def analysis(analysis_id:)
+        PhotoCleanup.analysis_info(analysis_id)
+      end
+
+      # The meal was deleted: the object, the photo and the analyses go; cost records stay unlinked.
+      def erase_for_entry(user_id:, food_entry_id:)
+        PhotoCleanup.erase_for_entry(user_id:, food_entry_id:)
+      end
+
+      # Deletes the object and the photo that has no analysis: :discarded, :in_use or :not_found.
+      def discard_photo(user_id:, photo_id:)
+        PhotoCleanup.discard_photo(user_id:, photo_id:)
+      end
+
       # UploadAuthorization or Errors. day_start and day_end bound the person's local day, which
       # the caller computes (FoodAi does not know time zones). The consent is checked here.
       def authorize_photo_upload(user_id:, client_request_id:, content_type:, byte_size:, day_start:, day_end:)

@@ -6,7 +6,7 @@ module FoodAi
     self.table_name = "food_analysis_results"
 
     STATUSES = %w[running succeeded no_food unreadable failed cancelled].freeze
-    JOB_ERROR_CODES = %w[consent_revoked photo_missing].freeze
+    JOB_ERROR_CODES = %w[consent_revoked photo_missing invalid_photo internal_error].freeze
     ERROR_CODES = (TransientProviderError::CODES + PermanentProviderError::CODES + InvalidOutputError::CODES + JOB_ERROR_CODES).freeze
 
     belongs_to :photo, class_name: "FoodAi::FoodPhoto"

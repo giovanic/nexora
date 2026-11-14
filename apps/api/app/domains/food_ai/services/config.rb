@@ -7,6 +7,8 @@ module FoodAi
     class << self
       def operator = present(ENV["FOOD_AI_OPERATOR"])
       def region = present(ENV["FOOD_AI_REGION"])
+      def provider = present(ENV["FOOD_AI_PROVIDER"])
+      def model = present(ENV["FOOD_AI_MODEL"])
 
       # Authorizations per person and local day. An invalid value falls back to the default.
       def daily_quota

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_13_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -95,7 +95,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_190000) do
     t.index ["photo_id"], name: "index_food_analysis_results_on_photo_id"
     t.index ["prompt_version", "status"], name: "index_food_analysis_results_on_prompt_and_status"
     t.index ["user_id", "started_at"], name: "index_food_analysis_results_on_user_and_started_at"
-    t.check_constraint "error_code IS NULL OR (error_code::text = ANY (ARRAY['timeout'::character varying::text, 'rate_limited'::character varying::text, 'provider_unavailable'::character varying::text, 'bad_request'::character varying::text, 'unauthorized'::character varying::text, 'model_unavailable'::character varying::text, 'unsupported_model'::character varying::text, 'not_an_object'::character varying::text, 'missing_field'::character varying::text, 'unexpected_field'::character varying::text, 'wrong_type'::character varying::text, 'out_of_range'::character varying::text, 'too_many_items'::character varying::text, 'invalid_text'::character varying::text, 'unknown_value'::character varying::text, 'forbidden_field'::character varying::text, 'refusal'::character varying::text, 'consent_revoked'::character varying::text, 'photo_missing'::character varying::text, 'invalid_encoding'::character varying::text, 'duplicate_value'::character varying::text, 'missing_usage'::character varying::text]))", name: "food_analysis_results_error_code_known"
+    t.check_constraint "error_code IS NULL OR (error_code::text = ANY (ARRAY['timeout'::character varying, 'rate_limited'::character varying, 'provider_unavailable'::character varying, 'bad_request'::character varying, 'unauthorized'::character varying, 'model_unavailable'::character varying, 'unsupported_model'::character varying, 'not_an_object'::character varying, 'missing_field'::character varying, 'unexpected_field'::character varying, 'wrong_type'::character varying, 'out_of_range'::character varying, 'too_many_items'::character varying, 'invalid_text'::character varying, 'unknown_value'::character varying, 'forbidden_field'::character varying, 'refusal'::character varying, 'consent_revoked'::character varying, 'photo_missing'::character varying, 'invalid_encoding'::character varying, 'duplicate_value'::character varying, 'missing_usage'::character varying, 'invalid_photo'::character varying, 'internal_error'::character varying]::text[]))", name: "food_analysis_results_error_code_known"
     t.check_constraint "status::text = ANY (ARRAY['running'::character varying::text, 'succeeded'::character varying::text, 'no_food'::character varying::text, 'unreadable'::character varying::text, 'failed'::character varying::text, 'cancelled'::character varying::text])", name: "food_analysis_results_status_known"
   end
 
@@ -149,9 +149,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_190000) do
     t.index ["user_id", "client_request_id"], name: "index_food_entries_on_user_id_and_client_request_id", unique: true
     t.index ["user_id", "local_date", "id"], name: "index_food_entries_on_user_and_local_date", order: { local_date: :desc, id: :desc }
     t.check_constraint "calories_min IS NULL AND calories_likely IS NULL AND calories_max IS NULL OR calories_min IS NOT NULL AND calories_likely IS NOT NULL AND calories_max IS NOT NULL AND calories_min <= calories_likely AND calories_likely <= calories_max", name: "food_entries_calories_range"
-    t.check_constraint "result_code IS NULL OR (result_code::text = ANY (ARRAY['no_food'::character varying, 'unreadable'::character varying]::text[]))", name: "food_entries_result_code_known"
-    t.check_constraint "source::text = ANY (ARRAY['photo'::character varying, 'manual'::character varying]::text[])", name: "food_entries_source_known"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'processing'::character varying, 'analyzed'::character varying, 'failed'::character varying, 'confirmed'::character varying]::text[])", name: "food_entries_status_known"
+    t.check_constraint "result_code IS NULL OR (result_code::text = ANY (ARRAY['no_food'::character varying::text, 'unreadable'::character varying::text]))", name: "food_entries_result_code_known"
+    t.check_constraint "source::text = ANY (ARRAY['photo'::character varying::text, 'manual'::character varying::text])", name: "food_entries_source_known"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'processing'::character varying::text, 'analyzed'::character varying::text, 'failed'::character varying::text, 'confirmed'::character varying::text])", name: "food_entries_status_known"
   end
 
   create_table "food_photos", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

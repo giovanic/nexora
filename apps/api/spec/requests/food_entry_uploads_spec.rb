@@ -141,6 +141,22 @@ RSpec.describe "POST /api/v1/food_entries/uploads", :identity, :real_consumers d
       expect(FoodAi::FoodPhoto.count).to eq(1)
     end
 
+    it "repeating the request after the upload returns the meal without a new URL, counted once" do
+      upload
+      first = response.parsed_body
+      FoodAi::FoodPhoto.sole.update!(status: "stored")
+      Nutrition::FoodEntry.sole.update!(status: "processing")
+
+      upload
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq("food_entry_id" => first["food_entry_id"], "status" => "processing",
+                                         "upload_url" => nil, "upload_headers" => nil, "expires_at" => nil)
+      expect_response_to_match_contract
+      expect(FoodAi::FoodPhoto.count).to eq(1)
+      expect(Nutrition::FoodEntry.count).to eq(1)
+    end
+
     it "21st upload of the local day gets 429 with Retry-After until local midnight" do
       # 23:30 in São Paulo: 30 minutes to local midnight.
       travel_to(Time.utc(2026, 11, 14, 2, 30)) do
@@ -189,7 +205,7 @@ RSpec.describe "POST /api/v1/food_entries/uploads", :identity, :real_consumers d
       upload
 
       expect(response).to have_http_status(:created)
-      expect(response.parsed_body.keys).to match_array(%w[food_entry_id upload_url upload_headers expires_at])
+      expect(response.parsed_body.keys).to match_array(%w[food_entry_id status upload_url upload_headers expires_at])
       expect_response_to_match_contract
     end
   end

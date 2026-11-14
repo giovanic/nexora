@@ -23,6 +23,15 @@ Rails.application.config.to_prepare do
     klass.new(api_key: api_key, model: model, transport: transport)
   end
 
+  # The adapter of the active provider (FOOD_AI_PROVIDER, FOOD_AI_MODEL). Specs assign a double.
+  FoodAi.singleton_class.attr_writer :adapter
+  FoodAi.define_singleton_method(:adapter) do
+    @adapter || FoodAi.adapter_for(provider: ENV["FOOD_AI_PROVIDER"].to_s.strip, model: ENV["FOOD_AI_MODEL"].to_s.strip)
+  end
+
+  # A revoked food_photo_ai consent discards the photos not analyzed yet and tells their meals.
+  Shared::Outbox.subscribe("consent.revoked", consumer: "food_ai.cancel_on_revocation") { |event| FoodAi::CancelOnRevocation.call(event) }
+
   # FoodAi's tables in account export and deletion. prompt_versions holds no person
   # (Shared::DataRegistry::TABLES_WITHOUT_USER_DATA).
   Shared::DataRegistry.register(
