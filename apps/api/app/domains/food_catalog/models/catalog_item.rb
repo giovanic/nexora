@@ -18,8 +18,11 @@ module FoodCatalog
 
     # Runs a lookup that carries a typed or AI-given food name without the SQL log line,
     # which would print the name in its text and its binds (names of foods are health data).
+    # The block runs exactly once. Every logger is silenced for the thread (the broadcast logger
+    # itself and each logger it forwards to), by nesting their own thread-local silence.
     def self.unlogged(&block)
-      logger ? logger.silence(Logger::WARN, &block) : block.call
+      loggers = [ logger, *(logger.broadcasts if logger.respond_to?(:broadcasts)) ].compact.select { |each| each.respond_to?(:silence) }
+      loggers.reduce(block) { |inner, each| proc { each.silence(Logger::WARN, &inner) } }.call
     end
 
     # Lowercase and without accents, the form search and match compare in.
