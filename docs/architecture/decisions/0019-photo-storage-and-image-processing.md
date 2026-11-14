@@ -55,6 +55,8 @@ Achado: o `Aws::S3::Presigner` **não assina `content-length`** por padrão (lis
 
 Justificativa da gem `aws-sdk-s3` (~> 1.242, Apache-2.0): é o cliente S3 oficial, faz a assinatura SigV4 e a URL pré-assinada, e serve a qualquer armazenamento S3 compatível. Fazer a assinatura à mão seria código de segurança próprio, mais arriscado. Fica atrás do adaptador `FoodAi::Adapters::ObjectStorage`.
 
+**Decisão do responsável em 2026-11-14: HEIC e HEIF aceitos e convertidos para JPEG no backend.** A libvips normaliza `image/heic` e `image/heif` como os demais tipos, e a saída é sempre JPEG. O app deixa de recusar HEIC antes do envio. No CI, o pacote `libheif-plugin-libde265` acompanha a `libvips42t64` para decodificar HEVC (fonte e data em `EXTERNAL_SOURCES.md`). A decisão continua `Proposta`, como o restante desta ADR.
+
 ## Estado da decisão
 
 Proposta

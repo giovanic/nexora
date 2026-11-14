@@ -39,6 +39,20 @@ module ImageFixtures
     gradient(width, height).webpsave_buffer
   end
 
+  # A HEIC container built at test time. The local libheif has no HEVC encoder, so the
+  # pixels are AV1 (libheif decodes by item type) and the major brand is rewritten to
+  # "heic", which is what the magic-byte detection and the loader see on an iPhone file.
+  # Where a HEVC encoder exists it is used and the bytes are untouched.
+  def heic(width: 64, height: 48, brand: "heic")
+    image = gradient(width, height)
+    bytes = begin
+      image.heifsave_buffer(Q: 60, compression: :hevc)
+    rescue Vips::Error
+      image.heifsave_buffer(Q: 60, compression: :av1).tap { |b| b[8, 4] = brand }
+    end
+    bytes.b.tap { |b| b[8, 4] = brand }
+  end
+
   def truncated_jpeg
     full = gradient(800, 600).jpegsave_buffer(Q: 95)
     full.byteslice(0, full.bytesize / 2)

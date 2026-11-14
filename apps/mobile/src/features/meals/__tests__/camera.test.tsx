@@ -139,10 +139,23 @@ describe("CameraScreen", () => {
     expect(files.pending()).toEqual([]);
   });
 
-  it("HEIC from the picker is converted before upload", async () => {
+  it("HEIC from the picker is uploaded as image/heic and converted by the backend", async () => {
     const heic: PickResult = { kind: "photo", photo: { uri: "file:///cache/photo.heic", mimeType: "image/heic", fileSize: 900, fileName: "photo.heic" } };
     const { element, startBodies, files } = setup({ pick: heic });
     files.seed("file:///cache/photo.heic");
+    await render(element);
+
+    await fireEvent.press(await screen.findByRole("button", { name: "Tirar uma foto" }));
+
+    await waitFor(() => expect(startBodies()).toHaveLength(1));
+    expect(startBodies()[0]).toMatchObject({ content_type: "image/heic" });
+    expect(screen.queryByText(/Este formato de foto não é aceito/)).not.toBeOnTheScreen();
+  });
+
+  it("still refuses a picker type outside jpeg, png, webp, heic and heif before upload", async () => {
+    const gif: PickResult = { kind: "photo", photo: { uri: "file:///cache/photo.gif", mimeType: "image/gif", fileSize: 900, fileName: "photo.gif" } };
+    const { element, startBodies, files } = setup({ pick: gif });
+    files.seed("file:///cache/photo.gif");
     await render(element);
 
     await fireEvent.press(await screen.findByRole("button", { name: "Tirar uma foto" }));

@@ -3,10 +3,15 @@ require "vips"
 
 module FoodAi
   # Validates a meal photo by its real bytes and re-encodes it: orientation applied, all
-  # metadata (EXIF, GPS, XMP, ICC) dropped, long edge limited, JPEG output.
+  # metadata (EXIF, GPS, XMP, ICC) dropped, long edge limited, JPEG output. HEIC and HEIF
+  # (iPhone photos) are decoded by libvips and leave as JPEG like the rest.
   # Runs before any AI call (ADR 0019). Never logs bytes or metadata.
   class NormalizePhoto
-    ALLOWED_TYPES = %w[image/jpeg image/png image/webp].freeze
+    ALLOWED_TYPES = %w[image/jpeg image/png image/webp image/heic image/heif].freeze
+    # Marcel reads the ftyp brand: "heic" gives image/heic, "mif1" gives image/heif. Both
+    # are one container family, and a phone may label a file with either, so a real type
+    # in the family matches a declared type in the family.
+    HEIF_FAMILY = %w[image/heic image/heif].freeze
     MAX_BYTES = 10 * 1024 * 1024
     MAX_PIXELS = 40_000_000
     MAX_EDGE = 1568
@@ -33,9 +38,13 @@ module FoodAi
 
     def check_type!
       real = Marcel::MimeType.for(StringIO.new(@bytes)).to_s
-      return if ALLOWED_TYPES.include?(real) && real == @declared_type
+      return if ALLOWED_TYPES.include?(real) && same_type?(real)
 
       raise InvalidPhotoError, "unsupported_media_type"
+    end
+
+    def same_type?(real)
+      real == @declared_type || (HEIF_FAMILY.include?(real) && HEIF_FAMILY.include?(@declared_type))
     end
 
     def normalize

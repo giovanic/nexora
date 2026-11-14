@@ -69,8 +69,18 @@ RSpec.describe "POST /api/v1/food_entries/uploads", :identity, :real_consumers d
       expect(error_code).to eq("consent_operator_mismatch")
     end
 
-    it "422 unsupported_media_type for image/heic" do
-      upload(content_type: "image/heic")
+    it "201 for image/heic and image/heif" do
+      upload(content_type: "image/heic", client_request_id: "heic-1")
+      expect(response).to have_http_status(:created)
+      expect_response_to_match_contract
+
+      upload(content_type: "image/heif", client_request_id: "heif-1")
+      expect(response).to have_http_status(:created)
+      expect_response_to_match_contract
+    end
+
+    it "422 unsupported_media_type for image/gif" do
+      upload(content_type: "image/gif")
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(error_code).to eq("unsupported_media_type")

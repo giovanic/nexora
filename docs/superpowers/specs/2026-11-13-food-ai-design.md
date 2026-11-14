@@ -37,6 +37,8 @@ Uma foto de refeição vira, em até um minuto, uma estimativa honesta: o que pr
 - Armazenamento por adaptador `Nutrition::PhotoStorage` sobre `aws-sdk-s3`, com `STORAGE_BUCKET`, `STORAGE_REGION` e `STORAGE_ENDPOINT` ([ENVIRONMENT_VARIABLES.md](../../operations/ENVIRONMENT_VARIABLES.md)). Bucket privado: leitura só por URL assinada de até 15 minutos.
 - **Local:** SeaweedFS 4.53 no `docker-compose.yml`, só em loopback, com credenciais de desenvolvimento sem valor fora da máquina. A primeira tarefa prova por execução: PUT pré-assinado, recusa de `Content-Length` diferente do assinado, GET sem assinatura recusado, e expiração. Se o SeaweedFS falhar em algum desses pontos, a alternativa é o RustFS 1.0.5, registrada na ADR nova.
 
+**Decisão do responsável em 2026-11-14: HEIC e HEIF aceitos e convertidos para JPEG no backend.** `content_type` passa a aceitar também `image/heic` e `image/heif`; o app envia o tipo real, e a normalização da seção 4.2 converte para JPEG com as mesmas regras (megapixels pelo cabeçalho, orientação, remoção de metadados, lado maior de 1.568 px, sRGB). Qualquer outro tipo (por exemplo GIF) continua recusado com `unsupported_media_type`. O texto acima registra o desenho anterior e fica como estava.
+
 ### 4.2 Validação e normalização
 
 No job, antes de qualquer chamada à IA:

@@ -25,10 +25,10 @@ export const deviceUploader: Uploader = {
   },
 };
 
-const ALLOWED = ["image/jpeg", "image/png", "image/webp"] as const;
+const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"] as const;
 type ContentType = (typeof ALLOWED)[number];
 
-const BY_EXTENSION: Record<string, ContentType> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
+const BY_EXTENSION: Record<string, ContentType> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", heic: "image/heic", heif: "image/heif" };
 
 function contentTypeOf(photo: PickedPhoto): ContentType | null {
   const declared = photo.mimeType?.toLowerCase();

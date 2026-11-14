@@ -545,8 +545,9 @@ paths:
         Checks that food_photo_ai is granted for the version in force and that this version names the
         operator and region the server really uses (403 consent_required, 403 consent_operator_mismatch),
         then the daily quota of 20 authorized uploads per local day (429 analysis_quota_exceeded, with
-        Retry-After in seconds until local midnight). content_type is image/jpeg, image/png or image/webp
-        (other types, such as image/heic, answer 422 unsupported_media_type) and byte_size is at most
+        Retry-After in seconds until local midnight). content_type is image/jpeg, image/png, image/webp, image/heic or image/heif
+        (HEIC and HEIF are converted to JPEG by the server before analysis; other types, such as image/gif,
+        answer 422 unsupported_media_type) and byte_size is at most
         10 MB. meal_at needs a UTC offset and falls between 30 days ago and 1 day ahead (422 validation_failed
         otherwise). Creates a pending meal and returns a signed PUT URL valid for 15 minutes; the PUT must send
         exactly upload_headers. Repeating a client_request_id returns the same meal with a new URL and
@@ -1179,7 +1180,7 @@ components:
           description: Chosen by the client for each meal. Repeating it returns the same meal.
         content_type:
           type: string
-          enum: [image/jpeg, image/png, image/webp]
+          enum: [image/jpeg, image/png, image/webp, image/heic, image/heif]
         byte_size:
           type: integer
           minimum: 1

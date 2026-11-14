@@ -39,8 +39,14 @@ RSpec.describe "FoodAi::Api.authorize_photo_upload" do
       expect(photo).to have_attributes(status: "awaiting_upload", content_type: "image/jpeg", byte_size: 1_000_000)
     end
 
-    it "refuses image/heic as unsupported_media_type" do
-      expect(authorize(content_type: "image/heic")).to have_attributes(code: "unsupported_media_type")
+    it "authorizes image/heic and image/heif" do
+      expect(authorize(content_type: "image/heic", client_request_id: "heic-1")).to be_ok
+      expect(authorize(content_type: "image/heif", client_request_id: "heif-1")).to be_ok
+      expect(FoodAi::FoodPhoto.pluck(:content_type)).to contain_exactly("image/heic", "image/heif")
+    end
+
+    it "refuses image/gif as unsupported_media_type" do
+      expect(authorize(content_type: "image/gif")).to have_attributes(code: "unsupported_media_type")
       expect(FoodAi::FoodPhoto.count).to eq(0)
     end
 

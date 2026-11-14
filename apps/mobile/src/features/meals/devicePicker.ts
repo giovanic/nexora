@@ -13,7 +13,8 @@ export type Picker = {
 };
 
 // "compatible" asks iOS for the most compatible representation (not HEIC when it
-// can be avoided). The docs do not promise JPEG, so the flow still checks the type.
+// can be avoided). The docs do not promise JPEG; HEIC and HEIF are accepted and the
+// backend converts them to JPEG, so the flow only refuses types outside the list.
 const OPTIONS: ImagePicker.ImagePickerOptions = {
   mediaTypes: "images",
   exif: false,

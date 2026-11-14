@@ -65,6 +65,47 @@ RSpec.describe FoodAi::NormalizePhoto do
     expect(Marcel::MimeType.for(StringIO.new(call(ImageFixtures.png, "image/png").bytes))).to eq("image/jpeg")
   end
 
+  describe "HEIC and HEIF (owner decision 2026-11-14)" do
+    before { skip "libvips here has no heifsave, cannot build the HEIC fixture" unless Vips.get_suffixes.include?(".heic") && Vips::Image.black(8, 8).respond_to?(:heifsave_buffer) }
+
+    it "converts HEIC to a JPEG with no metadata" do
+      result = call(ImageFixtures.heic(width: 200, height: 100), "image/heic")
+
+      expect(result.content_type).to eq("image/jpeg")
+      expect(Marcel::MimeType.for(StringIO.new(result.bytes))).to eq("image/jpeg")
+      expect([ result.width, result.height ]).to eq([ 200, 100 ])
+      fields = vips(result.bytes).get_fields
+      expect(fields).not_to include("exif-data", "xmp-data", "icc-profile-data")
+    end
+
+    it "limits the long edge of a HEIC to 1568 px" do
+      result = call(ImageFixtures.heic(width: 3200, height: 1600), "image/heic")
+
+      expect([ result.width, result.height ]).to eq([ 1568, 784 ])
+    end
+
+    it "accepts HEIF (mif1 brand) declared as image/heif" do
+      result = call(ImageFixtures.heic(brand: "mif1"), "image/heif")
+
+      expect(result.content_type).to eq("image/jpeg")
+    end
+
+    it "accepts a HEIF file declared as image/heic and the other way round" do
+      expect(call(ImageFixtures.heic(brand: "mif1"), "image/heic").content_type).to eq("image/jpeg")
+      expect(call(ImageFixtures.heic, "image/heif").content_type).to eq("image/jpeg")
+    end
+
+    it "refuses a HEIC declared as image/jpeg" do
+      expect(error_code_for(ImageFixtures.heic, "image/jpeg")).to eq("unsupported_media_type")
+    end
+
+    it "refuses a truncated HEIC as unreadable_image" do
+      bytes = ImageFixtures.heic(width: 400, height: 300)
+
+      expect(error_code_for(bytes.byteslice(0, bytes.bytesize / 2), "image/heic")).to eq("unreadable_image")
+    end
+  end
+
   it "refuses a text file named .jpg" do
     expect(error_code_for(ImageFixtures.text_named_jpg)).to eq("unsupported_media_type")
   end
@@ -77,7 +118,7 @@ RSpec.describe FoodAi::NormalizePhoto do
     expect(error_code_for(ImageFixtures.png, "image/jpeg")).to eq("unsupported_media_type")
   end
 
-  it "refuses a real type outside jpeg, png and webp even when declared" do
+  it "refuses a real type outside jpeg, png, webp, heic and heif even when declared" do
     gif = "GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xFF\xFF\xFF!\xF9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;".b
 
     expect(error_code_for(gif, "image/gif")).to eq("unsupported_media_type")

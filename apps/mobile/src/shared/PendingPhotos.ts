@@ -17,12 +17,12 @@ export type PendingFs = {
 // No food data, no URLs: only what the upload request itself carries.
 export type PendingMeta = {
   clientRequestId: string;
-  contentType: "image/jpeg" | "image/png" | "image/webp";
+  contentType: "image/jpeg" | "image/png" | "image/webp" | "image/heic" | "image/heif";
   byteSize: number;
   mealAt: string;
 };
 
-const TYPES = ["image/jpeg", "image/png", "image/webp"];
+const TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 const META_SUFFIX = ".json";
 
 function parseMeta(text: string): PendingMeta | null {

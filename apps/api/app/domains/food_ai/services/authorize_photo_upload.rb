@@ -6,7 +6,7 @@ module FoodAi
   # on (user_id, client_request_id) stays the last defence. Signing is local, and it runs
   # outside the transaction.
   module AuthorizePhotoUpload
-    CONTENT_TYPES = %w[image/jpeg image/png image/webp].freeze
+    CONTENT_TYPES = %w[image/jpeg image/png image/webp image/heic image/heif].freeze
     MAX_BYTES = 10 * 1024 * 1024
     MAX_REQUEST_ID = 100
 
