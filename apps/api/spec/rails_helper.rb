@@ -1,5 +1,7 @@
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 require 'spec_helper'
+# libvips prints warnings (for example for a truncated JPEG) straight to stderr. Read when it loads.
+ENV['VIPS_WARNING'] ||= '0'
 ENV['RAILS_ENV'] ||= 'test'
 require_relative '../config/environment'
 # Prevent database truncation if the environment is production

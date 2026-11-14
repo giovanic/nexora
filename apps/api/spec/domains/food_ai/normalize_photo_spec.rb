@@ -42,7 +42,7 @@ RSpec.describe FoodAi::NormalizePhoto do
     expect([ result.width, result.height ]).to eq([ 100, 200 ])
     expect(vips(result.bytes).width).to eq(100)
     reread = vips(result.bytes)
-    expect(reread.get("orientation")).to eq(1) if reread.get_fields.include?("orientation")
+    expect(reread.get_typeof("orientation") == 0 || reread.get("orientation") == 1).to be(true)
   end
 
   it "limits the long edge to 1568 px and keeps the aspect ratio" do
@@ -91,18 +91,22 @@ RSpec.describe FoodAi::NormalizePhoto do
     bytes = ImageFixtures.jpeg_41_megapixels
     expect(bytes.bytesize).to be < 10 * 1024 * 1024
 
-    # ruby-vips resolves operations through method_missing, so record every call that
-    # reaches it: none may be a pixel-consuming operation.
-    called = []
+    # ruby-vips resolves every operation through method_missing. Width and height are real
+    # methods and the load is a class method, so on the refusal path nothing may reach it.
+    operations = []
     allow_any_instance_of(Vips::Image).to receive(:method_missing).and_wrap_original do |original, name, *args, **kwargs, &block|
-      called << name
+      operations << name
       original.call(name, *args, **kwargs, &block)
     end
+    loads = []
+    allow(Vips::Image).to receive(:new_from_buffer).and_wrap_original do |original, *args, **kwargs|
+      loads << kwargs[:access]
+      original.call(*args, **kwargs)
+    end
 
-    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     expect(error_code_for(bytes)).to eq("too_many_pixels")
-    expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).to be < 0.5
-    expect(called & %i[autorot resize jpegsave_buffer write_to_memory copy_memory avg]).to be_empty
+    expect(loads).to eq([ :sequential ])
+    expect(operations).to be_empty
   end
 
   it "accepts exactly 40 megapixels" do
@@ -111,6 +115,45 @@ RSpec.describe FoodAi::NormalizePhoto do
     result = call(bytes)
 
     expect([ result.width, result.height ]).to eq([ 1568, 980 ])
+  end
+
+  it "converts an image with an ICC profile to sRGB and drops the profile" do
+    tagged = ImageFixtures.cmyk_jpeg_with_icc
+    source = vips(tagged)
+    expect(source.get_fields).to include("icc-profile-data")
+    expect(source.interpretation).to eq(:cmyk)
+
+    result = call(tagged)
+    output = vips(result.bytes)
+
+    expect(output.get_fields).not_to include("icc-profile-data")
+    expect(output.interpretation).to eq(:srgb)
+    expect(output.bands).to eq(3)
+  end
+
+  it "falls back to a plain strip when the colour transform fails" do
+    tagged = ImageFixtures.cmyk_jpeg_with_icc
+    allow_any_instance_of(Vips::Image).to receive(:method_missing).and_wrap_original do |original, name, *args, **kwargs, &block|
+      raise Vips::Error, "bad profile" if name == :icc_transform
+
+      original.call(name, *args, **kwargs, &block)
+    end
+
+    result = call(tagged)
+    output = vips(result.bytes)
+
+    expect(output.get_fields).not_to include("icc-profile-data")
+    expect([ result.width, result.height ]).to eq([ 80, 60 ])
+  end
+
+  it "normalizes an animated WebP from its first frame only" do
+    animated = ImageFixtures.animated_webp(width: 40, height: 30)
+    expect(vips(animated).get("n-pages")).to eq(2)
+
+    result = call(animated, "image/webp")
+
+    expect([ result.width, result.height ]).to eq([ 40, 30 ])
+    expect(vips(result.bytes).height).to eq(30)
   end
 
   it "refuses a truncated JPEG" do

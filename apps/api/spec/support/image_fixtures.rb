@@ -52,4 +52,17 @@ module ImageFixtures
   def jpeg_41_megapixels
     solid(8200, 5000).jpegsave_buffer(Q: 50)
   end
+
+  # CMYK JPEG carrying a CMYK ICC profile (the one built into libvips).
+  def cmyk_jpeg_with_icc
+    gradient(80, 60).icc_export(output_profile: "cmyk").jpegsave_buffer
+  end
+
+  # Two frames of different colour, so the file has n-pages = 2.
+  def animated_webp(width: 40, height: 30)
+    frames = [ [ 255, 0, 0 ], [ 0, 0, 255 ] ].map { |color| solid(width, height, color) }
+    Vips::Image.arrayjoin(frames, across: 1).mutate do |m|
+      m.set_type! GObject::GINT_TYPE, "page-height", height
+    end.webpsave_buffer
+  end
 end

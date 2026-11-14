@@ -40,16 +40,36 @@ module FoodAi
 
     def normalize
       # Lazy, sequential open: width and height come from the header only.
-      image = Vips::Image.new_from_buffer(@bytes, "", access: :sequential, fail: true)
+      image = open_image
       raise InvalidPhotoError, "too_many_pixels" if image.width * image.height > MAX_PIXELS
 
+      render(image, icc: has_icc?(image))
+    rescue Vips::Error
+      raise InvalidPhotoError, "unreadable_image"
+    end
+
+    def open_image
+      Vips::Image.new_from_buffer(@bytes, "", access: :sequential, fail: true)
+    end
+
+    def has_icc?(image)
+      image.get_typeof("icc-profile-data") != 0
+    end
+
+    # Encodes the image. With icc: true it first converts to sRGB, so the colours survive
+    # the removal of the profile. A broken profile fails when the pixels are read, so the
+    # whole pipeline is retried once, from a fresh open, with a plain strip.
+    def render(image, icc:)
+      image = image.icc_transform("srgb", embedded: true) if icc
       image = image.autorot
       longest = [ image.width, image.height ].max
       image = image.resize(MAX_EDGE.to_f / longest) if longest > MAX_EDGE
       output = image.jpegsave_buffer(Q: JPEG_QUALITY, strip: true)
       NormalizedPhoto.new(bytes: output, content_type: "image/jpeg", width: image.width, height: image.height)
     rescue Vips::Error
-      raise InvalidPhotoError, "unreadable_image"
+      raise unless icc
+
+      render(open_image, icc: false)
     end
   end
 end
