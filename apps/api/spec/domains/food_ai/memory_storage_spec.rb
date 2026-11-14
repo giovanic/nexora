@@ -9,6 +9,18 @@ RSpec.describe FoodAi::Adapters::MemoryStorage do
     expect(FoodAi.storage).to be_a(described_class)
   end
 
+  describe "isolation between examples", order: :defined do
+    it "leaves an object in FoodAi.storage" do
+      FoodAi.storage.write(key: "leak", bytes: "x", content_type: "image/jpeg")
+
+      expect(FoodAi.storage.head(key: "leak")).not_to be_nil
+    end
+
+    it "starts the next example with an empty FoodAi.storage" do
+      expect(FoodAi.storage.head(key: "leak")).to be_nil
+    end
+  end
+
   it "writes, heads, reads and deletes" do
     storage.write(key: key, bytes: "abc", content_type: "image/jpeg")
 

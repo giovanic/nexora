@@ -67,6 +67,17 @@ RSpec.describe "private object storage", :object_storage do
     expect { storage.presigned_get(key: key, expires_in: 901) }.to raise_error(ArgumentError)
   end
 
+  it "creates a missing bucket on first use outside production" do
+    client = storage.instance_variable_get(:@client)
+    bucket = "spec-bucket-#{SecureRandom.hex(4)}"
+    fresh = FoodAi::Adapters::S3Storage.new(client: client, bucket: bucket, create_bucket: true)
+
+    expect { fresh.presigned_put(key: key, content_type: "image/jpeg", byte_size: 1) }.not_to raise_error
+    expect { client.head_bucket(bucket: bucket) }.not_to raise_error
+  ensure
+    client&.delete_bucket(bucket: bucket)
+  end
+
   it "delete is idempotent and read of a missing key is nil" do
     expect { 2.times { storage.delete(key: key) } }.not_to raise_error
     expect(storage.read(key: key)).to be_nil

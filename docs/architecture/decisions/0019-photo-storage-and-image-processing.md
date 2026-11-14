@@ -23,7 +23,7 @@ Onde guardar as fotos, como autorizar o envio com limite de tipo e de tamanho, e
 
 Em estado `Proposta`. O que já vale como direção, validado na primeira tarefa de código da Fase 03:
 
-- Armazenamento **S3 compatível atrás do adaptador** `Nutrition::PhotoStorage`, sobre `aws-sdk-s3`. Bucket privado, leitura só por URL assinada de até 15 minutos.
+- Armazenamento **S3 compatível atrás do adaptador** `FoodAi::Adapters::ObjectStorage` (instância configurada em `FoodAi.storage`; a foto é do Food AI, que consulta o consentimento), sobre `aws-sdk-s3`. Bucket privado, leitura só por URL assinada de até 15 minutos.
 - **SeaweedFS no desenvolvimento**, só em loopback. A tarefa prova por execução: PUT pré-assinado, recusa de `Content-Length` diferente do assinado, GET sem assinatura recusado e expiração. **RustFS** é a alternativa se o SeaweedFS falhar em algum ponto.
 - **URL pré-assinada de PUT que assina `Content-Type` e `Content-Length`**, com validade de 15 minutos. Como a fonte não confirma esse comportamento, a prova por execução é obrigatória, e o tamanho e o tipo reais são conferidos de novo no job, pelos bytes (`marcel`).
 - **libvips** (`ruby-vips` e `image_processing`) normaliza a imagem: recusa acima de 40 megapixels, aplica a orientação, remove todos os metadados, reduz o lado maior para 1.568 px e regrava em JPEG, substituindo o objeto guardado.

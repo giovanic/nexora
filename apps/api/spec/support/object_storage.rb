@@ -3,7 +3,7 @@
 RSpec.configure do |config|
   config.around(:each, :object_storage) do |example|
     previous = FoodAi.storage
-    FoodAi.storage = FoodAi::Adapters::S3Storage.from_env(ensure_bucket: true)
+    FoodAi.storage = FoodAi::Adapters::S3Storage.from_env
     example.run
   ensure
     FoodAi.storage = previous
