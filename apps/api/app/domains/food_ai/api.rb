@@ -31,8 +31,10 @@ module FoodAi
       end
 
       # The meal was deleted: the object, the photo and the analyses go; cost records stay unlinked.
-      def erase_for_entry(user_id:, food_entry_id:)
-        PhotoCleanup.erase_for_entry(user_id:, food_entry_id:)
+      # photo_id: the meal's photo_id, for a photo not yet linked back to the meal. A storage failure does not
+      # fail the erasure: the photo is marked deleted and PurgeObjectJob retries the object.
+      def erase_for_entry(user_id:, food_entry_id:, photo_id: nil)
+        PhotoCleanup.erase_for_entry(user_id:, food_entry_id:, photo_id:)
       end
 
       # Deletes the object and the photo that has no analysis: :discarded, :in_use or :not_found.

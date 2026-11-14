@@ -388,6 +388,20 @@ RSpec.describe "managing meals", :identity, :real_consumers do
     end
   end
 
+  describe "correcting to another food" do
+    it "clears the household measure of the old food, and keeps it when only the grams change" do
+      meal = entry
+      original = item(meal, household_measure: "1 scoop")
+
+      call(:patch, "/food_entries/#{meal.id}/items/#{original.id}", { catalog_item_id: beans.id })
+      expect(body["items"].first["household_measure"]).to be_nil
+
+      other = item(meal, grams: [ 120, 150, 180 ], household_measure: "1 scoop")
+      call(:patch, "/food_entries/#{meal.id}/items/#{other.id}", { grams_likely: 150 })
+      expect(body["items"].last["household_measure"]).to eq("1 scoop")
+    end
+  end
+
   describe "meal_at on both routes" do
     def manual_at(value) = call(:post, "/food_entries", { client_request_id: SecureRandom.uuid, meal_at: value, items: [ { free_text_name: "x", grams_likely: 10 } ] })
 
@@ -593,9 +607,51 @@ RSpec.describe "managing meals", :identity, :real_consumers do
 
       call(:delete, "/food_entries/#{meal.id}")
 
-      expect(FoodAi::Api).to have_received(:erase_for_entry).with(user_id:, food_entry_id: meal.id)
+      expect(FoodAi::Api).to have_received(:erase_for_entry).with(user_id:, food_entry_id: meal.id, photo_id: nil)
       # The spec itself runs inside a test transaction (1): the delete adds none while FoodAi runs.
       expect(inside).to eq([ false, 1 ])
+    end
+
+    it "a storage failure still answers 204, deletes the photo row and queues the object for purge, with no key in the logs" do
+      meal = entry
+      photo = photo_for(meal)
+      allow(FoodAi.storage).to receive(:delete).and_raise(IOError, "boom #{photo.object_key}")
+      allow(FoodAi::PurgeObjectJob).to receive(:perform_async)
+      logged = StringIO.new
+      allow(Rails).to receive(:logger).and_return(Logger.new(logged))
+
+      call(:delete, "/food_entries/#{meal.id}")
+
+      expect(response).to have_http_status(:no_content)
+      expect(Nutrition::FoodEntry.where(id: meal.id)).to be_empty
+      expect(photo.reload.status).to eq("deleted")
+      expect(FoodAi::PurgeObjectJob).to have_received(:perform_async).with(photo.id)
+      expect(logged.string).not_to include(photo.object_key)
+    end
+
+    it "the purge job deletes the object later" do
+      meal = entry
+      photo = photo_for(meal)
+      calls = 0
+      allow(FoodAi.storage).to receive(:delete).and_wrap_original { |original, **args| (calls += 1) == 1 ? raise(IOError) : original.call(**args) }
+      allow(FoodAi::PurgeObjectJob).to receive(:perform_async)
+
+      call(:delete, "/food_entries/#{meal.id}")
+      FoodAi::PurgeObjectJob.new.perform(photo.id)
+
+      expect(FoodAi.storage.head(key: photo.object_key)).to be_nil
+    end
+
+    it "a photo linked to the meal only by photo_id is erased too" do
+      meal = entry
+      photo = photo_for(meal)
+      photo.update!(food_entry_id: nil)
+
+      call(:delete, "/food_entries/#{meal.id}")
+
+      expect(response).to have_http_status(:no_content)
+      expect(photo.reload.status).to eq("deleted")
+      expect(FoodAi.storage.head(key: photo.object_key)).to be_nil
     end
 
     it "works while the analysis runs" do

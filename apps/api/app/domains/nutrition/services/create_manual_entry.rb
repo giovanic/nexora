@@ -58,6 +58,11 @@ module Nutrition
     rescue ActiveRecord::RecordNotUnique
       # Another request with the same client_request_id won the race.
       existing_result(FoodEntry.find_by!(user_id:, client_request_id:))
+    rescue ActiveRecord::RecordInvalid => error
+      # The uniqueness validation saw the other request's commit before the index did. Any other failure is a bug.
+      raise unless error.record.errors.of_kind?(:client_request_id, :taken)
+
+      existing_result(FoodEntry.find_by!(user_id:, client_request_id:))
     end
 
     def self.invalid(errors) = Api::Errors.new(code: "validation_failed", details: errors)

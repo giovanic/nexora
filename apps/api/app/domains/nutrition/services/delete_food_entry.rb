@@ -4,9 +4,10 @@ module Nutrition
   # delete is committed and outside any transaction. :deleted or :not_found (also for another person's meal).
   module DeleteFoodEntry
     def self.call(user_id:, food_entry_id:)
+      photo_id = FoodEntry.where(user_id:, id: food_entry_id).pick(:photo_id)
       return :not_found unless FoodEntry.where(user_id:, id: food_entry_id).delete_all == 1
 
-      FoodAi::Api.erase_for_entry(user_id:, food_entry_id:)
+      FoodAi::Api.erase_for_entry(user_id:, food_entry_id:, photo_id:)
       :deleted
     end
   end

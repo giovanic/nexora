@@ -50,7 +50,7 @@ module Nutrition
       portion = new_portion(original, changes[:grams_likely])
       same_grams = portion[:grams_likely] == original.quantity_grams_likely
       base = food_attributes(original, changes[:catalog_item_id], portion)
-      base && base.merge(ItemBuilder.portion(**portion), household_measure: (original.household_measure if same_grams))
+      base && base.merge(ItemBuilder.portion(**portion), household_measure: (original.household_measure if same_grams && changes[:catalog_item_id].nil?))
     end
 
     # The portion for a new likely weight, keeping the original proportions.

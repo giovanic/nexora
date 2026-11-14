@@ -5,9 +5,14 @@ module FoodAi
     # The meal was deleted: object, photo and analyses go. The photo row stays as deleted, so a job
     # still running finds it and drops its result (the cost is kept, unlinked). Another person's
     # photo is never touched.
-    def self.erase_for_entry(user_id:, food_entry_id:)
-      FoodPhoto.where(user_id:, food_entry_id:).find_each do |photo|
-        FoodAi.storage.delete(key: photo.object_key)
+    # If the object cannot be deleted now, the photo is still marked deleted and PurgeObjectJob retries
+    # the object (by photo id: the key never goes to the queue or a log). photo_id also finds a photo the
+    # meal points to that does not point back to it yet.
+    def self.erase_for_entry(user_id:, food_entry_id:, photo_id: nil)
+      photos = FoodPhoto.where(user_id:)
+      photos = photo_id ? photos.where(food_entry_id:).or(photos.where(id: photo_id)) : photos.where(food_entry_id:)
+      photos.find_each do |photo|
+        object_deleted = delete_object(photo)
         FoodPhoto.transaction do
           locked = FoodPhoto.lock.find(photo.id)
           analysis_ids = AnalysisResult.where(photo_id: photo.id).pluck(:id)
@@ -15,9 +20,19 @@ module FoodAi
           AnalysisResult.where(id: analysis_ids).delete_all
           locked.update!(status: "deleted", deleted_at: locked.deleted_at || Time.current) unless locked.status == "deleted"
         end
+        PurgeObjectJob.perform_async(photo.id) unless object_deleted
       end
       nil
     end
+
+    # true when the object is gone; false when storage failed (the error is not kept: it may name the key).
+    def self.delete_object(photo)
+      FoodAi.storage.delete(key: photo.object_key)
+      true
+    rescue StandardError
+      false
+    end
+    private_class_method :delete_object
 
     # :discarded, :in_use (an analysis exists or is running) or :not_found, also for another person's photo.
     def self.discard_photo(user_id:, photo_id:)
