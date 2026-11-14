@@ -72,6 +72,10 @@ jobs:
         with:
           working-directory: apps/api
           bundler-cache: true
+      # ruby-vips loads the native library at runtime. On ubuntu-24.04 the package is libvips42t64.
+      - name: Install libvips
+        working-directory: .
+        run: sudo apt-get update && sudo apt-get install -y libvips42t64
       - name: Lint
         run: bundle exec rubocop
       - name: Static security analysis

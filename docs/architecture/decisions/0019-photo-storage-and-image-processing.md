@@ -5,7 +5,7 @@
 
 ## Contexto
 
-A Fase 03 recebe fotos de refeições, que são dados sensíveis (LGPD). A foto precisa ficar em armazenamento privado, chegar ao armazenamento sem passar pela API, perder os metadados (EXIF) antes de ir à IA e ser apagada 30 dias após a análise. Os fatos externos (URL pré-assinada, licenças e versões do armazenamento, gems) estão no [registro de fontes](../EXTERNAL_SOURCES.md), seção "Fase 03: armazenamento, imagem e câmera". A fonte da AWS não oferece limite de tamanho nem de tipo para PUT pré-assinado, e as condições de POST policy não foram verificadas. O MinIO está arquivado. A máquina de desenvolvimento ainda não tem a biblioteca libvips.
+A Fase 03 recebe fotos de refeições, que são dados sensíveis (LGPD). A foto precisa ficar em armazenamento privado, chegar ao armazenamento sem passar pela API, perder os metadados (EXIF) antes de ir à IA e ser apagada 30 dias após a análise. Os fatos externos (URL pré-assinada, licenças e versões do armazenamento, gems) estão no [registro de fontes](../EXTERNAL_SOURCES.md), seção "Fase 03: armazenamento, imagem e câmera". A fonte da AWS não oferece limite de tamanho nem de tipo para PUT pré-assinado, e as condições de POST policy não foram verificadas. O MinIO está arquivado. A biblioteca libvips (`libvips42` 8.12.1) foi instalada na máquina de desenvolvimento no início da Tarefa 2.
 
 ## Problema
 
@@ -17,7 +17,7 @@ Onde guardar as fotos, como autorizar o envio com limite de tipo e de tamanho, e
 2. **S3 compatível por adaptador, com URL pré-assinada de PUT.** O app envia direto ao armazenamento. A API só autoriza e valida depois. Custo: um serviço a mais no desenvolvimento e a prova de que o PUT assinado respeita tipo e tamanho.
 3. **Envio pela API (multipart).** Dá controle total do tamanho, mas a foto passa pela memória da API e ocupa o processo web.
 4. **Armazenamento local compatível com S3:** SeaweedFS 4.53 (Apache-2.0, ativo), RustFS 1.0.5 (Apache-2.0, ativo), MinIO (arquivado, AGPL-3.0, descartado) e Garage (licença e versão não verificadas).
-5. **Normalização:** `libvips` por `ruby-vips` e `image_processing`, ou ImageMagick. A libvips decodifica por partes, com menos memória, e a pilha tem licença MIT.
+5. **Normalização:** `libvips` por `ruby-vips` e `image_processing`, ou ImageMagick. A libvips é descrita pelo projeto como orientada à demanda e de baixo uso de memória, e tem licença LGPL-2.1-or-later (as gems `ruby-vips` e `image_processing` são MIT). A ligação é dinâmica, por ffi.
 
 ## Decisão
 
@@ -32,12 +32,12 @@ Em estado `Proposta`. O que já vale como direção, validado na primeira tarefa
 
 ## Justificativa
 
-O envio direto ao armazenamento mantém a API fora do caminho dos bytes. O adaptador S3 serve a qualquer provedor e a qualquer alternativa local. SeaweedFS e RustFS têm licença permissiva e estão ativos, ao contrário do MinIO. A libvips é a escolha usual com Rails e usa menos memória. As três gems novas são justificadas por esta ADR.
+O envio direto ao armazenamento mantém a API fora do caminho dos bytes. O adaptador S3 serve a qualquer provedor e a qualquer alternativa local. SeaweedFS e RustFS têm licença permissiva e estão ativos, ao contrário do MinIO. A libvips é a escolha usual com Rails e, segundo o projeto, usa pouca memória (fonte no registro). As gems novas são justificadas aqui: `aws-sdk-s3` (abaixo) e `ruby-vips`, binding oficial da libvips, que abre a imagem de forma preguiçosa e lê largura e altura do cabeçalho antes de decodificar, o que sustenta a recusa acima de 40 megapixels. A gem `image_processing` não é usada: ela trabalha com arquivos temporários, e a foto não deve ir ao disco; a Tarefa 2 chama `ruby-vips` direto, em memória. Pendência para o responsável: a LGPL-2.1 da libvips em SaaS não tem parecer jurídico.
 
 ## Consequências
 
 - Mais fácil: foto privada com acesso de prazo curto, sem passar pela API; troca de armazenamento sem mexer em Nutrition.
-- Mais difícil: um serviço novo no `docker-compose.yml`; dependência nativa da libvips na máquina e no CI (`sudo apt install libvips42`); specs `:object_storage` falam com o SeaweedFS local.
+- Mais difícil: um serviço novo no `docker-compose.yml`; dependência nativa da libvips na máquina (`sudo apt install libvips42`) e no CI (`libvips42t64`, nome no `ubuntu-24.04`); specs `:object_storage` falam com o SeaweedFS local.
 - Fazer: provar o comportamento do PUT assinado; registrar o resultado no registro de fontes; promover a ADR a `Aceita` no encerramento da fase, ou trocar para o RustFS e registrar o motivo.
 
 ## Evidência da Tarefa 1 (2026-11-13)

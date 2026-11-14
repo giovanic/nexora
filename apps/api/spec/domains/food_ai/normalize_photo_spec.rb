@@ -1,0 +1,139 @@
+require "rails_helper"
+require "support/image_fixtures"
+
+RSpec.describe FoodAi::NormalizePhoto do
+  def call(bytes, declared_type = "image/jpeg")
+    described_class.call(bytes: bytes, declared_type: declared_type)
+  end
+
+  def error_code_for(bytes, declared_type = "image/jpeg")
+    call(bytes, declared_type)
+    nil
+  rescue FoodAi::InvalidPhotoError => e
+    e.code
+  end
+
+  def vips(bytes)
+    Vips::Image.new_from_buffer(bytes, "")
+  end
+
+  describe "the fixture" do
+    it "really carries GPS and Orientation=6" do
+      image = vips(ImageFixtures.jpeg_with_gps)
+
+      expect(image.get_fields).to include("exif-ifd3-GPSLatitude", "exif-ifd3-GPSLongitude")
+      expect(image.get("orientation")).to eq(6)
+    end
+  end
+
+  it "removes GPS and every EXIF field" do
+    result = call(ImageFixtures.jpeg_with_gps)
+    fields = vips(result.bytes).get_fields
+
+    expect(fields).not_to include("exif-data")
+    expect(fields.grep(/\Aexif-ifd/)).to be_empty
+    expect(fields).not_to include("xmp-data", "iptc-data", "icc-profile-data")
+    expect(result.bytes.b).not_to include("GPS".b)
+  end
+
+  it "applies the orientation before removing it" do
+    result = call(ImageFixtures.jpeg_with_gps(width: 200, height: 100))
+
+    expect([ result.width, result.height ]).to eq([ 100, 200 ])
+    expect(vips(result.bytes).width).to eq(100)
+    reread = vips(result.bytes)
+    expect(reread.get("orientation")).to eq(1) if reread.get_fields.include?("orientation")
+  end
+
+  it "limits the long edge to 1568 px and keeps the aspect ratio" do
+    result = call(ImageFixtures.jpeg(width: 3200, height: 1600))
+
+    expect(result.width).to eq(1568)
+    expect(result.height).to eq(784)
+    expect([ vips(result.bytes).width, vips(result.bytes).height ]).to eq([ 1568, 784 ])
+  end
+
+  it "does not enlarge a small image" do
+    result = call(ImageFixtures.jpeg(width: 300, height: 200))
+
+    expect([ result.width, result.height ]).to eq([ 300, 200 ])
+  end
+
+  it "returns a JPEG whatever the input" do
+    expect(call(ImageFixtures.png, "image/png").content_type).to eq("image/jpeg")
+    expect(call(ImageFixtures.webp, "image/webp").content_type).to eq("image/jpeg")
+    expect(Marcel::MimeType.for(StringIO.new(call(ImageFixtures.png, "image/png").bytes))).to eq("image/jpeg")
+  end
+
+  it "refuses a text file named .jpg" do
+    expect(error_code_for(ImageFixtures.text_named_jpg)).to eq("unsupported_media_type")
+  end
+
+  it "refuses an empty body" do
+    expect(error_code_for("")).to eq("unsupported_media_type")
+  end
+
+  it "refuses a declared type that differs from the bytes" do
+    expect(error_code_for(ImageFixtures.png, "image/jpeg")).to eq("unsupported_media_type")
+  end
+
+  it "refuses a real type outside jpeg, png and webp even when declared" do
+    gif = "GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xFF\xFF\xFF!\xF9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;".b
+
+    expect(error_code_for(gif, "image/gif")).to eq("unsupported_media_type")
+  end
+
+  it "refuses more than 10 MB" do
+    expect(error_code_for("\xFF\xD8\xFF".b + ("a" * (10 * 1024 * 1024)))).to eq("too_large")
+  end
+
+  it "refuses 41 megapixels without decoding the pixels" do
+    bytes = ImageFixtures.jpeg_41_megapixels
+    expect(bytes.bytesize).to be < 10 * 1024 * 1024
+
+    # ruby-vips resolves operations through method_missing, so record every call that
+    # reaches it: none may be a pixel-consuming operation.
+    called = []
+    allow_any_instance_of(Vips::Image).to receive(:method_missing).and_wrap_original do |original, name, *args, **kwargs, &block|
+      called << name
+      original.call(name, *args, **kwargs, &block)
+    end
+
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    expect(error_code_for(bytes)).to eq("too_many_pixels")
+    expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).to be < 0.5
+    expect(called & %i[autorot resize jpegsave_buffer write_to_memory copy_memory avg]).to be_empty
+  end
+
+  it "accepts exactly 40 megapixels" do
+    bytes = ImageFixtures.solid(8000, 5000).jpegsave_buffer(Q: 50)
+
+    result = call(bytes)
+
+    expect([ result.width, result.height ]).to eq([ 1568, 980 ])
+  end
+
+  it "refuses a truncated JPEG" do
+    expect(error_code_for(ImageFixtures.truncated_jpeg)).to eq("unreadable_image")
+  end
+
+  it "error messages carry only the code" do
+    error = begin
+      call(ImageFixtures.truncated_jpeg)
+    rescue FoodAi::InvalidPhotoError => e
+      e
+    end
+
+    expect(error.code).to eq("unreadable_image")
+    expect(error.message).to eq("unreadable_image")
+    expect(error.cause).to be_nil.or(be_a(Vips::Error))
+    expect(error.message).not_to match(/vips|jpeg|\.jpg|bytes/i)
+  end
+
+  it "returns a frozen value object" do
+    result = call(ImageFixtures.jpeg)
+
+    expect(result).to be_a(FoodAi::NormalizedPhoto)
+    expect(result).to be_frozen
+  end
+end
