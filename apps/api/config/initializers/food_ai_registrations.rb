@@ -5,6 +5,24 @@ Rails.application.config.to_prepare do
   FoodAi.singleton_class.attr_accessor :storage
   FoodAi.storage = Rails.env.test? ? FoodAi::Adapters::MemoryStorage.new : FoodAi::Adapters::S3Storage.from_env
 
+  # The real adapter for a provider and model, with the key read from the environment. A missing
+  # key or an unpriced model raises a coded PermanentProviderError (never the key itself).
+  adapters = {
+    "anthropic" => [ FoodAi::Adapters::AnthropicAdapter, "ANTHROPIC_API_KEY" ],
+    "gemini" => [ FoodAi::Adapters::GeminiAdapter, "GEMINI_API_KEY" ],
+    "openai" => [ FoodAi::Adapters::OpenaiAdapter, "OPENAI_API_KEY" ]
+  }.freeze
+
+  FoodAi.define_singleton_method(:adapter_for) do |provider:, model:, env: ENV, transport: FoodAi::Adapters::HttpTransport.new|
+    klass, key_name = adapters[provider.to_s]
+    raise FoodAi::PermanentProviderError, "unsupported_model" unless klass && FoodAi::Pricing::TABLE.key?([ provider.to_s, model.to_s ])
+
+    api_key = env[key_name].to_s.strip
+    raise FoodAi::PermanentProviderError, "unauthorized" if api_key.empty?
+
+    klass.new(api_key: api_key, model: model, transport: transport)
+  end
+
   # FoodAi's tables in account export and deletion. prompt_versions holds no person
   # (Shared::DataRegistry::TABLES_WITHOUT_USER_DATA).
   Shared::DataRegistry.register(
