@@ -12,7 +12,7 @@ module Nutrition
       return conflict unless entry.photo_id && STARTABLE.include?(entry.status)
 
       previous = entry.status
-      return conflict unless FoodEntry.where(id: entry.id, status: previous).update_all(status: "processing", updated_at: Time.current) == 1
+      return conflict unless FoodEntry.where(id: entry.id, status: previous).update_all(status: "processing", resume_attempts: 0, updated_at: Time.current) == 1
 
       begin
         result = FoodAi::Api.request_analysis(user_id:, photo_id: entry.photo_id, food_entry_id: entry.id)

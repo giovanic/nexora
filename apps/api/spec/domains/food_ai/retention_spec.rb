@@ -39,13 +39,66 @@ RSpec.describe "FoodAi retention routines" do
       expect(FoodAi.storage.head(key: fresh.object_key)).to be_present
     end
 
-    it "keeps a photo that was never analyzed, however old" do
-      waiting = create_photo(user:, status: "awaiting_upload")
-      waiting.update!(created_at: 90.days.ago)
+    describe "photos that were never analyzed" do
+      def photo_with(status:, authorized_at:, updated_at: authorized_at)
+        photo = create_photo(user:, status:)
+        photo.update_columns(authorized_at:, updated_at:)
+        photo
+      end
 
-      described_class.new.perform
+      def running_analysis(photo, updated_at:)
+        FoodAi::AnalysisResult.create!(photo_id: photo.id, user_id: user.id, provider: "x", model: "y", prompt_version: prompt.version,
+                                       schema_version: prompt.schema_version, status: "running", started_at: updated_at, updated_at:, created_at: updated_at)
+      end
 
-      expect(waiting.reload.status).to eq("awaiting_upload")
+      it "deletes an upload never finished after one hour, and keeps a fresher one" do
+        old = photo_with(status: "awaiting_upload", authorized_at: 61.minutes.ago)
+        fresh = photo_with(status: "awaiting_upload", authorized_at: 59.minutes.ago)
+
+        described_class.new.perform
+
+        expect(old.reload.status).to eq("deleted")
+        expect(FoodAi.storage.head(key: old.object_key)).to be_nil
+        expect(fresh.reload.status).to eq("awaiting_upload")
+      end
+
+      it "deletes a stored photo with no analysis after 24 hours (a meal that failed and was not retried)" do
+        old = photo_with(status: "stored", authorized_at: 3.days.ago, updated_at: 25.hours.ago)
+        fresh = photo_with(status: "stored", authorized_at: 3.days.ago, updated_at: 23.hours.ago)
+
+        described_class.new.perform
+
+        expect(old.reload.status).to eq("deleted")
+        expect(FoodAi.storage.head(key: old.object_key)).to be_nil
+        expect(fresh.reload.status).to eq("stored")
+      end
+
+      it "keeps a stored photo that has a recent running analysis" do
+        busy = photo_with(status: "stored", authorized_at: 3.days.ago, updated_at: 25.hours.ago)
+        running_analysis(busy, updated_at: 1.hour.ago)
+
+        described_class.new.perform
+
+        expect(busy.reload.status).to eq("stored")
+      end
+
+      it "deletes a stored photo whose running analysis has been stuck for over 24 hours" do
+        stuck = photo_with(status: "stored", authorized_at: 3.days.ago, updated_at: 25.hours.ago)
+        running_analysis(stuck, updated_at: 25.hours.ago)
+
+        described_class.new.perform
+
+        expect(stuck.reload.status).to eq("deleted")
+      end
+
+      it "keeps the object for the next run when storage fails" do
+        old = photo_with(status: "awaiting_upload", authorized_at: 2.hours.ago)
+        allow(FoodAi.storage).to receive(:delete).and_raise("storage down")
+
+        described_class.new.perform
+
+        expect(old.reload.status).to eq("awaiting_upload")
+      end
     end
 
     it "leaves the photo for the next run when storage fails, and does not stop the others" do
@@ -67,6 +120,20 @@ RSpec.describe "FoodAi retention routines" do
 
       expect(failing.reload.status).to eq("deleted")
       expect(FoodAi.storage.head(key: failing.object_key)).to be_nil
+    end
+
+    it "30 days is the strict boundary: exactly 30 days is kept, one second more is deleted" do
+      travel_to(Time.utc(2026, 11, 14, 12)) do
+        exact = create_photo(user:)
+        exact.update!(analyzed_at: 30.days.ago)
+        over = create_photo(user:)
+        over.update!(analyzed_at: 30.days.ago - 1.second)
+
+        described_class.new.perform
+
+        expect(exact.reload.status).to eq("stored")
+        expect(over.reload.status).to eq("deleted")
+      end
     end
 
     it "is safe to run again" do
@@ -141,6 +208,22 @@ RSpec.describe "FoodAi retention routines" do
 
       expect(FoodAi::AnalysisResult.where(id: old.id)).not_to exist
       expect(FoodAi::AnalysisResult.find(fresh.id).raw_response).to be_present
+    end
+
+    it "90 days is the strict boundary for analyses and usage: exactly 90 days is kept, one second more goes" do
+      travel_to(Time.utc(2026, 11, 14, 12)) do
+        exact = analysis_for(create_photo(user:), started_at: 90.days.ago)
+        over = analysis_for(create_photo(user:), started_at: 90.days.ago - 1.second)
+        usage_exact = FoodAi::UsageRecord.create!(user_id: user.id, provider: "fake", model: "fake-1", cost_usd: 1, occurred_at: 90.days.ago)
+        usage_over = FoodAi::UsageRecord.create!(user_id: user.id, provider: "fake", model: "fake-1", cost_usd: 1, occurred_at: 90.days.ago - 1.second)
+
+        described_class.new.perform
+
+        expect(FoodAi::AnalysisResult.where(id: exact.id)).to exist
+        expect(FoodAi::AnalysisResult.where(id: over.id)).not_to exist
+        expect(usage_exact.reload.user_id).to eq(user.id)
+        expect(usage_over.reload.user_id).to be_nil
+      end
     end
 
     it "usage older than 90 days loses the user link and keeps the cost" do

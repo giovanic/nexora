@@ -12,6 +12,7 @@ RSpec.describe "Nutrition recovery jobs", :real_consumers do
     use_operator_consent_version
     grant_food_photo_ai(user.id)
     allow(FoodAi::AnalyzeJob).to receive(:perform_async)
+    allow(FoodAi::Api).to receive(:resume_analysis).and_call_original
   end
 
   def entry_for(photo, status:, updated_at: Time.current, created_at: updated_at)
@@ -40,6 +41,18 @@ RSpec.describe "Nutrition recovery jobs", :real_consumers do
       expect(Nutrition::FoodEntry.where(id: entry.id)).not_to exist
       expect(photo.reload.status).to eq("deleted")
       expect(FoodAi.storage.head(key: photo.object_key)).to be_nil
+    end
+
+    it "one hour is the strict boundary: exactly one hour is kept, one second more is deleted" do
+      travel_to(Time.utc(2026, 11, 14, 12)) do
+        exact = entry_for(create_photo(user:, status: "awaiting_upload"), status: "pending", created_at: 1.hour.ago)
+        over = entry_for(create_photo(user:, status: "awaiting_upload"), status: "pending", created_at: 1.hour.ago - 1.second)
+
+        described_class.new.perform
+
+        expect(Nutrition::FoodEntry.where(id: exact.id)).to exist
+        expect(Nutrition::FoodEntry.where(id: over.id)).not_to exist
+      end
     end
 
     it "keeps a recent pending entry and entries in any other state" do
@@ -115,6 +128,49 @@ RSpec.describe "Nutrition recovery jobs", :real_consumers do
       described_class.new.perform
 
       expect(entry.reload.status).to eq("failed")
+    end
+
+    it "refunds the quota unit when the meal fails because the photo is gone" do
+      photo.update!(status: "deleted", deleted_at: Time.current)
+      entry_for(photo, status: "processing", updated_at: 20.minutes.ago)
+
+      described_class.new.perform
+
+      expect(photo.reload.quota_refunded_at).to be_present
+    end
+
+    it "refunds the quota unit once" do
+      photo.update!(status: "deleted", deleted_at: Time.current, quota_refunded_at: 2.days.ago)
+      entry_for(photo, status: "processing", updated_at: 20.minutes.ago)
+
+      described_class.new.perform
+
+      expect(photo.reload.quota_refunded_at).to be_within(1.second).of(2.days.ago)
+    end
+
+    it "fails the meal and refunds after 3 resumes that did not settle it" do
+      entry = entry_for(photo, status: "processing", updated_at: 20.minutes.ago)
+
+      3.times do
+        described_class.new.perform
+        entry.update_columns(updated_at: 20.minutes.ago)
+        expect(entry.reload.status).to eq("processing")
+      end
+      described_class.new.perform
+
+      expect(entry.reload.status).to eq("failed")
+      expect(FoodAi::Api).to have_received(:resume_analysis).exactly(3).times
+      expect(photo.reload.quota_refunded_at).to be_present
+    end
+
+    it "a new analysis request starts the count again" do
+      entry = entry_for(photo, status: "processing", updated_at: 20.minutes.ago)
+      entry.update_columns(resume_attempts: 3, status: "failed")
+      photo.update!(quota_refunded_at: Time.current)
+
+      Nutrition::Api.request_analysis(user_id: user.id, food_entry_id: entry.id)
+
+      expect(entry.reload).to have_attributes(status: "processing", resume_attempts: 0)
     end
 
     it "marks the meal failed when it has no photo" do

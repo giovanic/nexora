@@ -54,6 +54,13 @@ module FoodAi
         ResumeAnalysis.call(user_id:, photo_id:, food_entry_id:)
       end
 
+      # A failure that is ours returns the quota unit of the photo (design 4.12). Safe to repeat: the first
+      # refund keeps its date. Another person's or an unknown photo is left alone.
+      def refund_quota(user_id:, photo_id:)
+        FoodPhoto.where(user_id:, id: photo_id, quota_refunded_at: nil).update_all(quota_refunded_at: Time.current, updated_at: Time.current)
+        nil
+      end
+
       # Deletes the object and the photo that has no analysis: :discarded, :in_use or :not_found.
       def discard_photo(user_id:, photo_id:)
         PhotoCleanup.discard_photo(user_id:, photo_id:)

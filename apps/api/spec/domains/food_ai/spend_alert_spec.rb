@@ -31,6 +31,20 @@ RSpec.describe FoodAi::SpendAlertJob do
     end
   end
 
+  it "does not keep the marker when the capture fails, so the next run alerts" do
+    travel_to(Time.utc(2026, 11, 14, 6)) do
+      spend("30")
+      allow(Sentry).to receive(:capture_exception).and_raise("sentry down")
+
+      expect { described_class.new.perform }.to raise_error("sentry down")
+
+      allow(Sentry).to receive(:capture_exception).and_call_original
+      described_class.new.perform
+
+      expect(sentry_events.size).to eq(1)
+    end
+  end
+
   it "does not count the cost of another month" do
     travel_to(Time.utc(2026, 11, 14, 6)) do
       spend("50", at: Time.utc(2026, 10, 31, 23))

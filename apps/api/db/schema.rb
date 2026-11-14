@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -145,11 +145,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_120000) do
     t.string "client_request_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "resume_attempts", default: 0, null: false
     t.index ["photo_id"], name: "index_food_entries_on_photo_id"
     t.index ["user_id", "client_request_id"], name: "index_food_entries_on_user_id_and_client_request_id", unique: true
     t.index ["user_id", "local_date", "meal_at", "id"], name: "index_food_entries_on_user_and_history", order: { local_date: :desc, meal_at: :desc, id: :desc }
     t.check_constraint "calories_min IS NULL AND calories_likely IS NULL AND calories_max IS NULL OR calories_min IS NOT NULL AND calories_likely IS NOT NULL AND calories_max IS NOT NULL AND calories_min::numeric <= calories_likely::numeric AND calories_likely::numeric <= calories_max::numeric", name: "food_entries_calories_range"
     t.check_constraint "result_code IS NULL OR (result_code::text = ANY (ARRAY['no_food'::character varying, 'unreadable'::character varying]::text[]))", name: "food_entries_result_code_known"
+    t.check_constraint "resume_attempts >= 0", name: "food_entries_resume_attempts_non_negative"
     t.check_constraint "source::text = ANY (ARRAY['photo'::character varying, 'manual'::character varying]::text[])", name: "food_entries_source_known"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'processing'::character varying, 'analyzed'::character varying, 'failed'::character varying, 'confirmed'::character varying]::text[])", name: "food_entries_status_known"
   end
