@@ -28,8 +28,9 @@ Lista sem valores. As da Fase 01 estão em uso; as demais são planejadas, e cad
 | `APP_WEB_URL` | 02 | Sim | URL base do painel web, para links de e-mail. Obrigatória em produção, e deve ser `https://` sem barra final nem caminho, ou o boot falha; padrão `http://localhost:5173` em desenvolvimento e teste |
 | `MAIL_FROM` | 02 | Não | Remetente dos e-mails da conta, como o link de recuperação de senha. Padrão `no-reply@localhost`. Em desenvolvimento os e-mails vão para arquivos em `apps/api/tmp/mails`, e em teste ficam em memória |
 | `MAIL_*` (demais) | M1 | Sim | Credenciais do provedor de e-mail, escolhido no M1 |
-| `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT` | 03 | Não | Armazenamento privado |
-| `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` | 03 | Sim | Credenciais do armazenamento |
+| `STORAGE_BUCKET`, `STORAGE_REGION` | 03 | Não | Bucket privado e região do armazenamento S3 compatível. Obrigatórias em produção; em desenvolvimento e teste, `app-dev-photos` e `us-east-1` (SeaweedFS do `docker-compose.yml`) |
+| `STORAGE_ENDPOINT` | 03 | Não | Endpoint S3 compatível. Em desenvolvimento e teste, `http://127.0.0.1:8334`; em produção, vazio usa o endpoint padrão do provedor |
+| `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` | 03 | Sim | Credenciais do armazenamento. Obrigatórias em produção; em desenvolvimento e teste, valores fixos e públicos de `infra/seaweedfs/s3.json`, sem uso fora da máquina |
 | `SIGNED_URL_TTL_SECONDS` | 03 | Não | No máximo 900 |
 | `FOOD_AI_PROVIDER`, `FOOD_AI_MODEL` | 03 | Não | Provedor e modelo ativos da análise de refeições |
 | `FOOD_AI_OPERATOR`, `FOOD_AI_REGION` | 03 | Não | Operador e região do provedor ativo. Precisam bater com a versão vigente do consentimento `food_photo_ai`; senão o envio é recusado e o teste de inicialização falha |

@@ -78,6 +78,20 @@ jobs:
         run: bundle exec brakeman -q --no-pager -w2
       - name: Audit gems
         run: bundle exec bundle-audit check --update
+      # A service container cannot take a command, so SeaweedFS starts with docker run,
+      # mirroring the seaweedfs service in docker-compose.yml.
+      - name: Start the object storage
+        working-directory: .
+        run: |
+          docker run -d --name seaweedfs -p 127.0.0.1:8334:8333 \
+            -v "$PWD/infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro" \
+            chrislusf/seaweedfs:4.53 server -dir=/data -s3 -s3.config=/etc/seaweedfs/s3.json
+          for i in $(seq 1 30); do
+            curl -s -o /dev/null http://127.0.0.1:8334 && exit 0
+            sleep 2
+          done
+          docker logs seaweedfs
+          exit 1
       - name: Prepare the database
         run: bin/rails db:prepare
       - name: Test, including contract and domain boundaries

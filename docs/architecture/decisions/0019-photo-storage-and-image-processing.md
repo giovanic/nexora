@@ -40,6 +40,21 @@ O envio direto ao armazenamento mantém a API fora do caminho dos bytes. O adapt
 - Mais difícil: um serviço novo no `docker-compose.yml`; dependência nativa da libvips na máquina e no CI (`sudo apt install libvips42`); specs `:object_storage` falam com o SeaweedFS local.
 - Fazer: provar o comportamento do PUT assinado; registrar o resultado no registro de fontes; promover a ADR a `Aceita` no encerramento da fase, ou trocar para o RustFS e registrar o motivo.
 
+## Evidência da Tarefa 1 (2026-11-13)
+
+Prova por execução contra o SeaweedFS `chrislusf/seaweedfs:4.53` local (`apps/api/spec/integration/object_storage_spec.rb`, tag `:object_storage`). Os seis pontos passaram no SeaweedFS, então o RustFS não foi necessário:
+
+- PUT pré-assinado com tipo e tamanho assinados grava o objeto;
+- PUT com `Content-Length` diferente do assinado é recusado;
+- PUT com outro `Content-Type` é recusado;
+- GET sem assinatura é recusado;
+- URL expirada (`expires_in: 1`, espera de 2 s) é recusada;
+- `expires_in` acima de 900 levanta `ArgumentError`.
+
+Achado: o `Aws::S3::Presigner` **não assina `content-length`** por padrão (lista de cabeçalhos ignorados, "due to a ELB bug"), e sem isso o armazenamento aceitou um corpo de outro tamanho. O adaptador passa `whitelist_headers: ["content-length"]`, e só então a recusa passou a valer. O tamanho real continua conferido de novo no job.
+
+Justificativa da gem `aws-sdk-s3` (~> 1.242, Apache-2.0): é o cliente S3 oficial, faz a assinatura SigV4 e a URL pré-assinada, e serve a qualquer armazenamento S3 compatível. Fazer a assinatura à mão seria código de segurança próprio, mais arriscado. Fica atrás do adaptador `FoodAi::Adapters::ObjectStorage`.
+
 ## Estado da decisão
 
 Proposta

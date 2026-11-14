@@ -12,7 +12,11 @@ RSpec.describe "production boot" do
       "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY" => "boot-spec-deterministic-key-0123456789abcdef",
       "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT" => "boot-spec-key-derivation-salt-0123456789abcdef",
       "AUDIT_IP_HMAC_KEY" => "boot-spec-audit-ip-hmac-key-0123456789abcdef",
-      "APP_WEB_URL" => "https://app.example.test"
+      "APP_WEB_URL" => "https://app.example.test",
+      "STORAGE_BUCKET" => "boot-spec-bucket",
+      "STORAGE_REGION" => "us-east-1",
+      "STORAGE_ACCESS_KEY_ID" => "boot-spec-access-key",
+      "STORAGE_SECRET_ACCESS_KEY" => "boot-spec-secret-key"
     }
   end
 
@@ -64,6 +68,10 @@ RSpec.describe "production boot" do
     ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
     AUDIT_IP_HMAC_KEY
     APP_WEB_URL
+    STORAGE_BUCKET
+    STORAGE_REGION
+    STORAGE_ACCESS_KEY_ID
+    STORAGE_SECRET_ACCESS_KEY
   ].each do |name|
     it "refuses to boot without #{name}" do
       output, status = boot(complete.merge(name => nil))
