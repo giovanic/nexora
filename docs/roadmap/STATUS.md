@@ -11,7 +11,7 @@ A linha `05` é um resumo de `05.1` e `05.2`.
 | 00 | Concluída | 2026-11-06 | [Relatório](reports/PHASE_00_REPORT.md) e mensagem do responsável de 2026-11-06, com a lacuna do check `scope` aceita |
 | 01 | Concluída | 2026-11-11 | [Relatório](reports/PHASE_01_REPORT.md) e mensagem do responsável de 2026-11-11: "Aprovo a Fase 01." Lacuna aceita: AC-01-07 sem envio real ao Sentry, pendente antes do M1 |
 | 02 | Concluída | 2026-11-13 | [Relatório](reports/PHASE_02_REPORT.md) e mensagem do responsável de 2026-11-13: "Aprovo a Fase 02." Lacuna aceita: AC-02-08 parcial (FR-PROFILE-001 e FR-PROFILE-003). Teste instável corrigido em `465e4f5`; PR #18 com [CI 43492082775](https://github.com/giovanic/nexora/actions/runs/43492082775) verde |
-| 03 | Não iniciada | 2026-11-05 | — |
+| 03 | Em desenvolvimento | 2026-11-13 | [Plano](../superpowers/plans/2026-11-13-food-ai.md) e mensagem do responsável de 2026-11-13: "aprovado pode implementar" |
 | 04 | Não iniciada | 2026-11-05 | — |
 | 05 | Não iniciada | 2026-11-05 | — |
 | 05.1 | Não iniciada | 2026-11-05 | — |
@@ -40,3 +40,5 @@ A linha `05` é um resumo de `05.1` e `05.2`.
 | 2026-11-13 | 02 | Concluída | Em desenvolvimento | Defeito: o teste "stays on the page and offers a retry when sign out fails" (`apps/web/src/features/privacy/PrivacyScreen.test.tsx:206`) confere o foco antes de o efeito do React rodar e reprovou o CI do PR #18 ([execução 43490332198](https://github.com/giovanic/nexora/actions/runs/43490332198)); reproduzido localmente 1 vez em 8 execuções da suíte web. Correção autorizada pelo responsável em 2026-11-13: "Autorizo a correção" |
 | 2026-11-13 | 02 | Em desenvolvimento | Em revisão | Correção em `465e4f5`: as quatro asserções de foco esperam com `waitFor`; suíte web 25 de 25 execuções locais; [CI 43492082775](https://github.com/giovanic/nexora/actions/runs/43492082775) com 6 de 6 jobs verdes |
 | 2026-11-13 | 02 | Em revisão | Concluída | Mensagem do responsável de 2026-11-13 ao autorizar a correção: registrar Concluída de novo com o CI verde. Mantidas a aprovação "Aprovo a Fase 02." e a lacuna aceita do AC-02-08. [CI 43492082775](https://github.com/giovanic/nexora/actions/runs/43492082775) |
+| 2026-11-13 | 03 | Não iniciada | Em planejamento | Mensagem do responsável de 2026-11-13: "Vamos iniciar a fase 03." Dependência 02 conferida na `main` (`5357167`): rspec 593/0, web 67, mobile 98, contratos e harness com código 0 |
+| 2026-11-13 | 03 | Em planejamento | Em desenvolvimento | [Design](../superpowers/specs/2026-11-13-food-ai-design.md) aprovado ("aprovado", duas vezes, incluindo o dataset de conjuntos públicos) e [plano](../superpowers/plans/2026-11-13-food-ai.md) aprovado pelo responsável em 2026-11-13: "aprovado pode implementar". Execução por subagentes, como recomendado no plano |
