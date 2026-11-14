@@ -94,9 +94,10 @@ catalog_truth:
   - Milho-verde cozido
   batata:
   - Batata cozida
+  - Batata assada
   - Batata crua
   batata assada:
-  - Batata cozida
+  - Batata assada
   batata-doce:
   - Batata-doce assada
   - Batata-doce crua

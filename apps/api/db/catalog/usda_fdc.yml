@@ -62,7 +62,7 @@ items:
     data_type: sr_legacy_food
     source_version: "2018-04"
     name: "Lemons, raw, without peel"
-    name_pt: "Limão-siciliano sem casca"
+    name_pt: "Limão-siciliano cru, sem casca"
     energy_nutrient: "208"
     energy_kcal: 29
     protein_g: 1.1
@@ -742,7 +742,7 @@ items:
     data_type: sr_legacy_food
     source_version: "2018-04"
     name: "Seeds, sesame seeds, whole, dried"
-    name_pt: "Gergelim"
+    name_pt: "Gergelim seco"
     energy_nutrient: "208"
     energy_kcal: 573
     protein_g: 17.73
@@ -908,6 +908,16 @@ items:
     protein_g: 1.71
     carbs_g: 20.01
     fat_g: 0.1
+  - fdc_id: 170093
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Potatoes, baked, flesh and skin, without salt"
+    name_pt: "Batata assada"
+    energy_nutrient: "208"
+    energy_kcal: 93
+    protein_g: 2.5
+    carbs_g: 21.15
+    fat_g: 0.13
   - fdc_id: 170457
     data_type: sr_legacy_food
     source_version: "2018-04"
@@ -1592,7 +1602,7 @@ items:
     data_type: sr_legacy_food
     source_version: "2018-04"
     name: "Cereals, oats, regular and quick, not fortified, dry"
-    name_pt: "Aveia em flocos"
+    name_pt: "Aveia em flocos seca"
     energy_nutrient: "208"
     energy_kcal: 379
     protein_g: 13.15

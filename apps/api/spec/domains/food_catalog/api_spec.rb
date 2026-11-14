@@ -107,6 +107,39 @@ RSpec.describe FoodCatalog::Api do
       expect(strict).to be_nil
     end
 
+    # Rule: when the name asked for does not say cru or seco, an item named cru or seco
+    # loses 0.15 of similarity in the ranking (not in the threshold). The AI model names
+    # food as it is on the plate, so the cooked item wins; a raw name still wins when asked.
+    it "prefers the cooked item to the raw one when the name does not ask for raw" do
+      add("Arroz branco cru")
+      cooked = add("Arroz branco cozido")
+
+      expect(described_class.match(name: "arroz branco").catalog_item_id).to eq(cooked.id)
+    end
+
+    it "matches batata assada to the baked potato, not to the sweet potato" do
+      add("Batata-doce assada")
+      baked = add("Batata assada")
+
+      expect(described_class.match(name: "batata assada").catalog_item_id).to eq(baked.id)
+    end
+
+    it "returns the raw item when the name asks for raw or dry" do
+      raw = add("Arroz branco cru")
+      add("Arroz branco cozido")
+
+      expect(described_class.match(name: "arroz branco cru").catalog_item_id).to eq(raw.id)
+    end
+
+    it "still matches a raw item when it is the only one, with its plain similarity" do
+      raw = add("Alface crua")
+
+      result = described_class.match(name: "alface")
+
+      expect(result.catalog_item_id).to eq(raw.id)
+      expect(result.similarity).to be > described_class::MATCH_THRESHOLD
+    end
+
     it "is accent and case insensitive" do
       item = add("Feijão-preto cozido")
 

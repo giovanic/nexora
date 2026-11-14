@@ -119,6 +119,26 @@ RSpec.describe FoodCatalog::LoadCatalog do
       end
     end
 
+    it "names raw and dry items as such and has a baked potato and a cooked white rice" do
+      items = YAML.load_file(usda_file)["items"].to_h { |i| [ i["name_pt"], i ] }
+
+      expect(items.keys).to include("Arroz branco cru", "Arroz branco cozido", "Batata assada", "Batata-doce assada",
+                                    "Limão-siciliano cru, sem casca", "Aveia em flocos seca", "Gergelim seco")
+      expect(items["Batata assada"]).to include("fdc_id" => 170_093, "data_type" => "sr_legacy_food", "energy_kcal" => 93)
+      expect(items["Batata assada"]["name"]).to eq("Potatoes, baked, flesh and skin, without salt")
+    end
+
+    it "matches the plain plate names to the cooked items of the real catalog" do
+      described_class.call
+
+      names = ->(text) { FoodCatalog::CatalogItem.find(FoodCatalog::Api.match(name: text).catalog_item_id).name_pt }
+
+      expect(names.("arroz branco")).to eq("Arroz branco cozido")
+      expect(names.("batata assada")).to eq("Batata assada")
+      expect(names.("batata")).to be_in([ "Batata cozida", "Batata assada" ])
+      expect(names.("arroz branco cru")).to eq("Arroz branco cru")
+    end
+
     it "loads the real files, twice, with every dish summing to 100 g" do
       2.times { described_class.call }
 
