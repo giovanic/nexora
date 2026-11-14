@@ -45,6 +45,14 @@ module FoodCatalog
                           source_item_id: item.source_item_id, license: item.license, kind: item.kind)
       end
 
+      # CatalogItemInfo, or nil for an unknown id.
+      def item(catalog_item_id:)
+        return unless catalog_item_id.to_s.match?(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/)
+
+        found = CatalogItem.find_by(id: catalog_item_id)
+        found && present(found)
+      end
+
       def present(item)
         CatalogItemInfo.new(id: item.id, name_pt: item.name_pt, kind: item.kind, source: item.source)
       end

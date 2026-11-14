@@ -11,6 +11,8 @@ RSpec.describe "account deletion scan", :real_consumers do
 
   # Where a row points to its owner; every other table uses user_id.
   USER_COLUMN = { "users" => "id", "audit_events" => "user_ref" }.freeze
+  # Tables with no user_id, owned through their parent: the column and the parent table.
+  OWNED_THROUGH = { "food_items" => %w[food_entry_id food_entries] }.freeze
   # Rows the design keeps (4.4), so the scan does not plant content in them:
   # account_deletions is written by the flow itself, and audit_events is
   # checked against the closed list of its only writer, RecordAudit.
@@ -60,6 +62,8 @@ RSpec.describe "account deletion scan", :real_consumers do
   # uuid cannot fill. The value is SQL; user_id is the quoted owner.
   ROW_VALUES = {
     "ai_usage_records" => { "provider" => "'fake'", "model" => "'fake-1'" },
+    "food_items" => { "food_entry_id" => ->(user_id) { "(SELECT id FROM food_entries WHERE user_id = #{user_id} LIMIT 1)" },
+                      "quantity_grams_min" => "1", "quantity_grams_likely" => "1", "quantity_grams_max" => "1" },
     "food_analysis_results" => { "photo_id" => ->(user_id) { "(SELECT id FROM food_photos WHERE user_id = #{user_id} LIMIT 1)" } }
   }.freeze
 
@@ -90,7 +94,9 @@ RSpec.describe "account deletion scan", :real_consumers do
   # it for holds only closed-list values, so nothing personal fits there.
   def seed(table, user_id)
     owner = USER_COLUMN.fetch(table, "user_id")
-    where = [ "#{column_name(owner)} = #{quote(user_id)}", SEED_SCOPE[table] ].compact.join(" AND ")
+    through = OWNED_THROUGH[table]
+    owned = through ? "#{column_name(through[0])} IN (SELECT id FROM #{table_name(through[1])} WHERE user_id = #{quote(user_id)})" : "#{column_name(owner)} = #{quote(user_id)}"
+    where = [ owned, SEED_SCOPE[table] ].compact.join(" AND ")
     insert_row(table, user_id, owner) unless connection.select_value("SELECT 1 FROM #{table_name(table)} WHERE #{where} LIMIT 1")
 
     connection.columns(table).filter_map do |column|

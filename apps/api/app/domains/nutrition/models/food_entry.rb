@@ -6,6 +6,8 @@ module Nutrition
     SOURCES = %w[photo manual].freeze
     STATUSES = %w[pending processing analyzed failed confirmed].freeze
 
+    has_many :items, class_name: "Nutrition::FoodItem", foreign_key: :food_entry_id, inverse_of: :food_entry, dependent: :delete_all
+
     validates :source, inclusion: { in: SOURCES }
     validates :status, inclusion: { in: STATUSES }
     validates :client_request_id, :meal_at, :local_date, presence: true

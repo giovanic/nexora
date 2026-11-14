@@ -166,6 +166,15 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
       expect(Nutrition::FoodEntry.count + FoodAi::FoodPhoto.count).to eq(0)
     },
     # A's meal has its photo in storage; B asks to analyze it and gets 404, and the meal stays pending.
+    # A's meal is analyzed with an item; B asks for it and gets 404, with no body of A's.
+    "GET /api/v1/food_entries/:id" => lambda {
+      entry = Nutrition::FoodEntry.find_by!(user_id: a_id)
+
+      get "/api/v1/food_entries/#{entry.id}", headers: b_headers, as: :json
+
+      expect(response).to have_http_status(:not_found)
+      expect(response.body).not_to include(entry.id, a_id)
+    },
     "POST /api/v1/food_entries/:id/analysis" => lambda {
       entry = Nutrition::FoodEntry.find_by!(user_id: a_id)
       photo = FoodAi::FoodPhoto.find(entry.photo_id)

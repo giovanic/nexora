@@ -37,7 +37,8 @@ module Nutrition
     def self.find_or_create(user_id:, client_request_id:, photo_id:, meal_at:, local_date:)
       FoodEntry.find_by(user_id:, client_request_id:) ||
         FoodEntry.create!(user_id:, client_request_id:, photo_id:, meal_at:, local_date:, source: "photo", status: "pending")
-    rescue ActiveRecord::RecordNotUnique
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+      # The uniqueness validation can lose the race before the index does.
       FoodEntry.find_by!(user_id:, client_request_id:)
     end
     private_class_method :zone_for, :parse, :find_or_create

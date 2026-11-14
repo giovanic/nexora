@@ -107,7 +107,7 @@ Nível por esporte.
 
 Uma refeição.
 
-- **Colunas:** `id`, `user_id` (FK), `source` (`photo` ou `manual`), `status` (`pending`, `processing`, `analyzed`, `failed`, `confirmed`), `photo_id` (referência a `food_photos`, nula após o prazo ou sem foto), `result_code` (`no_food`, `unreadable` ou nulo), `estimate_partial` (booleano), `meal_at`, `local_date`, `calories_min`, `calories_likely`, `calories_max`, `confirmed_at`, `client_request_id`.
+- **Colunas:** `id`, `user_id` (FK), `source` (`photo` ou `manual`), `status` (`pending`, `processing`, `analyzed`, `failed`, `confirmed`), `photo_id` (referência a `food_photos`, nula após o prazo ou sem foto), `result_code` (`no_food`, `unreadable` ou nulo), `estimate_partial` (booleano), `meal_at`, `local_date`, `calories_min`, `calories_likely`, `calories_max` (`decimal`, sem arredondar), `confirmed_at`, `client_request_id`.
 - **Constraints:** `calories_min <= calories_likely <= calories_max` quando preenchidas; único em `(user_id, client_request_id)`, para evitar registro duplicado em nova tentativa; `status` validado por `CHECK`.
 - **Índices:** `(user_id, local_date DESC)` para o histórico.
 - **Soft delete:** não. Excluir apaga a linha, os itens e a foto. `photo_id` substitui o antigo `photo_key`: a chave do objeto fica só em `food_photos`.
@@ -116,7 +116,7 @@ Uma refeição.
 
 Itens de uma refeição.
 
-- **Colunas:** `id`, `food_entry_id` (FK, `ON DELETE CASCADE`), `catalog_item_id` (referência), `display_name`, `quantity_grams_min`, `quantity_grams_likely`, `quantity_grams_max`, `household_measure`, `calories_min`, `calories_likely`, `calories_max`, `protein_g_*`, `carbs_g_*`, `fat_g_*`, `confidence`, `origin` (`ai` ou `user`), `corrected_from_item_id`, `nutrition_source_ref`.
+- **Colunas:** `id`, `food_entry_id` (FK, `ON DELETE CASCADE`), `catalog_item_id` (referência), `display_name`, `quantity_grams_min`, `quantity_grams_likely`, `quantity_grams_max`, `household_measure`, `calories_min`, `calories_likely`, `calories_max`, `protein_g_*`, `carbs_g_*`, `fat_g_*`, `confidence`, `hidden_ingredients_possible`, `origin` (`ai` ou `user`), `corrected_from_item_id`, `nutrition_source_ref` (`{source, version, id}`). Os números são `decimal`, sem arredondamento: ele só acontece ao montar a resposta.
 - **Constraints:** faixas ordenadas; `confidence` entre 0 e 1 quando presente; item corrigido pela pessoa mantém `origin = 'user'`.
 - **Índices:** `food_entry_id`.
 

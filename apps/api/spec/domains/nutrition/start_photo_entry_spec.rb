@@ -68,6 +68,32 @@ RSpec.describe "Nutrition::Api.start_photo_entry" do
     expect(FoodAi::FoodPhoto.count).to eq(1)
   end
 
+  it "local_date of a meal at 23:30 in São Paulo is that local day" do
+    allow(UserProfile::Api).to receive(:time_zone).with(user_id: user.id).and_return("America/Sao_Paulo")
+
+    result = Nutrition::Api.start_photo_entry(user_id: user.id, client_request_id: "late", content_type: "image/jpeg", byte_size: 1000,
+                                              meal_at: "2026-11-10T23:30:00-03:00")
+
+    expect(result).to be_ok
+    entry = Nutrition::FoodEntry.find(result.food_entry_id)
+    expect(entry.meal_at.utc.to_date).to eq(Date.new(2026, 11, 11))
+    expect(entry.local_date).to eq(Date.new(2026, 11, 10))
+  end
+
+  it "enforces the food_items ranges, confidence and origin in the database, and cascades on delete" do
+    start
+    entry = Nutrition::FoodEntry.sole
+    base = { food_entry_id: entry.id, display_name: "x", quantity_grams_min: 1, quantity_grams_likely: 2, quantity_grams_max: 3 }
+
+    [ { quantity_grams_min: 5 }, { calories_min: 5, calories_likely: 4, calories_max: 6 }, { calories_min: 1 }, { confidence: 1.5 }, { origin: "model" } ].each do |bad|
+      expect { Nutrition::FoodItem.new(base.merge(bad)).save!(validate: false) }.to raise_error(ActiveRecord::StatementInvalid)
+    end
+
+    Nutrition::FoodItem.create!(base)
+    entry.delete
+    expect(Nutrition::FoodItem.count).to eq(0)
+  end
+
   it "enforces the status list and the calories range in the database" do
     start
     entry = Nutrition::FoodEntry.sole

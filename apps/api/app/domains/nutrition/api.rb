@@ -2,12 +2,14 @@ module Nutrition
   # The only entry point to Nutrition for other contexts and controllers. It returns Data
   # objects, never models.
   module Api
-    USER_DATA_TABLES = %w[food_entries].freeze
+    USER_DATA_TABLES = %w[food_entries food_items].freeze
     # upload_url, upload_headers and expires_at are nil when the photo is past the upload (a repeated request).
     EntryUpload = Data.define(:food_entry_id, :status, :upload_url, :upload_headers, :expires_at) do
       def ok? = true
     end
-    EntryInfo = Data.define(:id, :status, :local_date, :meal_at) do
+    # view: the meal as clients show it (EntryView), only from Api.entry.
+    EntryInfo = Data.define(:id, :status, :local_date, :meal_at, :view) do
+      def initialize(id:, status:, local_date:, meal_at:, view: nil) = super
       def ok? = true
     end
     # code as FoodAi::Api::Errors, plus validation_failed for meal_at. retry_at only for
@@ -23,10 +25,16 @@ module Nutrition
         StartPhotoEntry.call(user_id:, client_request_id:, content_type:, byte_size:, meal_at:)
       end
 
-      # EntryInfo, or :not_found, also for another person's meal.
+      # EntryInfo (with its view: items, ranges, confidence and, while the photo exists, a signed photo_url),
+      # or :not_found, also for another person's meal or a malformed id.
       def entry(user_id:, food_entry_id:)
+        return :not_found unless food_entry_id.to_s.match?(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/)
+
         entry = FoodEntry.find_by(user_id:, id: food_entry_id)
-        entry ? EntryInfo.new(id: entry.id, status: entry.status, local_date: entry.local_date, meal_at: entry.meal_at) : :not_found
+        return :not_found unless entry
+
+        view = EntryView.call(entry, photo_url: FoodAi::Api.photo_url(user_id:, photo_id: entry.photo_id))
+        EntryInfo.new(id: entry.id, status: entry.status, local_date: entry.local_date, meal_at: entry.meal_at, view:)
       end
 
       # EntryInfo (now processing), :not_found (also for another person's meal) or Errors:

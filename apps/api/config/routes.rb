@@ -27,6 +27,7 @@ Rails.application.routes.draw do
       resources :sport_profiles, only: %i[index create destroy], constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }
       post "foods/search", to: "foods#search"
       post "food_entries/uploads", to: "food_entry_uploads#create"
+      get "food_entries/:id", to: "food_entries#show", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
       post "food_entries/:id/analysis", to: "food_entry_analyses#create", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
     end
   end

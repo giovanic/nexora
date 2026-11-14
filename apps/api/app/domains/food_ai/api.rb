@@ -58,6 +58,15 @@ module FoodAi
         nil
       end
 
+      # A signed GET URL (15 minutes at most) for the person's stored photo, or nil when the photo is
+      # absent, deleted, not uploaded yet or another person's. The URL is a secret: never log it.
+      def photo_url(user_id:, photo_id:)
+        return unless photo_id
+
+        photo = FoodPhoto.find_by(user_id:, id: photo_id, status: "stored")
+        photo && FoodAi.storage.presigned_get(key: photo.object_key, expires_in: Adapters::ObjectStorage::MAX_EXPIRES_IN)
+      end
+
       def export_user_data(user_id)
         UserData.export(user_id)
       end

@@ -450,6 +450,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/food_entries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A meal with its items, calorie and macro ranges, confidence and photo.
+         * @description Everything the app shows comes from here; the app computes nothing. Calories are always a range
+         *     (calories_min, calories_likely, calories_max) rounded to the ten, macros a range rounded to the
+         *     gram, and every number is null while there is nothing to show (processing, no food, no known item).
+         *     estimate_partial is true when some item is unknown to the catalog: the range then sums only the known
+         *     items, and an unknown item carries its name and no numbers. confidence is high, medium or low, and
+         *     null without items. source is the nutrition base of an item (usda_fdc or project); own_composition is
+         *     true for a dish composed by the project. There is no total of the day, no remaining and no goal.
+         *     photo_url is a signed URL valid for 15 minutes, only while the photo exists, and a secret: never log
+         *     it. Another person's or an unknown meal answers 404.
+         */
+        get: operations["getFoodEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -588,6 +616,65 @@ export interface components {
             food_entry_id: string;
             /** @enum {string} */
             status: "processing";
+        };
+        FoodEntry: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "analyzed" | "failed" | "confirmed";
+            /** @enum {string|null} */
+            result_code: "no_food" | "unreadable" | null;
+            /** @enum {string} */
+            source: "photo" | "manual";
+            /** Format: date-time */
+            meal_at: string;
+            /** Format: date */
+            local_date: string;
+            estimate_partial: boolean;
+            unknown_items_count: number;
+            /** @enum {string|null} */
+            confidence: "high" | "medium" | "low" | null;
+            photo_url: string | null;
+            calories_min: number | null;
+            calories_likely: number | null;
+            calories_max: number | null;
+            protein_g_min: number | null;
+            protein_g_likely: number | null;
+            protein_g_max: number | null;
+            carbs_g_min: number | null;
+            carbs_g_likely: number | null;
+            carbs_g_max: number | null;
+            fat_g_min: number | null;
+            fat_g_likely: number | null;
+            fat_g_max: number | null;
+            items: components["schemas"]["FoodEntryItem"][];
+        };
+        FoodEntryItem: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            origin: "ai" | "user";
+            unknown: boolean;
+            household_measure: string | null;
+            /** @enum {string|null} */
+            source: "usda_fdc" | "project" | null;
+            own_composition: boolean;
+            quantity_grams_min: number;
+            quantity_grams_likely: number;
+            quantity_grams_max: number;
+            calories_min: number | null;
+            calories_likely: number | null;
+            calories_max: number | null;
+            protein_g_min: number | null;
+            protein_g_likely: number | null;
+            protein_g_max: number | null;
+            carbs_g_min: number | null;
+            carbs_g_likely: number | null;
+            carbs_g_max: number | null;
+            fat_g_min: number | null;
+            fat_g_likely: number | null;
+            fat_g_max: number | null;
         };
         FoodCatalogItem: {
             /** Format: uuid */
@@ -1323,6 +1410,32 @@ export interface operations {
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
             422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    getFoodEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The meal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
     };

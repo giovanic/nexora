@@ -619,6 +619,42 @@ paths:
           $ref: "#/components/responses/Error"
         default:
           $ref: "#/components/responses/Error"
+  /api/v1/food_entries/{id}:
+    get:
+      operationId: getFoodEntry
+      summary: A meal with its items, calorie and macro ranges, confidence and photo.
+      description: |
+        Everything the app shows comes from here; the app computes nothing. Calories are always a range
+        (calories_min, calories_likely, calories_max) rounded to the ten, macros a range rounded to the
+        gram, and every number is null while there is nothing to show (processing, no food, no known item).
+        estimate_partial is true when some item is unknown to the catalog: the range then sums only the known
+        items, and an unknown item carries its name and no numbers. confidence is high, medium or low, and
+        null without items. source is the nutrition base of an item (usda_fdc or project); own_composition is
+        true for a dish composed by the project. There is no total of the day, no remaining and no goal.
+        photo_url is a signed URL valid for 15 minutes, only while the photo exists, and a secret: never log
+        it. Another person's or an unknown meal answers 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The meal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntry"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     bearerSession:
@@ -916,6 +952,122 @@ components:
         status:
           type: string
           enum: [processing]
+    FoodEntry:
+      type: object
+      additionalProperties: false
+      required: [id, status, result_code, source, meal_at, local_date, estimate_partial, unknown_items_count, confidence, photo_url,
+                 calories_min, calories_likely, calories_max, protein_g_min, protein_g_likely, protein_g_max, carbs_g_min, carbs_g_likely,
+                 carbs_g_max, fat_g_min, fat_g_likely, fat_g_max, items]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processing, analyzed, failed, confirmed]
+        result_code:
+          type: [string, "null"]
+          enum: [no_food, unreadable, null]
+        source:
+          type: string
+          enum: [photo, manual]
+        meal_at:
+          type: string
+          format: date-time
+        local_date:
+          type: string
+          format: date
+        estimate_partial:
+          type: boolean
+        unknown_items_count:
+          type: integer
+        confidence:
+          type: [string, "null"]
+          enum: [high, medium, low, null]
+        photo_url:
+          type: [string, "null"]
+        calories_min:
+          type: [integer, "null"]
+        calories_likely:
+          type: [integer, "null"]
+        calories_max:
+          type: [integer, "null"]
+        protein_g_min:
+          type: [integer, "null"]
+        protein_g_likely:
+          type: [integer, "null"]
+        protein_g_max:
+          type: [integer, "null"]
+        carbs_g_min:
+          type: [integer, "null"]
+        carbs_g_likely:
+          type: [integer, "null"]
+        carbs_g_max:
+          type: [integer, "null"]
+        fat_g_min:
+          type: [integer, "null"]
+        fat_g_likely:
+          type: [integer, "null"]
+        fat_g_max:
+          type: [integer, "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FoodEntryItem"
+    FoodEntryItem:
+      type: object
+      additionalProperties: false
+      required: [id, name, origin, unknown, household_measure, source, own_composition, quantity_grams_min, quantity_grams_likely,
+                 quantity_grams_max, calories_min, calories_likely, calories_max, protein_g_min, protein_g_likely, protein_g_max,
+                 carbs_g_min, carbs_g_likely, carbs_g_max, fat_g_min, fat_g_likely, fat_g_max]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        origin:
+          type: string
+          enum: [ai, user]
+        unknown:
+          type: boolean
+        household_measure:
+          type: [string, "null"]
+        source:
+          type: [string, "null"]
+          enum: [usda_fdc, project, null]
+        own_composition:
+          type: boolean
+        quantity_grams_min:
+          type: number
+        quantity_grams_likely:
+          type: number
+        quantity_grams_max:
+          type: number
+        calories_min:
+          type: [integer, "null"]
+        calories_likely:
+          type: [integer, "null"]
+        calories_max:
+          type: [integer, "null"]
+        protein_g_min:
+          type: [integer, "null"]
+        protein_g_likely:
+          type: [integer, "null"]
+        protein_g_max:
+          type: [integer, "null"]
+        carbs_g_min:
+          type: [integer, "null"]
+        carbs_g_likely:
+          type: [integer, "null"]
+        carbs_g_max:
+          type: [integer, "null"]
+        fat_g_min:
+          type: [integer, "null"]
+        fat_g_likely:
+          type: [integer, "null"]
+        fat_g_max:
+          type: [integer, "null"]
     FoodCatalogItem:
       type: object
       additionalProperties: false
