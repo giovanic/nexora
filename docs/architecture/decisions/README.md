@@ -41,3 +41,4 @@ Toda decisão técnica relevante fica aqui, no formato do [modelo](TEMPLATE.md).
 | [0016](0016-closed-beta-milestone.md) | Marco de beta fechado | Aceita | n/a |
 | [0017](0017-derived-data-after-source-removal.md) | Dados derivados após remover a origem | Proposta | Fase 04 |
 | [0018](0018-application-level-encryption.md) | Cifragem em nível de aplicação | Aceita | n/a |
+| [0019](0019-photo-storage-and-image-processing.md) | Armazenamento de fotos e processamento de imagem | Proposta | Fase 03 |

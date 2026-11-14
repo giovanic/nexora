@@ -31,10 +31,12 @@ Lista sem valores. As da Fase 01 estão em uso; as demais são planejadas, e cad
 | `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT` | 03 | Não | Armazenamento privado |
 | `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` | 03 | Sim | Credenciais do armazenamento |
 | `SIGNED_URL_TTL_SECONDS` | 03 | Não | No máximo 900 |
-| `AI_PROVIDER`, `AI_MODEL` | 03 | Não | Provedor e modelo ativos |
-| `AI_PROVIDER_API_KEY` | 03 | Sim | Credencial do provedor |
-| `AI_ANALYSES_PER_DAY_LIMIT` | 03 | Não | Limite por usuário |
-| `AI_DAILY_SPEND_ALERT_USD` | 03 | Não | Alerta de gasto total |
+| `FOOD_AI_PROVIDER`, `FOOD_AI_MODEL` | 03 | Não | Provedor e modelo ativos da análise de refeições |
+| `FOOD_AI_OPERATOR`, `FOOD_AI_REGION` | 03 | Não | Operador e região do provedor ativo. Precisam bater com a versão vigente do consentimento `food_photo_ai`; senão o envio é recusado e o teste de inicialização falha |
+| `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` | 03 | Sim | Chave de cada provedor candidato. Só a do provedor ativo é obrigatória em produção; as demais servem à avaliação, fora da suíte comum |
+| `FOOD_AI_DAILY_QUOTA` | 03 | Não | Envios autorizados por pessoa e por dia local. Padrão 20 |
+| `FOOD_AI_MONTHLY_ALERT_USD` | 03 | Não | Alerta de gasto mensal total com IA, em dólares. Padrão 10 |
+| `EVALUATION_IMAGES_DIR` | 03 | Não | Diretório local do dataset de imagens da avaliação de IA. Nunca versionado |
 | `USDA_FDC_API_KEY` | 03 | Sim | API do FoodData Central, se usada |
 | `STRAVA_CLIENT_ID` | 04 | Não | Aplicação do Strava |
 | `STRAVA_CLIENT_SECRET` | 04 | Sim | Só no backend |
