@@ -27,7 +27,14 @@
         }
       ],
       "@sentry/react-native",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "O app usa a câmera para fotografar as suas refeições.",
+          "photosPermission": "O app acessa as suas fotos só para você escolher a foto de uma refeição."
+        }
+      ]
     ]
   }
 }

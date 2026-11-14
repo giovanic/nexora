@@ -1,6 +1,6 @@
-import { router } from "expo-router";
-import { ComingSoonScreen } from "../features/onboarding/ComingSoonScreen";
+import { Redirect } from "expo-router";
 
+// The first screen after sign in is the camera.
 export default function Home() {
-  return <ComingSoonScreen onOpenSettings={() => router.push("/settings")} />;
+  return <Redirect href="/meals" />;
 }
