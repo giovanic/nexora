@@ -1,10 +1,10 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Api } from "../../shared/api";
 import { errorMessage } from "../../shared/messages";
 import { useResource } from "../../shared/useResource";
 import { Body, Button, ErrorText, ErrorView, LinkButton, LoadingView, Screen, Title } from "../../shared/ui";
 import { PhotoConsentStep } from "./PhotoConsentStep";
-import type { PendingPhotos } from "./PendingPhotos";
+import type { PendingPhotos } from "../../shared/PendingPhotos";
 import { createUploadFlow, type Prepared, type SendResult, type Uploader } from "./UploadFlow";
 import type { Picker } from "./devicePicker";
 import { mealErrorMessage } from "./mealMessages";
@@ -26,7 +26,7 @@ type Status =
   | { kind: "idle" }
   | { kind: "busy" }
   | { kind: "denied" }
-  | { kind: "network" }
+  | { kind: "network"; copyKept: boolean }
   | { kind: "message"; text: string };
 
 const UNSUPPORTED = errorMessage({ ok: false, status: 422, code: "unsupported_media_type" });
@@ -41,18 +41,35 @@ export function CameraScreen({ api, picker, photos, uploader, newId, onResult, o
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   // The photo that still has to be sent, kept for retry with the same client_request_id.
   const pending = useRef<Prepared | null>(null);
+  // Photos kept from an earlier visit (network failure, app closed), offered to send again or discard.
+  const [kept, setKept] = useState<Prepared[]>([]);
+  const [currentId, setCurrentId] = useState<string | null>(null);
+
+  const refreshKept = useCallback(async () => setKept(await photos.list()), [photos]);
+  useEffect(() => {
+    let live = true;
+    photos.list().then((list) => {
+      if (live) setKept(list);
+    });
+    return () => {
+      live = false;
+    };
+  }, [photos]);
 
   async function send(prepared: Prepared) {
     pending.current = prepared;
+    setCurrentId(prepared.clientRequestId);
     setStatus({ kind: "busy" });
     const result: SendResult = await flow.send(prepared);
+    await refreshKept();
 
     if (result.kind === "sent") {
       pending.current = null;
+      setCurrentId(null);
       setStatus({ kind: "idle" });
       return onResult(result.entryId);
     }
-    if (result.kind === "network") return setStatus({ kind: "network" });
+    if (result.kind === "network") return setStatus({ kind: "network", copyKept: result.copyKept });
 
     const { failure } = result;
     if (failure.code === "consent_operator_mismatch" || failure.code === "consent_required") {
@@ -62,6 +79,7 @@ export function CameraScreen({ api, picker, photos, uploader, newId, onResult, o
       return setAskConsent(true);
     }
     pending.current = null;
+    setCurrentId(null);
     setStatus({ kind: "message", text: mealErrorMessage(failure) });
   }
 
@@ -75,6 +93,11 @@ export function CameraScreen({ api, picker, photos, uploader, newId, onResult, o
     if (prepared.kind === "unsupported") return setStatus({ kind: "message", text: UNSUPPORTED });
     if (prepared.kind === "copy_failed") return setStatus({ kind: "message", text: COPY_FAILED });
     await send(prepared.prepared);
+  }
+
+  async function discard(item: Prepared) {
+    await photos.remove(item.clientRequestId);
+    await refreshKept();
   }
 
   async function consentGranted() {
@@ -108,7 +131,11 @@ export function CameraScreen({ api, picker, photos, uploader, newId, onResult, o
           )}
           {status.kind === "network" && (
             <>
-              <ErrorText>Não foi possível enviar a foto. Ela continua guardada no aparelho.</ErrorText>
+              <ErrorText>
+                {status.copyKept
+                  ? "Não foi possível enviar a foto. Ela continua guardada no aparelho."
+                  : "A foto já foi enviada, mas não conseguimos pedir a análise. Tente de novo."}
+              </ErrorText>
               <Button label="Tentar enviar de novo" onPress={() => pending.current && send(pending.current)} />
             </>
           )}
@@ -119,6 +146,16 @@ export function CameraScreen({ api, picker, photos, uploader, newId, onResult, o
               <Button label="Escolher da galeria" variant="secondary" onPress={() => pick("choosePhoto")} />
             </>
           )}
+          {status.kind !== "busy" &&
+            kept
+              .filter((item) => item.clientRequestId !== currentId)
+              .map((item) => (
+                <Fragment key={item.clientRequestId}>
+                  <Body>Uma foto ficou guardada no aparelho sem ser enviada.</Body>
+                  <Button label="Reenviar" onPress={() => send(item)} />
+                  <Button label="Descartar" variant="secondary" onPress={() => discard(item)} />
+                </Fragment>
+              ))}
           <LinkButton label="Registrar sem foto" onPress={onManual} />
         </>
       )}

@@ -1,6 +1,6 @@
 import * as FileSystem from "expo-file-system/legacy";
 import type { Api, Failure } from "../../shared/api";
-import type { PendingPhotos } from "./PendingPhotos";
+import type { PendingMeta, PendingPhotos } from "../../shared/PendingPhotos";
 import type { PickedPhoto } from "./devicePicker";
 
 export type PutResult = { ok: true } | { ok: false; network: boolean };
@@ -41,17 +41,18 @@ function contentTypeOf(photo: PickedPhoto): ContentType | null {
 }
 
 // What one photo needs to be sent again with the same client_request_id.
-export type Prepared = { clientRequestId: string; contentType: ContentType; byteSize: number; mealAt: string };
+export type Prepared = PendingMeta;
 
 export type PrepareResult = { kind: "prepared"; prepared: Prepared } | { kind: "unsupported" } | { kind: "copy_failed" };
 
 export type SendResult =
   | { kind: "sent"; entryId: string }
   // The photo (or the answer) did not get through; try again with the same id.
-  | { kind: "network" }
+  // copyKept is false when the upload had already finished and only the analysis request failed.
+  | { kind: "network"; copyKept: boolean }
   | { kind: "failure"; failure: Failure };
 
-// After these the same photo cannot work as it is, so the copy is not kept.
+// After these the copy is kept: the photo is fine, and it is sent once the person agrees to the consent in force.
 const KEEP_COPY = new Set(["consent_required", "consent_operator_mismatch"]);
 
 type Deps = { api: Api; photos: PendingPhotos; uploader: Uploader; newId: () => string; now?: () => Date };
@@ -64,11 +65,13 @@ export function createUploadFlow({ api, photos, uploader, newId, now = () => new
     const clientRequestId = newId();
     if (!(await photos.save(clientRequestId, photo.uri))) return { kind: "copy_failed" };
     const byteSize = (await photos.size(clientRequestId)) ?? photo.fileSize ?? 0;
-    return { kind: "prepared", prepared: { clientRequestId, contentType, byteSize, mealAt: now().toISOString() } };
+    const prepared: Prepared = { clientRequestId, contentType, byteSize, mealAt: now().toISOString() };
+    await photos.saveMeta(prepared);
+    return { kind: "prepared", prepared };
   }
 
   async function fail(prepared: Prepared, failure: Failure): Promise<SendResult> {
-    if (failure.code === "network_error") return { kind: "network" };
+    if (failure.code === "network_error") return { kind: "network", copyKept: await photos.exists(prepared.clientRequestId) };
     if (!KEEP_COPY.has(failure.code)) await photos.remove(prepared.clientRequestId);
     return { kind: "failure", failure };
   }
@@ -86,7 +89,7 @@ export function createUploadFlow({ api, photos, uploader, newId, now = () => new
 
     if (url) {
       const put = await uploader.put(url, photos.uriFor(prepared.clientRequestId), headers ?? {});
-      if (!put.ok) return { kind: "network" };
+      if (!put.ok) return { kind: "network", copyKept: true };
       await photos.remove(prepared.clientRequestId);
     } else {
       // Replay after the upload: nothing more to send, the copy is not needed.

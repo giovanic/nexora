@@ -2,12 +2,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 import { consentList, errorResponse, jsonResponse, makeApi } from "../../../shared/testing/fakes";
 import { ENTRY_ID, analysisAccepted, fakeFs, fakePicker, fakeUploader, jpeg, uploadGrant } from "../../../shared/testing/mealFakes";
 import { CameraScreen } from "../CameraScreen";
-import { createPendingPhotos } from "../PendingPhotos";
+import { createPendingPhotos } from "../../../shared/PendingPhotos";
 import type { PickResult } from "../devicePicker";
 
 const consentText = jsonResponse(200, { purpose: "food_photo_ai", version: 1, text: "Sua foto é enviada ao provedor para identificar os alimentos." });
 
-function setup(options: { pick?: PickResult; routes?: Record<string, unknown>; consents?: Record<string, string>; uploads?: Parameters<typeof fakeUploader>[0] } = {}) {
+function setup(options: { pick?: PickResult; routes?: Record<string, unknown>; consents?: Record<string, string>; uploads?: Parameters<typeof fakeUploader>[0]; files?: ReturnType<typeof fakeFs> } = {}) {
   const ctx = makeApi({
     "GET /api/v1/consents": consentList(options.consents ?? { food_photo_ai: "granted" }),
     "GET /api/v1/consents/food_photo_ai/text": consentText,
@@ -15,7 +15,7 @@ function setup(options: { pick?: PickResult; routes?: Record<string, unknown>; c
     "POST /api/v1/food_entries/11111111-1111-4111-8111-111111111111/analysis": analysisAccepted(),
     ...options.routes,
   } as never);
-  const files = fakeFs();
+  const files = options.files ?? fakeFs();
   files.seed("file:///cache/photo.jpg");
   const picker = fakePicker(options.pick ?? jpeg());
   const uploader = fakeUploader(options.uploads);
@@ -47,7 +47,7 @@ describe("CameraScreen", () => {
     await fireEvent.press(await screen.findByRole("button", { name: "Tirar uma foto" }));
 
     expect(await screen.findByText(/Não foi possível enviar a foto/)).toBeOnTheScreen();
-    expect(files.pending()).toEqual(["file:///docs/pending-photos/req-1"]);
+    expect(files.pending().sort()).toEqual(["file:///docs/pending-photos/req-1", "file:///docs/pending-photos/req-1.json"]);
     expect(onResult).not.toHaveBeenCalled();
 
     await fireEvent.press(screen.getByRole("button", { name: "Tentar enviar de novo" }));
@@ -124,7 +124,7 @@ describe("CameraScreen", () => {
     await fireEvent.press(await screen.findByRole("button", { name: "Tirar uma foto" }));
 
     expect(await screen.findByRole("button", { name: "Concordo e continuar" })).toBeOnTheScreen();
-    expect(files.pending()).toEqual(["file:///docs/pending-photos/req-1"]);
+    expect(files.pending().sort()).toEqual(["file:///docs/pending-photos/req-1", "file:///docs/pending-photos/req-1.json"]);
   });
 
   it("429 shows when the limit resets and offers manual entry", async () => {
@@ -177,5 +177,54 @@ describe("CameraScreen", () => {
     await render(element);
 
     expect(await screen.findByRole("button", { name: "Tentar de novo" })).toBeOnTheScreen();
+  });
+
+  it("a kept copy and its metadata survive leaving the screen and are resent with the same id", async () => {
+    const first = setup({ uploads: [{ ok: false, network: true }] });
+    const view = await render(first.element);
+    await fireEvent.press(await screen.findByRole("button", { name: "Tirar uma foto" }));
+    await screen.findByText(/Não foi possível enviar a foto/);
+    expect(first.files.pending().sort()).toEqual(["file:///docs/pending-photos/req-1", "file:///docs/pending-photos/req-1.json"]);
+    await view.unmount();
+
+    const second = setup({ files: first.files });
+    await render(second.element);
+    await fireEvent.press(await screen.findByRole("button", { name: "Reenviar" }));
+
+    await waitFor(() => expect(second.onResult).toHaveBeenCalledWith(ENTRY_ID));
+    expect(second.startBodies().map((body) => body.client_request_id)).toEqual(["req-1"]);
+    expect(second.uploader.put).toHaveBeenCalledTimes(1);
+    expect(first.files.pending()).toEqual([]);
+  });
+
+  it("discard deletes the copy and the metadata file", async () => {
+    const first = setup({ uploads: [{ ok: false, network: true }] });
+    const view = await render(first.element);
+    await fireEvent.press(await screen.findByRole("button", { name: "Tirar uma foto" }));
+    await screen.findByText(/Não foi possível enviar a foto/);
+    await view.unmount();
+
+    const second = setup({ files: first.files });
+    await render(second.element);
+    await fireEvent.press(await screen.findByRole("button", { name: "Descartar" }));
+
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Reenviar" })).toBeNull());
+    expect(first.files.pending()).toEqual([]);
+    expect(second.startBodies()).toHaveLength(0);
+  });
+
+  it("does not claim the photo is kept when only the analysis request failed", async () => {
+    const down = () => {
+      throw new Error("offline");
+    };
+    const { element, files } = setup({ routes: { "POST /api/v1/food_entries/11111111-1111-4111-8111-111111111111/analysis": down } });
+    await render(element);
+
+    await fireEvent.press(await screen.findByRole("button", { name: "Tirar uma foto" }));
+
+    expect(await screen.findByText(/A foto já foi enviada/)).toBeOnTheScreen();
+    expect(screen.queryByText(/continua guardada/)).toBeNull();
+    expect(files.pending()).toEqual([]);
+    expect(screen.queryByRole("button", { name: "Reenviar" })).toBeNull();
   });
 });

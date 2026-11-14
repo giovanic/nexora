@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { Linking } from "react-native";
 import { CameraScreen } from "../../features/meals/CameraScreen";
-import { pendingPhotos } from "../../features/meals/PendingPhotos";
+import { pendingPhotos } from "../../shared/PendingPhotos";
 import { deviceUploader } from "../../features/meals/UploadFlow";
 import { newClientRequestId } from "../../features/meals/clientRequestId";
 import { devicePicker } from "../../features/meals/devicePicker";

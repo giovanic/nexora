@@ -70,6 +70,20 @@ describe("MealResultScreen", () => {
     expect(count(GET)).toBe(polled + 1);
   });
 
+  it("a meal still pending after 90 seconds also offers to refresh", async () => {
+    const { element, count } = setup({ [GET]: entryRoute(foodEntry({ status: "pending", ...NO_NUMBERS })) });
+    await render(element);
+    await screen.findByText("Aguardando a foto chegar ao servidor…");
+
+    await tick(90_000);
+    expect(await screen.findByText(/Ainda estamos esperando/)).toBeOnTheScreen();
+    const polled = count(GET);
+
+    await fireEvent.press(screen.getByRole("button", { name: "Atualizar" }));
+    await tick(0);
+    expect(count(GET)).toBe(polled + 1);
+  });
+
   it.each([
     ["no_food", /Não encontramos comida nesta foto/],
     ["unreadable", /Não conseguimos ler esta foto/],
@@ -105,6 +119,22 @@ describe("MealResultScreen", () => {
     expect(screen.getByText("Refeição: cerca de 420 a 610 kcal")).toBeOnTheScreen();
     expect(screen.queryByText(/\d[.,]\d/)).toBeNull();
     expect(screen.queryByText(/total|restante|hoje/i)).toBeNull();
+  });
+
+  it("names only the sources it knows and falls back to a neutral label", async () => {
+    const entry = foodEntry({
+      items: [
+        foodItem({ source: "usda_fdc" }),
+        foodItem({ id: "33333333-3333-4333-8333-333333333333", name: "Pão", source: "project", own_composition: false }),
+        foodItem({ id: "44444444-4444-4444-8444-444444444444", name: "Queijo", source: "other_base" as never }),
+      ],
+    });
+    const { element } = setup({ [GET]: entryRoute(entry) });
+    await render(element);
+
+    expect(await screen.findAllByText("Origem: USDA")).toHaveLength(1);
+    expect(screen.getAllByText("Origem: composição própria")).toHaveLength(1);
+    expect(screen.getAllByText("Origem: base de dados")).toHaveLength(1);
   });
 
   it("partial estimate label", async () => {

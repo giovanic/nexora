@@ -1,5 +1,5 @@
 import * as SecureStore from "expo-secure-store";
-import { clearPendingPhotos } from "../features/meals/PendingPhotos";
+import { clearPendingPhotos } from "./PendingPhotos";
 
 // The session token lives only in the device keystore (SecureStore), never in
 // plain storage, logs or monitoring. Every call is safe to await: a keystore

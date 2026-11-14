@@ -4,7 +4,7 @@ import { createApi } from "../../../shared/api";
 import { session } from "../../../shared/session";
 import { jsonResponse } from "../../../shared/testing/fakes";
 import { fakeFs } from "../../../shared/testing/mealFakes";
-import { createPendingPhotos } from "../PendingPhotos";
+import { createPendingPhotos } from "../../../shared/PendingPhotos";
 
 jest.mock("expo-secure-store", () => ({ getItemAsync: jest.fn(async () => "tok"), setItemAsync: jest.fn(), deleteItemAsync: jest.fn() }));
 jest.mock("expo-file-system/legacy", () => ({
@@ -44,6 +44,18 @@ describe("local copy", () => {
     fsMock.deleteAsync.mockClear();
     const deleted = await api.deleteAccount("senha");
     expect(deleted.ok).toBe(true);
+    expect(fsMock.deleteAsync).toHaveBeenCalledWith("file:///docs/pending-photos/", { idempotent: true });
+  });
+
+  it("an expired session (401) also deletes the pending copies", async () => {
+    const fetchFn = jest.fn(async () => jsonResponse(401, { error: { code: "unauthorized" } }) as unknown as Response);
+    const onUnauthorized = jest.fn();
+    const api = createApi({ baseUrl: "http://api.test", fetchFn, session, onUnauthorized, deviceLabel: "x" });
+
+    const result = await api.listFoodEntries();
+
+    expect(result.ok).toBe(false);
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
     expect(fsMock.deleteAsync).toHaveBeenCalledWith("file:///docs/pending-photos/", { idempotent: true });
   });
 

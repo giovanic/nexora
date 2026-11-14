@@ -22,7 +22,10 @@ const CONFIDENCE = { high: "alta", medium: "média", low: "baixa" } as const;
 
 function itemOrigin(item: FoodEntryItem): string | null {
   if (item.source === null) return null;
-  return item.own_composition || item.source === "project" ? "composição própria" : "USDA";
+  if (item.source === "usda_fdc") return "USDA";
+  if (item.source === "project") return "composição própria";
+  // A base this app version does not know yet: say so, without naming another one.
+  return "base de dados";
 }
 
 function ItemCard({ item, onCorrect }: { item: FoodEntryItem; onCorrect: () => void }) {
@@ -104,14 +107,18 @@ export function MealResultScreen({ api, entryId, onNewPhoto, onManual, onDone }:
   }
 
   function renderEntry(entry: FoodEntry) {
-    if (entry.status === "pending") return <LoadingView label="Aguardando a foto chegar ao servidor…" />;
-    if (entry.status === "processing") {
+    if (entry.status === "pending" || entry.status === "processing") {
+      const waiting = entry.status === "pending";
       return (
         <>
-          <LoadingView label="Analisando a foto…" />
+          <LoadingView label={waiting ? "Aguardando a foto chegar ao servidor…" : "Analisando a foto…"} />
           {timedOut && (
             <>
-              <Body>Ainda estamos analisando. Você pode esperar mais um pouco ou atualizar.</Body>
+              <Body>
+                {waiting
+                  ? "Ainda estamos esperando a foto chegar. Você pode esperar mais um pouco ou atualizar."
+                  : "Ainda estamos analisando. Você pode esperar mais um pouco ou atualizar."}
+              </Body>
               <Button label="Atualizar" variant="secondary" onPress={refresh} />
             </>
           )}

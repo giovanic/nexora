@@ -1,6 +1,6 @@
 // Test helpers for the meal screens only. Nothing here is imported by a route or a screen.
 import type { components } from "@app/contracts";
-import type { PendingFs } from "../../features/meals/PendingPhotos";
+import type { PendingFs } from "../PendingPhotos";
 import type { PickResult, Picker } from "../../features/meals/devicePicker";
 import type { Uploader } from "../../features/meals/UploadFlow";
 import { jsonResponse } from "./fakes";
@@ -99,6 +99,7 @@ export const analysisAccepted = () => jsonResponse(202, { food_entry_id: ENTRY_I
 // In-memory file system. `seed` plants a file the picker "produced".
 export function fakeFs() {
   const files = new Map<string, number>();
+  const texts = new Map<string, string>();
   const dirs = new Set<string>();
   const fs = {
     documentDirectory: "file:///docs/",
@@ -112,10 +113,25 @@ export function fakeFs() {
     deleteAsync: jest.fn(async (uri: string) => {
       if (uri.endsWith("/")) {
         for (const key of [...files.keys()]) if (key.startsWith(uri)) files.delete(key);
+        for (const key of [...texts.keys()]) if (key.startsWith(uri)) texts.delete(key);
         dirs.delete(uri);
       } else {
         files.delete(uri);
+        texts.delete(uri);
       }
+    }),
+    writeAsStringAsync: jest.fn(async (uri: string, text: string) => {
+      files.set(uri, text.length);
+      texts.set(uri, text);
+    }),
+    readAsStringAsync: jest.fn(async (uri: string) => {
+      const text = texts.get(uri);
+      if (text === undefined) throw new Error("missing file");
+      return text;
+    }),
+    readDirectoryAsync: jest.fn(async (uri: string) => {
+      if (!dirs.has(uri)) throw new Error("missing directory");
+      return [...files.keys()].filter((key) => key.startsWith(uri)).map((key) => key.slice(uri.length));
     }),
     getInfoAsync: jest.fn(async (uri: string) => ({ exists: files.has(uri) || dirs.has(uri), size: files.get(uri) })),
   } satisfies PendingFs;

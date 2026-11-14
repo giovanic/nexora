@@ -8,7 +8,40 @@ export type PendingFs = {
   copyAsync: (options: { from: string; to: string }) => Promise<void>;
   deleteAsync: (uri: string, options?: { idempotent?: boolean }) => Promise<void>;
   getInfoAsync: (uri: string) => Promise<{ exists: boolean; size?: number }>;
+  writeAsStringAsync: (uri: string, contents: string) => Promise<void>;
+  readAsStringAsync: (uri: string) => Promise<string>;
+  readDirectoryAsync: (uri: string) => Promise<string[]>;
 };
+
+// The minimum needed to send a kept photo again with the same client_request_id.
+// No food data, no URLs: only what the upload request itself carries.
+export type PendingMeta = {
+  clientRequestId: string;
+  contentType: "image/jpeg" | "image/png" | "image/webp";
+  byteSize: number;
+  mealAt: string;
+};
+
+const TYPES = ["image/jpeg", "image/png", "image/webp"];
+const META_SUFFIX = ".json";
+
+function parseMeta(text: string): PendingMeta | null {
+  try {
+    const value = JSON.parse(text) as Partial<PendingMeta>;
+    if (
+      typeof value.clientRequestId === "string" &&
+      typeof value.contentType === "string" &&
+      TYPES.includes(value.contentType) &&
+      typeof value.byteSize === "number" &&
+      typeof value.mealAt === "string"
+    ) {
+      return value as PendingMeta;
+    }
+  } catch {
+    // An unreadable file is treated as no metadata.
+  }
+  return null;
+}
 
 const FOLDER = "pending-photos/";
 const safe = (id: string) => id.replace(/[^A-Za-z0-9_-]/g, "_");
@@ -19,6 +52,15 @@ export function createPendingPhotos(fs: PendingFs) {
     return `${fs.documentDirectory}${FOLDER}`;
   };
   const uriFor = (id: string) => `${folder()}${safe(id)}`;
+  const metaUri = (id: string) => `${uriFor(id)}${META_SUFFIX}`;
+
+  async function exists(id: string): Promise<boolean> {
+    try {
+      return (await fs.getInfoAsync(uriFor(id))).exists;
+    } catch {
+      return false;
+    }
+  }
 
   return {
     uriFor,
@@ -34,6 +76,30 @@ export function createPendingPhotos(fs: PendingFs) {
         return null;
       }
     },
+    exists,
+    async saveMeta(meta: PendingMeta): Promise<void> {
+      try {
+        await fs.writeAsStringAsync(metaUri(meta.clientRequestId), JSON.stringify(meta));
+      } catch {
+        // The copy still works for this screen; only a later resend is lost.
+      }
+    },
+    // Copies kept on the device, with the data to send each one again. Metadata
+    // without its copy (or the other way round) is not offered and is cleaned up.
+    async list(): Promise<PendingMeta[]> {
+      try {
+        const names = await fs.readDirectoryAsync(folder());
+        const found: PendingMeta[] = [];
+        for (const name of names.filter((entry) => entry.endsWith(META_SUFFIX))) {
+          const meta = parseMeta(await fs.readAsStringAsync(`${folder()}${name}`).catch(() => ""));
+          if (meta && (await exists(meta.clientRequestId))) found.push(meta);
+          else await fs.deleteAsync(`${folder()}${name}`, { idempotent: true }).catch(() => {});
+        }
+        return found;
+      } catch {
+        return [];
+      }
+    },
     async size(id: string): Promise<number | null> {
       try {
         const info = await fs.getInfoAsync(uriFor(id));
@@ -45,6 +111,7 @@ export function createPendingPhotos(fs: PendingFs) {
     async remove(id: string): Promise<void> {
       try {
         await fs.deleteAsync(uriFor(id), { idempotent: true });
+        await fs.deleteAsync(metaUri(id), { idempotent: true });
       } catch {
         // A copy left behind is removed on sign out.
       }
@@ -68,6 +135,9 @@ const deviceFs: PendingFs = {
   makeDirectoryAsync: (uri, options) => FileSystem.makeDirectoryAsync(uri, options),
   copyAsync: (options) => FileSystem.copyAsync(options),
   deleteAsync: (uri, options) => FileSystem.deleteAsync(uri, options),
+  writeAsStringAsync: (uri, contents) => FileSystem.writeAsStringAsync(uri, contents),
+  readAsStringAsync: (uri) => FileSystem.readAsStringAsync(uri),
+  readDirectoryAsync: (uri) => FileSystem.readDirectoryAsync(uri),
   getInfoAsync: async (uri) => {
     const info = await FileSystem.getInfoAsync(uri);
     return info.exists ? { exists: true, size: info.size } : { exists: false };
