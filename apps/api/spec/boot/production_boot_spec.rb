@@ -132,4 +132,27 @@ RSpec.describe "production boot" do
     expect(status).to be_success, output
     expect(output.lines.last.strip).to eq("boot-spec-primary-key-0123456789abcdef,boot-spec-deterministic-key-0123456789abcdef,boot-spec-key-derivation-salt-0123456789abcdef")
   end
+
+  describe "Food AI operator check" do
+    it "boots without FOOD_AI_PROVIDER, since uploads are then refused" do
+      output, status = boot(complete)
+
+      expect(status).to be_success, output
+    end
+
+    it "refuses to boot when the provider's operator does not match the consent in force" do
+      output, status = boot(complete.merge("FOOD_AI_PROVIDER" => "anthropic", "FOOD_AI_OPERATOR" => "Some Operator", "FOOD_AI_REGION" => "US"))
+
+      expect(status).not_to be_success
+      expect(output).to include("FOOD_AI_OPERATOR")
+      expect(output).not_to include("Some Operator")
+    end
+
+    it "refuses to boot with a provider and no operator or region declared" do
+      output, status = boot(complete.merge("FOOD_AI_PROVIDER" => "anthropic"))
+
+      expect(status).not_to be_success
+      expect(output).to include("FOOD_AI_OPERATOR")
+    end
+  end
 end

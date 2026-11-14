@@ -8,6 +8,9 @@ module ErrorRendering
     "invalid_token" => "Este link de redefinição não vale mais. Peça um novo.",
     "profile_pending" => "Estamos preparando o seu perfil. Tente de novo em instantes.",
     "consent_required" => "Esta parte do app depende de um consentimento que você ainda não deu.",
+    "consent_operator_mismatch" => "O consentimento que você deu não cobre o serviço que analisaria a foto. Leia o texto atual antes de enviar.",
+    "unsupported_media_type" => "Este formato de foto não é aceito. Use JPEG, PNG ou WebP.",
+    "analysis_quota_exceeded" => "Você chegou ao limite de fotos analisadas hoje. Tente de novo amanhã.",
     "outdated_version" => "O texto deste consentimento foi atualizado. Leia a versão atual antes de aceitar."
   }.freeze
 

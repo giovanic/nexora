@@ -74,7 +74,9 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
       audits: Identity::AuditEvent.where(user_ref: a_id).order(:id).map(&:attributes),
       deletions: Identity::AccountDeletion.where(user_id: a_id).count,
       profile: UserProfile::Profile.find(a_id).attributes,
-      sports: UserProfile::SportProfile.where(user_id: a_id).order(:id).map(&:attributes)
+      sports: UserProfile::SportProfile.where(user_id: a_id).order(:id).map(&:attributes),
+      meals: Nutrition::FoodEntry.where(user_id: a_id).count,
+      photos: FoodAi::FoodPhoto.where(user_id: a_id).count
     }
   end
 
@@ -155,6 +157,13 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
       post "/api/v1/foods/search", params: { term: "arroz" }, headers: b_headers, as: :json
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.keys).to eq(%w[items next_page])
+    },
+    # B has no food_photo_ai consent, so the upload is refused and starts nothing; A has no meal or photo.
+    "POST /api/v1/food_entries/uploads" => lambda {
+      post "/api/v1/food_entries/uploads", params: { client_request_id: "req-1", content_type: "image/jpeg", byte_size: 1000, meal_at: Time.current.iso8601 },
+                                           headers: b_headers, as: :json
+      expect(response).to have_http_status(:forbidden)
+      expect(Nutrition::FoodEntry.count + FoodAi::FoodPhoto.count).to eq(0)
     },
     "POST /api/v1/account/export" => lambda {
       post "/api/v1/account/export", params: { password: IdentityHelpers::PASSWORD }, headers: b_headers, as: :json

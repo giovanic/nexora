@@ -537,6 +537,42 @@ paths:
           $ref: "#/components/responses/Error"
         default:
           $ref: "#/components/responses/Error"
+  /api/v1/food_entries/uploads:
+    post:
+      operationId: startFoodEntryUpload
+      summary: Authorizes the upload of a meal photo and starts the pending meal.
+      description: |
+        Checks that food_photo_ai is granted for the version in force and that this version names the
+        operator and region the server really uses (403 consent_required, 403 consent_operator_mismatch),
+        then the daily quota of 20 authorized uploads per local day (429 analysis_quota_exceeded, with
+        Retry-After in seconds until local midnight). content_type is image/jpeg, image/png or image/webp
+        (other types, such as image/heic, answer 422 unsupported_media_type) and byte_size is at most
+        10 MB. Creates a pending meal and returns a signed PUT URL valid for 15 minutes; the PUT must send
+        exactly upload_headers. Repeating a client_request_id returns the same meal with a new URL and
+        counts once. The URL is a secret: never log it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FoodEntryUploadRequest"
+      responses:
+        "201":
+          description: The meal was started and the upload is authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntryUpload"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     bearerSession:
@@ -779,6 +815,46 @@ components:
           maximum: 50
           default: 20
           description: Values above 50 are served as 50.
+    FoodEntryUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [client_request_id, content_type, byte_size, meal_at]
+      properties:
+        client_request_id:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Chosen by the client for each meal. Repeating it returns the same meal.
+        content_type:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+        byte_size:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+        meal_at:
+          type: string
+          format: date-time
+          description: When the meal happened, with the UTC offset. The local date comes from the profile time zone.
+    FoodEntryUpload:
+      type: object
+      additionalProperties: false
+      required: [food_entry_id, upload_url, upload_headers, expires_at]
+      properties:
+        food_entry_id:
+          type: string
+          format: uuid
+        upload_url:
+          type: string
+          description: Signed PUT URL. A secret; never log it.
+        upload_headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Content-Type and Content-Length, to send exactly as given.
+        expires_at:
+          type: string
+          format: date-time
     FoodCatalogItem:
       type: object
       additionalProperties: false

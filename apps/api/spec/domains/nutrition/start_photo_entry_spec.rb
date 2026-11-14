@@ -1,0 +1,77 @@
+require "rails_helper"
+require "support/food_ai_consent"
+
+RSpec.describe "Nutrition::Api.start_photo_entry" do
+  self.use_transactional_tests = false
+
+  let(:user) { Identity::User.create!(email: "nu-#{SecureRandom.hex(4)}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current) }
+
+  before do
+    use_operator_consent_version
+    grant_food_photo_ai(user.id)
+  end
+
+  after { ActiveRecord::Base.connection.execute("TRUNCATE users, food_photos, food_entries, consent_records, outbox_events, audit_events CASCADE") }
+
+  def start(client_request_id: "req-1")
+    Nutrition::Api.start_photo_entry(user_id: user.id, client_request_id:, content_type: "image/jpeg", byte_size: 1000, meal_at: Time.current.iso8601)
+  end
+
+  it "two concurrent requests with the same client_request_id create one entry" do
+    gate = Queue.new
+    threads = 3.times.map do
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          gate.pop
+          start(client_request_id: "race")
+        end
+      end
+    end
+    3.times { gate << true }
+    results = threads.map(&:value)
+
+    expect(results).to all(be_ok)
+    expect(results.map(&:food_entry_id).uniq.size).to eq(1)
+    expect(Nutrition::FoodEntry.count).to eq(1)
+    expect(FoodAi::FoodPhoto.count).to eq(1)
+    expect(FoodAi::FoodPhoto.sole.food_entry_id).to eq(Nutrition::FoodEntry.sole.id)
+  end
+
+  it "does not create an entry when FoodAi refuses" do
+    Identity::Api.revoke_consent(user_id: user.id, purpose: "food_photo_ai")
+
+    expect(start).to have_attributes(code: "consent_required")
+    expect(Nutrition::FoodEntry.count).to eq(0)
+  end
+
+  it "recovers an authorized photo that never got its entry, on the retry" do
+    FoodAi::Api.authorize_photo_upload(user_id: user.id, client_request_id: "half", content_type: "image/jpeg", byte_size: 1000,
+                                       day_start: Time.current.beginning_of_day, day_end: Time.current.end_of_day)
+
+    result = start(client_request_id: "half")
+
+    expect(result).to be_ok
+    expect(FoodAi::FoodPhoto.sole.food_entry_id).to eq(result.food_entry_id)
+  end
+
+  it "exports and erases only Nutrition's rows" do
+    start
+    export = Nutrition::Api.export_user_data(user.id)
+
+    expect(export[:entries].size).to eq(1)
+    expect(export[:entries].first).to include(status: "pending", source: "photo")
+    expect(export[:entries].first.keys).not_to include(:photo_id, :user_id)
+
+    Nutrition::Api.erase_user_data(user.id)
+
+    expect(Nutrition::FoodEntry.count).to eq(0)
+    expect(FoodAi::FoodPhoto.count).to eq(1)
+  end
+
+  it "enforces the status list and the calories range in the database" do
+    start
+    entry = Nutrition::FoodEntry.sole
+    expect { entry.update_columns(status: "weird") }.to raise_error(ActiveRecord::StatementInvalid)
+    expect { entry.update_columns(calories_min: 500, calories_likely: 400, calories_max: 600) }.to raise_error(ActiveRecord::StatementInvalid)
+  end
+end

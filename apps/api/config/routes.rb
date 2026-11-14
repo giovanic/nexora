@@ -26,6 +26,7 @@ Rails.application.routes.draw do
       patch "profile", to: "profiles#update"
       resources :sport_profiles, only: %i[index create destroy], constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }
       post "foods/search", to: "foods#search"
+      post "food_entries/uploads", to: "food_entry_uploads#create"
     end
   end
 

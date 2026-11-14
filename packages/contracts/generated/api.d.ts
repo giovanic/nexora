@@ -395,6 +395,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/food_entries/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Authorizes the upload of a meal photo and starts the pending meal.
+         * @description Checks that food_photo_ai is granted for the version in force and that this version names the
+         *     operator and region the server really uses (403 consent_required, 403 consent_operator_mismatch),
+         *     then the daily quota of 20 authorized uploads per local day (429 analysis_quota_exceeded, with
+         *     Retry-After in seconds until local midnight). content_type is image/jpeg, image/png or image/webp
+         *     (other types, such as image/heic, answer 422 unsupported_media_type) and byte_size is at most
+         *     10 MB. Creates a pending meal and returns a signed PUT URL valid for 15 minutes; the PUT must send
+         *     exactly upload_headers. Repeating a client_request_id returns the same meal with a new URL and
+         *     counts once. The URL is a secret: never log it.
+         */
+        post: operations["startFoodEntryUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -498,6 +525,30 @@ export interface components {
              * @default 20
              */
             per_page: number;
+        };
+        FoodEntryUploadRequest: {
+            /** @description Chosen by the client for each meal. Repeating it returns the same meal. */
+            client_request_id: string;
+            /** @enum {string} */
+            content_type: "image/jpeg" | "image/png" | "image/webp";
+            byte_size: number;
+            /**
+             * Format: date-time
+             * @description When the meal happened, with the UTC offset. The local date comes from the profile time zone.
+             */
+            meal_at: string;
+        };
+        FoodEntryUpload: {
+            /** Format: uuid */
+            food_entry_id: string;
+            /** @description Signed PUT URL. A secret; never log it. */
+            upload_url: string;
+            /** @description Content-Type and Content-Length, to send exactly as given. */
+            upload_headers: {
+                [key: string]: string;
+            };
+            /** Format: date-time */
+            expires_at: string;
         };
         FoodCatalogItem: {
             /** Format: uuid */
@@ -1167,6 +1218,35 @@ export interface operations {
             401: components["responses"]["Error"];
             403: components["responses"]["Error"];
             422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    startFoodEntryUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodEntryUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description The meal was started and the upload is authorized. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntryUpload"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
             default: components["responses"]["Error"];
         };
     };
