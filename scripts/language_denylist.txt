@@ -5,16 +5,18 @@
 # Palavras genéricas ("limite", "meta") ficam de fora: entram só as expressões
 # que julgam ou pressionam. Liberar um termo em contexto legítimo exige
 # justificativa no registro da fase.
-# Liberado: "limite de calorias" e "teto de calorias" ficam fora porque o texto
-# de consentimento health_data v1 os usa para NEGAR ("Não define meta nem limite
-# de calorias"). O julgamento "acima do limite" e "passou do limite" continua vetado.
+# Exceções pontuais (negação em texto aprovado) ficam em language_allow.txt, por
+# arquivo e linha exata, e não aqui.
 
 # Calorias como meta, teto, saldo ou compensação
 calorias restantes
 calorias restantes hoje
+caloria restante
 acima do limite
 passou do limite
 meta de calorias
+limite de calorias
+teto de calorias
 meta calorica
 deficit
 deficit calorico
@@ -22,6 +24,10 @@ queime o que comeu
 queimar o que comeu
 compensar a comida
 compensar o que comeu
+comendo demais
+comeu demais
+comeu pouco
+comendo pouco
 
 # Julgamento moral da comida
 comida boa
@@ -29,6 +35,13 @@ comida ruim
 comida lixo
 comida limpa
 comida suja
+dieta limpa
+comer limpo
+alimento ruim
+alimento bom
+refeicao lixo
+junk food
+junk
 refeicao ruim
 refeicao boa
 besteira
@@ -42,15 +55,19 @@ perder a sua sequencia
 voce vai perder
 sem desculpas
 sem dor, sem ganho
+sem dor sem ganho
 
 # Foco no corpo
 corpo dos sonhos
 secar
+secando
 barriga
 emagrecer
+emagrec*
 
 # Prescrição e diagnóstico
 voce deveria
+voce nao deveria
 deveria comer menos
 voce precisa comer menos
 indica deficiencia

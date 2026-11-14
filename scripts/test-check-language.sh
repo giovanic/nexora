@@ -16,7 +16,8 @@ CODE=0
 
 fresh() { rm -rf "$WORK/root"; mkdir -p "$WORK/root"; }
 put() { mkdir -p "$(dirname "$WORK/root/$1")"; printf '%s\n' "$2" > "$WORK/root/$1"; }
-run() { OUT="$(python3 -I "$CHECK" --root "$WORK/root" --denylist "${1:-$DENY}" 2>&1)"; CODE=$?; }
+: > "$WORK/allow_empty.txt"
+run() { OUT="$(python3 -I "$CHECK" --root "$WORK/root" --denylist "${1:-$DENY}" --allow "${2:-$WORK/allow_empty.txt}" 2>&1)"; CODE=$?; }
 
 expect() { # name, ok|fail
   TESTS=$((TESTS + 1))
@@ -78,6 +79,52 @@ if [ "$CODE" -ne 0 ] && [ "$CODE" -ne 1 ]; then
 else
   expect "missing denylist is an error, not a pass" fail
 fi
+
+# Termos que o revisor provou passar antes: cada um com um exemplo positivo e um negativo.
+M=apps/mobile/src/shared/messages.ts
+pair() { # termo-esperado, texto que casa, texto limpo parecido
+  reports "denylist catches '$1'" "$M" "$2" ":1:$1"
+  passes "denylist spares near-miss of '$1'" "$M" "$3"
+}
+pair "calorias restantes" "Restam calorias restantes" "Calorias restam registradas"
+pair "caloria restante" "Uma caloria restante" "Uma caloria registrada"
+pair "limite de calorias" "Seu limite de calorias" "Limite de fotos"
+pair "teto de calorias" "O teto de calorias" "O teto do prédio"
+pair "comendo demais" "Está comendo demais" "Está comendo bem"
+pair "comeu demais" "Hoje você comeu demais" "Hoje você comeu bem"
+pair "comeu pouco" "Você comeu pouco" "Você comeu poucos itens"
+pair "comendo pouco" "Está comendo pouco" "Está comendo poucos itens"
+pair "voce nao deveria" "Você não deveria" "Você não pode ver isso"
+pair "secar" "Quer secar rápido" "O secador está ligado"
+pair "secando" "Você está secando" "Você está secou"
+pair "sem dor sem ganho" "Sem dor sem ganho!" "Sem dor de cabeça"
+pair "sem dor, sem ganho" "Sem dor, sem ganho!" "Sem dor de cabeça"
+pair "dieta limpa" "Faça dieta limpa" "Dieta registrada"
+pair "comer limpo" "Quer comer limpo" "Quer comer bem"
+pair "alimento ruim" "Esse alimento ruim" "Esse alimento registrado"
+pair "alimento bom" "Um alimento bom" "Um alimento registrado"
+pair "refeicao lixo" "Uma refeição lixo" "Uma refeição registrada"
+pair "junk food" "Evite junk food" "Evite repetir"
+pair "junk" "Que junk" "Um junkyard"
+pair "emagrec*" "Para emagrecimento" "Para magreza"
+reports "trailing * matches an inflection" "$M" "emagreça já" ":1:emagrec*"
+
+# Lista de exceções: caminho|linha exata|motivo
+ALLOW_LINE="Não define meta nem limite de calorias."
+printf 'apps/api/config/consents/h.md|%s|aprovado\n' "$ALLOW_LINE" > "$WORK/allow.txt"
+fresh; put apps/api/config/consents/h.md "Não define meta nem limite de calorias."; run "$DENY" "$WORK/allow.txt"
+if [ "$CODE" -eq 0 ]; then expect "allowlisted line passes" ok; else expect "allowlisted line passes" fail; fi
+fresh; put apps/api/config/consents/h.md $'Não define meta nem limite de calorias.\nTem limite de calorias hoje'; run "$DENY" "$WORK/allow.txt"
+if [ "$CODE" -eq 1 ] && echo "$OUT" | grep -qF "h.md:2:limite de calorias"; then expect "same term on another line still fails" ok; else expect "same term on another line still fails" fail; fi
+fresh; put apps/api/config/consents/other.md "Não define meta nem limite de calorias."; put apps/api/config/consents/h.md "Texto limpo"; run "$DENY" "$WORK/allow.txt"
+if [ "$CODE" -eq 1 ] && echo "$OUT" | grep -qF "other.md:1:limite de calorias"; then expect "same line in another file still fails" ok; else expect "same line in another file still fails" fail; fi
+fresh; put apps/api/config/consents/h.md "Texto limpo"; run "$DENY" "$WORK/allow.txt"
+if [ "$CODE" -eq 1 ] && echo "$OUT" | grep -qF "stale"; then expect "stale allowlist entry is reported" ok; else expect "stale allowlist entry is reported" fail; fi
+fresh; put apps/api/config/consents/h.md "NAO define meta nem LIMITE de calorias."; run "$DENY" "$WORK/allow.txt"
+if [ "$CODE" -eq 0 ]; then expect "allowlist compares normalized line" ok; else expect "allowlist compares normalized line" fail; fi
+
+fresh; run
+if echo "$OUT" | grep -qi "aviso"; then expect "missing scan path warns" ok; else expect "missing scan path warns" fail; fi
 
 echo
 echo "$TESTS testes, $FAILS falhas"

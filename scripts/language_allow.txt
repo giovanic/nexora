@@ -1,0 +1,4 @@
+# Exceções à lista de linguagem: caminho|linha exata|motivo
+# Vale só para o arquivo e a linha inteira (sem caixa e sem acentos). Entrada
+# cuja linha deixou de existir é reportada, para a exceção não ficar esquecida.
+apps/api/config/consents/health_data.v1.md|- Não define meta nem limite de calorias. Quando aparecem, as calorias são uma estimativa em faixa, e nunca uma medição.|negação aprovada pelo responsável (Fase 02)

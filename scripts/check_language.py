@@ -12,7 +12,15 @@ então uma expressão quebrada em duas linhas não é vista.
 
 Saída: código 0 sem ocorrências; código 1 com "arquivo:linha:termo" por
 ocorrência; código 2 para erro de uso (lista ausente). Caminho que ainda não
-existe não é erro: não há o que varrer. Só Python 3 padrão.
+existe não é erro (avisa em stderr): não há o que varrer. Só Python 3 padrão.
+
+Termo terminando em "*" casa prefixo de palavra ("emagrec*" casa "emagreça").
+Sem "*", só a palavra inteira. Prefira formas explícitas; use "*" só com raiz
+longa o bastante para não casar outras palavras.
+
+Exceções: scripts/language_allow.txt, linhas "caminho|linha exata|motivo". Um
+achado é ignorado só se o arquivo e a linha inteira (normalizada) forem iguais
+à entrada. Entrada cuja linha não existe mais é reportada como "stale" (exit 1).
 """
 import argparse
 import os
@@ -51,8 +59,26 @@ def load_terms(path):
 
 
 def compile_term(term):
-    body = r"\s+".join(re.escape(part) for part in term.split())
-    return re.compile(r"(?<!\w)" + body + r"(?!\w)")
+    prefix = term.endswith("*")
+    body = r"\s+".join(re.escape(part) for part in term.rstrip("*").split())
+    return re.compile(r"(?<!\w)" + body + (r"\w*" if prefix else r"(?!\w)"))
+
+
+def load_allow(path):
+    """Entradas (arquivo, linha normalizada) -> número da linha na lista."""
+    entries = {}
+    if not path or not os.path.exists(path):
+        return entries
+    with open(path, encoding="utf-8") as handle:
+        for number, raw in enumerate(handle, 1):
+            line = raw.rstrip("\n")
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            parts = line.split("|", 2)
+            if len(parts) < 3 or not parts[2].strip():
+                raise ValueError(f"{path}:{number}: use caminho|linha|motivo")
+            entries[(parts[0].strip(), normalize(parts[1]).strip())] = number
+    return entries
 
 
 def is_test_file(name):
@@ -78,6 +104,7 @@ def main(argv):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--root", default=os.path.dirname(here))
     parser.add_argument("--denylist", default=os.path.join(here, "language_denylist.txt"))
+    parser.add_argument("--allow", default=os.path.join(here, "language_allow.txt"))
     args = parser.parse_args(argv)
 
     try:
@@ -86,16 +113,34 @@ def main(argv):
         print(f"check_language: não foi possível ler a lista: {error}", file=sys.stderr)
         return 2
     patterns = [(term, compile_term(term)) for term in terms]
+    try:
+        allow = load_allow(args.allow)
+    except (OSError, ValueError) as error:
+        print(f"check_language: lista de exceções inválida: {error}", file=sys.stderr)
+        return 2
+    used = set()
 
     hits = []
     for rel in SCAN_PATHS:
+        if not os.path.exists(os.path.join(args.root, rel)):
+            print(f"check_language: aviso: nada a varrer em {rel} (não existe)", file=sys.stderr)
         for path in files_under(args.root, rel):
             with open(os.path.join(args.root, path), encoding="utf-8") as handle:
                 for number, line in enumerate(handle, 1):
                     text = normalize(line)
+                    key = (path, text.strip())
                     for term, pattern in patterns:
                         if pattern.search(text):
-                            hits.append(f"{path}:{number}:{term}")
+                            if key in allow:
+                                used.add(key)
+                            else:
+                                hits.append(f"{path}:{number}:{term}")
+                    if key in allow:
+                        used.add(key)
+
+    for (path, _line), number in allow.items():
+        if (path, _line) not in used:
+            hits.append(f"{args.allow}:{number}:stale (linha de {path} não existe mais)")
 
     for hit in hits:
         print(hit)
