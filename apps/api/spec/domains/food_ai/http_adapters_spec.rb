@@ -126,6 +126,27 @@ RSpec.describe "FoodAi HTTP adapters" do
       end
     end
 
+    it "protocol and decompression failures raise TransientProviderError provider_unavailable" do
+      [ Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError, Net::ProtocolError, Zlib::Error ].each do |klass|
+        transport.queue(klass)
+        expect { analyze }.to raise_error(FoodAi::TransientProviderError) { |e| expect(e.code).to eq("provider_unavailable") }
+      end
+    end
+
+    it "a 200 without usage, or with malformed usage, raises InvalidOutputError missing_usage" do
+      missing_usage_replies.each do |bad|
+        transport.queue(bad)
+        expect { analyze }.to raise_error(FoodAi::InvalidOutputError) { |e| expect(e.code).to eq("missing_usage") }
+      end
+    end
+
+    it "an envelope with non-Hash intermediate values raises only coded errors" do
+      odd_envelopes.each do |envelope|
+        transport.queue(reply(200, envelope))
+        expect { analyze }.to raise_error(FoodAi::ProviderError)
+      end
+    end
+
     it "an unpriced model is refused with a code" do
       other = described_class.new(api_key: api_key, model: "not-a-model", transport: transport)
 
@@ -140,7 +161,16 @@ RSpec.describe "FoodAi HTTP adapters" do
                    usage: { input_tokens: 1500, output_tokens: 300 } })
     end
     let(:refusal_reply) { reply(200, { content: [], stop_reason: "refusal", usage: { input_tokens: 10, output_tokens: 0 } }) }
-    let(:non_json_reply) { reply(200, { content: [ { type: "text", text: "sorry" } ], usage: {} }) }
+    let(:non_json_reply) { reply(200, { content: [ { type: "text", text: "sorry" } ], usage: { input_tokens: 10, output_tokens: 2 } }) }
+    let(:missing_usage_replies) do
+      text = JSON.generate(payload)
+      [ reply(200, { content: [ { type: "text", text: text } ] }),
+        reply(200, { content: [ { type: "text", text: text } ], usage: "x" }),
+        reply(200, { content: [ { type: "text", text: text } ], usage: { input_tokens: "12", output_tokens: 3 } }),
+        reply(200, { content: [ { type: "text", text: text } ], usage: { input_tokens: 5 } }),
+        reply(200, { content: [ { type: "text", text: text } ], usage: { input_tokens: -1, output_tokens: 3 } }) ]
+    end
+    let(:odd_envelopes) { [ { content: "x", usage: {} }, { content: [ "x", 1, nil ], usage: [] }, { content: nil } ] }
 
     it_behaves_like "an http adapter", provider: "anthropic", model: "claude-haiku-5-5", input_tokens: 1500, output_tokens: 300
 
@@ -166,7 +196,20 @@ RSpec.describe "FoodAi HTTP adapters" do
                    usageMetadata: { promptTokenCount: 1200, candidatesTokenCount: 250, thoughtsTokenCount: 50 } })
     end
     let(:refusal_reply) { reply(200, { promptFeedback: { blockReason: "SAFETY" } }) }
-    let(:non_json_reply) { reply(200, { candidates: [ { content: { parts: [ { text: "nope" } ] }, finishReason: "STOP" } ] }) }
+    let(:non_json_reply) { reply(200, { candidates: [ { content: { parts: [ { text: "nope" } ] }, finishReason: "STOP" } ],
+                                    usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 2 } }) }
+    let(:missing_usage_replies) do
+      candidates = [ { content: { parts: [ { text: JSON.generate(payload) } ] }, finishReason: "STOP" } ]
+      [ reply(200, { candidates: candidates }),
+        reply(200, { candidates: candidates, usageMetadata: "x" }),
+        reply(200, { candidates: candidates, usageMetadata: { promptTokenCount: "12", candidatesTokenCount: 3 } }),
+        reply(200, { candidates: candidates, usageMetadata: { promptTokenCount: 5 } }) ]
+    end
+    let(:odd_envelopes) do
+      [ { promptFeedback: "blocked", candidates: [] }, { candidates: "x" }, { candidates: [ "x" ] },
+        { candidates: [ { content: "x" } ] }, { candidates: [ { content: { parts: "x" } } ] },
+        { candidates: [ { content: { parts: [ 1, nil ] } } ], usageMetadata: [] } ]
+    end
 
     it_behaves_like "an http adapter", provider: "gemini", model: "gemini-3.5-flash-lite", input_tokens: 1200, output_tokens: 300
 
@@ -200,7 +243,15 @@ RSpec.describe "FoodAi HTTP adapters" do
     let(:refusal_reply) do
       reply(200, { output: [ { type: "message", content: [ { type: "refusal", refusal: "I cannot help" } ] } ], usage: {} })
     end
-    let(:non_json_reply) { reply(200, { output: [ { type: "message", content: [ { type: "output_text", text: "hi" } ] } ], usage: {} }) }
+    let(:non_json_reply) { reply(200, { output: [ { type: "message", content: [ { type: "output_text", text: "hi" } ] } ], usage: { input_tokens: 10, output_tokens: 2 } }) }
+    let(:missing_usage_replies) do
+      output = [ { type: "message", content: [ { type: "output_text", text: JSON.generate(payload) } ] } ]
+      [ reply(200, { output: output }),
+        reply(200, { output: output, usage: "x" }),
+        reply(200, { output: output, usage: { input_tokens: "12", output_tokens: 3 } }),
+        reply(200, { output: output, usage: { output_tokens: 3 } }) ]
+    end
+    let(:odd_envelopes) { [ { output: "x" }, { output: [ "x", 1, nil ] }, { output: [ { type: "message", content: "x" } ], usage: [] } ] }
 
     it_behaves_like "an http adapter", provider: "openai", model: "gpt-6-luna", input_tokens: 2000, output_tokens: 400
 

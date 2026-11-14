@@ -56,6 +56,16 @@ RSpec.describe "FoodAi tables" do
       expect { bad.save!(validate: false) }.to raise_error(ActiveRecord::StatementInvalid, /food_analysis_results_error_code_known/)
     end
 
+    it "the database CHECK accepts every code a provider error can carry" do
+      pic = photo
+      codes = [ FoodAi::TransientProviderError, FoodAi::PermanentProviderError, FoodAi::InvalidOutputError ].flat_map { |k| k::CODES }
+      codes.each do |code|
+        row = described_class.new(user_id: user.id, photo_id: pic.id, provider: "p", model: "m", prompt_version: "v", schema_version: "1",
+                                  status: "failed", error_code: code, started_at: Time.current)
+        expect { row.save!(validate: false) }.not_to raise_error
+      end
+    end
+
     it "accepts every code a provider error can carry" do
       codes = [ FoodAi::TransientProviderError, FoodAi::PermanentProviderError, FoodAi::InvalidOutputError ].flat_map { |k| k::CODES }
       expect(described_class::ERROR_CODES).to include(*codes)

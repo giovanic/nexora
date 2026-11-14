@@ -1,4 +1,7 @@
 require "json"
+require "net/http"
+require "openssl"
+require "zlib"
 
 module FoodAi
   module Adapters
@@ -33,7 +36,8 @@ module FoodAi
         @transport.post_json(url: url, headers: headers, body: body, timeout: HttpTransport::DEFAULT_TIMEOUT)
       rescue Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, Timeout::Error
         raise TransientProviderError, "timeout"
-      rescue SocketError, SystemCallError, IOError, OpenSSL::SSL::SSLError
+      rescue SocketError, SystemCallError, IOError, OpenSSL::SSL::SSLError, Net::ProtocolError, Net::HTTPBadResponse,
+             Net::HTTPHeaderSyntaxError, Zlib::Error
         raise TransientProviderError, "provider_unavailable"
       end
 
@@ -70,6 +74,14 @@ module FoodAi
       rescue Pricing::UnknownModelError
         raise PermanentProviderError, "unsupported_model"
       end
+
+      # A token count the provider reported: an Integer of zero or more, else the answer is
+      # unusable (a silent 0 would corrupt cost records and the quota).
+      def tokens!(value)
+        value.is_a?(Integer) && !value.negative? ? value : raise(InvalidOutputError, "missing_usage")
+      end
+
+      def hash_or_empty(value) = value.is_a?(Hash) ? value : {}
 
       def base64(image) = [ image ].pack("m0")
     end

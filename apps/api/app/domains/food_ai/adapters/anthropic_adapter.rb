@@ -30,8 +30,8 @@ module FoodAi
         raise InvalidOutputError, "refusal" if parsed["stop_reason"] == "refusal"
 
         block = Array(parsed["content"]).find { |item| item.is_a?(Hash) && item["type"] == "text" }
-        usage = parsed["usage"].is_a?(Hash) ? parsed["usage"] : {}
-        [ block && block["text"], usage["input_tokens"].to_i, usage["output_tokens"].to_i ]
+        usage = hash_or_empty(parsed["usage"])
+        [ block && block["text"], tokens!(usage["input_tokens"]), tokens!(usage["output_tokens"]) ]
       end
     end
   end

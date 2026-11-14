@@ -30,17 +30,17 @@ module FoodAi
       end
 
       def extract(parsed)
-        raise InvalidOutputError, "refusal" if parsed.dig("promptFeedback", "blockReason")
+        raise InvalidOutputError, "refusal" if hash_or_empty(parsed["promptFeedback"])["blockReason"]
 
-        candidate = Array(parsed["candidates"]).first
-        candidate = {} unless candidate.is_a?(Hash)
-        parts = Array(candidate.dig("content", "parts"))
+        candidate = hash_or_empty(Array(parsed["candidates"]).first)
+        parts = Array(hash_or_empty(candidate["content"])["parts"])
         text = parts.filter_map { |part| part["text"] if part.is_a?(Hash) && !part["thought"] }.join
         raise InvalidOutputError, "refusal" if text.empty? && BLOCKED_FINISH_REASONS.include?(candidate["finishReason"])
 
-        usage = parsed["usageMetadata"].is_a?(Hash) ? parsed["usageMetadata"] : {}
+        usage = hash_or_empty(parsed["usageMetadata"])
+        thoughts = usage.key?("thoughtsTokenCount") ? tokens!(usage["thoughtsTokenCount"]) : 0
         # Thinking tokens are billed as output.
-        [ text, usage["promptTokenCount"].to_i, usage["candidatesTokenCount"].to_i + usage["thoughtsTokenCount"].to_i ]
+        [ text, tokens!(usage["promptTokenCount"]), tokens!(usage["candidatesTokenCount"]) + thoughts ]
       end
     end
   end
