@@ -38,7 +38,8 @@ RSpec.describe "account deletion scan", :real_consumers do
   def column_name(column) = connection.quote_column_name(column)
 
   def user_tables
-    (Shared::DataRegistry.user_data_tables(connection) | (Shared::DataRegistry.registered_tables & connection.tables)).sort
+    # food_photos first: the analyses point to it.
+    (Shared::DataRegistry.user_data_tables(connection) | (Shared::DataRegistry.registered_tables & connection.tables)).sort_by { |t| [ t == "food_photos" ? 0 : 1, t ] }
   end
 
   # A different value per row, so unique indexes do not refuse it.
@@ -55,10 +56,19 @@ RSpec.describe "account deletion scan", :real_consumers do
     end
   end
 
+  # Columns the database holds to a closed list or to another row, which a marker or a random
+  # uuid cannot fill. The value is SQL; user_id is the quoted owner.
+  ROW_VALUES = {
+    "ai_usage_records" => { "provider" => "'fake'", "model" => "'fake-1'" },
+    "food_analysis_results" => { "photo_id" => ->(user_id) { "(SELECT id FROM food_photos WHERE user_id = #{user_id} LIMIT 1)" } }
+  }.freeze
+
   # For a table the flow left without a row of the person, such as a new one.
   def insert_row(table, user_id, owner)
+    fixed = ROW_VALUES.fetch(table, {})
     values = connection.columns(table).filter_map do |column|
       next [ column.name, quote(user_id) ] if column.name == owner
+      next [ column.name, fixed[column.name].then { |v| v.respond_to?(:call) ? v.call(quote(user_id)) : v } ] if fixed.key?(column.name)
       next if column.null || column.default || column.default_function
 
       [ column.name, marker_expression(column) || filler(column) ]

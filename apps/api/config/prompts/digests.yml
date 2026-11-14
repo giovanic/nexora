@@ -1,0 +1,6 @@
+# sha256 of each registered prompt version. A registered version never changes: edit nothing here,
+# add a new version instead (spec "prompt versions are immutable").
+food_vision_v1:
+  schema_version: "1"
+  body: 84463e07ff8054dd96a0d0198c296c47d26c52d10c6c9e0d13ebb60114df4726
+  schema: 928e0920cc5f64637277a6de543ae8b87f05a98c56ee7b17e0389f9bb105911e

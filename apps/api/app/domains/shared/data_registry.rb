@@ -16,7 +16,8 @@ module Shared
     TABLES_WITHOUT_USER_DATA = {
       "consumed_events" => "Only a consumer name and an event id; its rows go with outbox_events (ON DELETE CASCADE).",
       "food_catalog" => "Reference foods (USDA and the project's dishes); no person, and searches are not stored.",
-      "food_compositions" => "Ingredients of the project's dishes; reference data with no person."
+      "food_compositions" => "Ingredients of the project's dishes; reference data with no person.",
+      "prompt_versions" => "Registry of the prompt versions in use (names and file references); no person."
     }.freeze
     # Contexts whose models hold only reference data, so they export and erase nothing.
     REFERENCE_CONTEXTS = %w[food_catalog].freeze

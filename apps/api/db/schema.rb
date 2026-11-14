@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_13_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -24,6 +24,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
     t.index ["user_id"], name: "index_account_deletions_on_user_id", unique: true
     t.check_constraint "array_to_string(pending_contexts, ','::text) ~ '^([a-z][a-z_]*(,|$))*$'::text", name: "account_deletions_contexts_format"
     t.check_constraint "completed_at IS NULL OR cardinality(pending_contexts) = 0", name: "account_deletions_completed_when_empty"
+  end
+
+  create_table "ai_usage_records", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "analysis_id"
+    t.uuid "user_id"
+    t.string "provider", null: false
+    t.string "model", null: false
+    t.integer "input_tokens", default: 0, null: false
+    t.integer "output_tokens", default: 0, null: false
+    t.decimal "cost_usd", precision: 12, scale: 8, default: "0.0", null: false
+    t.datetime "occurred_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["analysis_id"], name: "index_ai_usage_records_on_analysis_id"
+    t.index ["occurred_at"], name: "index_ai_usage_records_on_occurred_at"
+    t.index ["user_id", "occurred_at"], name: "index_ai_usage_records_on_user_id_and_occurred_at"
+    t.check_constraint "input_tokens >= 0 AND output_tokens >= 0 AND cost_usd >= 0::numeric", name: "ai_usage_records_non_negative"
+    t.check_constraint "model::text = ANY (ARRAY['claude-haiku-5-5'::character varying, 'claude-sonnet-5-5'::character varying, 'gemini-3.8-flash'::character varying, 'gemini-3.5-flash-lite'::character varying, 'gpt-6-luna'::character varying, 'gpt-6.1-terra'::character varying, 'fake-1'::character varying]::text[])", name: "ai_usage_records_model_known"
+    t.check_constraint "provider::text = ANY (ARRAY['anthropic'::character varying, 'gemini'::character varying, 'openai'::character varying, 'fake'::character varying]::text[])", name: "ai_usage_records_provider_known"
   end
 
   create_table "audit_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -58,6 +77,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
     t.index ["event_id"], name: "index_consumed_events_on_event_id"
   end
 
+  create_table "food_analysis_results", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "food_entry_id"
+    t.uuid "user_id", null: false
+    t.uuid "photo_id", null: false
+    t.string "provider", null: false
+    t.string "model", null: false
+    t.string "prompt_version", null: false
+    t.string "schema_version", null: false
+    t.string "status", default: "running", null: false
+    t.jsonb "raw_response"
+    t.string "error_code"
+    t.datetime "started_at", null: false
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["food_entry_id"], name: "index_food_analysis_results_on_food_entry_id"
+    t.index ["photo_id", "prompt_version"], name: "index_food_analysis_results_one_live_run", unique: true, where: "((status)::text <> ALL ((ARRAY['failed'::character varying, 'cancelled'::character varying])::text[]))"
+    t.index ["prompt_version", "status"], name: "index_food_analysis_results_on_prompt_and_status"
+    t.index ["user_id", "started_at"], name: "index_food_analysis_results_on_user_and_started_at"
+    t.check_constraint "error_code IS NULL OR (error_code::text = ANY (ARRAY['timeout'::character varying, 'rate_limited'::character varying, 'provider_unavailable'::character varying, 'bad_request'::character varying, 'unauthorized'::character varying, 'model_unavailable'::character varying, 'unsupported_model'::character varying, 'not_an_object'::character varying, 'missing_field'::character varying, 'unexpected_field'::character varying, 'wrong_type'::character varying, 'out_of_range'::character varying, 'too_many_items'::character varying, 'invalid_text'::character varying, 'unknown_value'::character varying, 'forbidden_field'::character varying, 'refusal'::character varying, 'consent_revoked'::character varying, 'photo_missing'::character varying]::text[]))", name: "food_analysis_results_error_code_known"
+    t.check_constraint "status::text = ANY (ARRAY['running'::character varying, 'succeeded'::character varying, 'no_food'::character varying, 'unreadable'::character varying, 'failed'::character varying, 'cancelled'::character varying]::text[])", name: "food_analysis_results_status_known"
+  end
+
   create_table "food_catalog", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "source", null: false
     t.string "source_version", null: false
@@ -88,6 +130,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
     t.check_constraint "grams_per_100g > 0::numeric AND grams_per_100g <= 100::numeric", name: "food_compositions_grams_in_range"
   end
 
+  create_table "food_photos", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.uuid "food_entry_id"
+    t.string "client_request_id", null: false
+    t.string "object_key", null: false
+    t.string "content_type", null: false
+    t.integer "byte_size"
+    t.string "status", default: "awaiting_upload", null: false
+    t.datetime "authorized_at", null: false
+    t.datetime "analyzed_at"
+    t.datetime "deleted_at"
+    t.datetime "quota_refunded_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["food_entry_id"], name: "index_food_photos_on_food_entry_id"
+    t.index ["object_key"], name: "index_food_photos_on_object_key", unique: true
+    t.index ["status", "analyzed_at"], name: "index_food_photos_on_status_and_analyzed_at"
+    t.index ["status", "authorized_at"], name: "index_food_photos_on_status_and_authorized_at"
+    t.index ["user_id", "authorized_at"], name: "index_food_photos_on_user_and_authorized_at"
+    t.index ["user_id", "client_request_id"], name: "index_food_photos_on_user_id_and_client_request_id", unique: true
+    t.check_constraint "status::text = ANY (ARRAY['awaiting_upload'::character varying, 'stored'::character varying, 'deleted'::character varying]::text[])", name: "food_photos_status_known"
+  end
+
   create_table "outbox_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
     t.integer "version", default: 1, null: false
@@ -105,6 +170,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
     t.check_constraint "jsonb_typeof(payload) = 'object'::text", name: "outbox_events_payload_object"
     t.check_constraint "name::text ~ '^[a-z][a-z_]*(\\.[a-z][a-z_]*)+$'::text", name: "outbox_events_name_format"
     t.check_constraint "version >= 1", name: "outbox_events_version_positive"
+  end
+
+  create_table "prompt_versions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "version", null: false
+    t.string "schema_version", null: false
+    t.string "body_ref", null: false
+    t.datetime "activated_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["version"], name: "index_prompt_versions_on_version", unique: true
   end
 
   create_table "sessions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -164,10 +239,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
   end
 
   add_foreign_key "account_deletions", "users"
+  add_foreign_key "ai_usage_records", "food_analysis_results", column: "analysis_id", on_delete: :nullify
+  add_foreign_key "ai_usage_records", "users"
   add_foreign_key "consent_records", "users"
   add_foreign_key "consumed_events", "outbox_events", column: "event_id", on_delete: :cascade
+  add_foreign_key "food_analysis_results", "food_photos", column: "photo_id", on_delete: :cascade
+  add_foreign_key "food_analysis_results", "users"
   add_foreign_key "food_compositions", "food_catalog", column: "catalog_item_id", on_delete: :cascade
   add_foreign_key "food_compositions", "food_catalog", column: "ingredient_catalog_item_id"
+  add_foreign_key "food_photos", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "sport_profiles", "users"
   add_foreign_key "user_profiles", "users"
