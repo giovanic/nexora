@@ -63,7 +63,13 @@ module FoodAi
         next unless photo&.status == "stored" && photo.quota_refunded_at.nil?
 
         prompt = PromptCatalog.current
-        analysis = new_analysis(photo, prompt, status: "failed", error_code: "internal_error", finished_at: Time.current)
+        # An analysis that already concluded, or a run another job still owns, must not be failed
+        # (the error that exhausted the retries may have come after the result was saved).
+        live = AnalysisResult.where(photo_id: photo.id, prompt_version: prompt.version).where.not(status: %w[failed cancelled]).first
+        next if live && (LIVE_STATUSES.include?(live.status) || live.updated_at >= STALE_AFTER.ago)
+
+        live&.update!(status: "failed", error_code: "internal_error", finished_at: Time.current)
+        analysis = live || new_analysis(photo, prompt, status: "failed", error_code: "internal_error", finished_at: Time.current)
         finish_failed(photo, analysis)
       end
     end
@@ -81,6 +87,7 @@ module FoodAi
         prompt = PromptCatalog.current
         live = AnalysisResult.lock.where(photo_id: photo.id, prompt_version: prompt.version).where.not(status: %w[failed cancelled]).first
         if live
+          # Only a succeeded run gets here still stored: no_food and unreadable delete the photo, which ends the claim above.
           next republish(live) if LIVE_STATUSES.include?(live.status)
           next unless live.updated_at < STALE_AFTER.ago
 

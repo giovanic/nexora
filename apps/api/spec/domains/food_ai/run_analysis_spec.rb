@@ -155,6 +155,51 @@ RSpec.describe "FoodAi analysis pipeline" do
       expect(analyses.pluck(:status)).to contain_exactly("failed", "succeeded")
     end
 
+    it "first job finishes after its stale running row was taken over: late result discarded, cost kept, one result and one event" do
+      adapter = scripted(FoodAiAdapter::RICE)
+      nested = false
+      allow(adapter).to receive(:analyze).and_wrap_original do |original, **args|
+        unless nested
+          nested = true
+          analyses.update_all(updated_at: 1.hour.ago) # the first run looks dead, and a second job takes it over
+          run_job(photo)
+        end
+        original.call(**args)
+      end
+
+      run_job(photo)
+
+      expect(analyses.pluck(:status)).to contain_exactly("failed", "succeeded")
+      expect(FoodAi::UsageRecord.count).to eq(2)
+      expect(FoodAi::UsageRecord.pluck(:analysis_id)).to match_array(analyses.pluck(:id))
+      expect(completed_events.map { |event| event["outcome"] }).to eq([ "analyzed" ])
+      expect(photo.reload.quota_refunded_at).to be_nil
+    end
+
+    it "give_up after an analysis that succeeded neither fails nor refunds the photo" do
+      scripted(FoodAiAdapter::RICE)
+      run_job(photo)
+      allow_any_instance_of(FoodAi::RunAnalysis).to receive(:republish).and_raise(RuntimeError)
+      expect { run_job(photo) }.to raise_error(RuntimeError) # the redelivery fails after success, and Sidekiq runs out of retries
+
+      FoodAi::RunAnalysis.give_up(photo_id: photo.id)
+
+      expect(analyses.sole.status).to eq("succeeded")
+      expect(photo.reload.quota_refunded_at).to be_nil
+      expect(completed_events.map { |event| event["outcome"] }).to eq([ "analyzed" ])
+    end
+
+    it "give_up leaves a fresh running run of another job alone" do
+      prompt = FoodAi::PromptCatalog.current
+      FoodAi::AnalysisResult.create!(photo_id: photo.id, user_id: user.id, provider: "x", model: "y", prompt_version: prompt.version,
+                                     schema_version: prompt.schema_version, status: "running", started_at: Time.current)
+
+      FoodAi::RunAnalysis.give_up(photo_id: photo.id)
+
+      expect(photo.reload.quota_refunded_at).to be_nil
+      expect(completed_events).to be_empty
+    end
+
     it "leaves a fresh running run alone" do
       adapter = scripted(FoodAiAdapter::RICE)
       FoodAi::AnalysisResult.create!(photo_id: photo.id, user_id: user.id, provider: "x", model: "y", prompt_version: prompt.version,
