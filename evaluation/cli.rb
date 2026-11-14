@@ -17,8 +17,7 @@ require_relative "catalog_check"
 module Evaluation
   module Run
     ROOT = __dir__
-    REPORTS = File.join(ROOT, "reports")
-    EXPECTED_ENV = { "anthropic" => "ANTHROPIC_API_KEY", "gemini" => "GEMINI_API_KEY", "openai" => "OPENAI_API_KEY" }.freeze
+        EXPECTED_ENV = { "anthropic" => "ANTHROPIC_API_KEY", "gemini" => "GEMINI_API_KEY", "openai" => "OPENAI_API_KEY" }.freeze
 
     module_function
 
@@ -50,7 +49,7 @@ module Evaluation
       { version: manifest.fetch("dataset_version"), total: images.size, categories: }
     end
 
-    def main(argv, env: ENV, out: $stdout, err: $stderr)
+    def main(argv, env: ENV, out: $stdout, err: $stderr, root: ROOT)
       options = parse(argv)
       catalog_only = options["CATALOG_ONLY"].to_s == "1"
       pairs = providers_from(options["PROVIDERS"])
@@ -58,20 +57,21 @@ module Evaluation
         message = refusal(pairs, env:)
         return fail_with(err, message) if message
       end
-      return fail_with(err, "O catálogo está vazio. Rode `bin/rails food_catalog:load`.") if FoodCatalog::CatalogItem.none?
+      return fail_with(err, "O catálogo está vazio. Rode `bin/rails food_catalog:load`.") if !FoodCatalog::Api.loaded?
 
-      manifest = YAML.safe_load_file(File.join(ROOT, "manifest.yml"))
-      annotations = YAML.safe_load_file(File.join(ROOT, "annotations.yml"))
+      manifest = YAML.safe_load_file(File.join(root, "manifest.yml"))
+      annotations = YAML.safe_load_file(File.join(root, "annotations.yml"))
       dir = Fetch.images_dir(env)
       runner = Runner.new(manifest:, annotations:, dir:)
       date = Date.today.iso8601
       round = options["ROUND"].to_s.strip
       round = catalog_only ? "pre-provider" : "r1" if round.empty?
-      FileUtils.mkdir_p(REPORTS)
-      path = File.join(REPORTS, "#{date}-#{round}.md")
+      reports = File.join(root, "reports")
+      path = File.join(reports, "#{date}-#{round}.md")
       catalog = CatalogCheck.call(annotations)
 
       if catalog_only
+        FileUtils.mkdir_p(reports)
         File.write(path, Report.render_catalog_only(date:, round:, dataset: dataset_summary(manifest), catalog:))
         out.puts "report: #{path}"
         return 0
@@ -80,13 +80,23 @@ module Evaluation
       missing = missing_images(manifest, dir)
       return fail_with(err, "Imagens ausentes ou alteradas em #{dir}: #{missing.size}. Rode `ruby evaluation/fetch.rb`.") unless missing.empty?
 
-      results = pairs.to_h do |provider, model|
-        adapter = FoodAi.adapter_for(provider:, model:)
-        records = runner.images.map do |entry|
-          runner.evaluate(entry, adapter:).tap { |record| out.puts "#{provider}:#{model} #{record[:image]} #{record[:status]} #{record[:error]}".strip }
+      results = {}
+      pairs.each do |provider, model|
+        label = "#{provider}:#{model}"
+        begin
+          adapter = FoodAi.adapter_for(provider:, model:)
+        rescue FoodAi::PermanentProviderError => error
+          return abort_round(err, label, error.code)
         end
-        [ "#{provider}:#{model}", records ]
+        results[label] = runner.images.map do |entry|
+          record = runner.evaluate(entry, adapter:)
+          out.puts "#{label} #{record[:image]} #{record[:status]} #{record[:error]}".strip
+          return abort_round(err, label, record[:error]) if record[:error] == "unauthorized"
+
+          record
+        end
       end
+      FileUtils.mkdir_p(reports)
       File.write(path, Report.render(date:, round:, prompt_version: FoodAi::PromptCatalog.current.version, dataset: dataset_summary(manifest), providers: results, catalog:))
       out.puts "report: #{path}"
       0
@@ -97,6 +107,11 @@ module Evaluation
         path = File.join(dir, entry["file"])
         File.file?(path) && Fetch.sha256(File.binread(path)) == entry["sha256"]
       end
+    end
+
+    # A key the provider refuses would fail every photo and cost nothing but time: stop at the first.
+    def abort_round(err, label, code)
+      fail_with(err, "#{label} recusou a chamada (#{code}): chave inválida ou sem acesso ao modelo. Rodada abortada, nenhum relatório gravado.")
     end
 
     def fail_with(err, message)

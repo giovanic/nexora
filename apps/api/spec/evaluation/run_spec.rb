@@ -50,6 +50,75 @@ RSpec.describe Evaluation::Run do
     end
   end
 
+  describe ".main with real files" do
+    require "tmpdir"
+    require "support/image_fixtures"
+    require "support/food_ai_adapter"
+
+    let(:root) { Dir.mktmpdir("evaluation-root") }
+    let(:images) { Dir.mktmpdir("evaluation-images") }
+    let(:env) { { "ANTHROPIC_API_KEY" => "k", "EVALUATION_IMAGES_DIR" => images } }
+    let(:out) { StringIO.new }
+    let(:err) { StringIO.new }
+
+    before do
+      FoodCatalog::CatalogItem.create!(source: "usda_fdc", source_version: "v1", source_item_id: "1", license: "CC0-1.0", name: "Arroz branco cozido",
+                                       name_pt: "Arroz branco cozido", kind: "ingredient",
+                                       nutrients_per_100g: { "energy_kcal" => 130, "protein_g" => 2.7, "carbs_g" => 28, "fat_g" => 0.3 })
+      entries = %w[a b].map do |id|
+        bytes = ImageFixtures.jpeg
+        File.binwrite(File.join(images, "#{id}.jpg"), bytes)
+        { "id" => id, "category" => "brazilian", "file" => "#{id}.jpg", "sha256" => Digest::SHA256.hexdigest(bytes) }
+      end
+      File.write(File.join(root, "manifest.yml"), YAML.dump("dataset_version" => 1, "images" => entries))
+      File.write(File.join(root, "annotations.yml"), YAML.dump("catalog_truth" => { "arroz branco cozido" => [ "Arroz branco cozido" ] },
+                                                               "annotations" => entries.to_h { [ _1["id"], { "expect" => "food", "items" => [ { "name" => "arroz branco cozido" } ] } ] }))
+    end
+
+    after do
+      FileUtils.remove_entry(root)
+      FileUtils.remove_entry(images)
+    end
+
+    it "aborts the round at the first unauthorized answer, with a clear message, instead of failing every photo" do
+      refused = FoodAiAdapter::ScriptedAdapter.new(steps: [ FoodAi::PermanentProviderError.new("unauthorized") ])
+      allow(FoodAi).to receive(:adapter_for).and_return(refused)
+
+      status = described_class.main([ "PROVIDERS=anthropic:claude-haiku-5-5" ], env:, out:, err:, root:)
+
+      expect(status).to eq(1)
+      expect(refused.calls).to eq(1)
+      expect(err.string).to include("anthropic:claude-haiku-5-5", "unauthorized", "Rodada abortada")
+      expect(Dir.glob(File.join(root, "reports", "*"))).to be_empty
+    end
+
+    it "aborts when the adapter cannot even start for lack of a key (unauthorized raised by adapter_for)" do
+      allow(FoodAi).to receive(:adapter_for).and_raise(FoodAi::PermanentProviderError, "unauthorized")
+
+      expect(described_class.main([ "PROVIDERS=anthropic:claude-haiku-5-5" ], env:, out:, err:, root:)).to eq(1)
+      expect(err.string).to include("Rodada abortada")
+    end
+
+    it "goes through every image otherwise and writes the report" do
+      answer = { "contains_food" => true, "image_quality" => "good", "note_codes" => [],
+                 "items" => [ { "name" => "arroz branco cozido", "preparation" => "", "confidence" => 0.9, "hidden_ingredients_possible" => false,
+                                "portion" => { "grams_min" => 90, "grams_likely" => 100, "grams_max" => 120, "household_measure" => "1 porção" } } ] }
+      working = FoodAiAdapter::ScriptedAdapter.new(steps: [ answer ])
+      allow(FoodAi).to receive(:adapter_for).and_return(working)
+
+      expect(described_class.main([ "PROVIDERS=anthropic:claude-haiku-5-5", "ROUND=t" ], env:, out:, err:, root:)).to eq(0)
+      expect(working.calls).to eq(2)
+      expect(Dir.glob(File.join(root, "reports", "*-t.md")).size).to eq(1)
+    end
+
+    it "does not touch the catalog table from the CLI: it asks FoodCatalog::Api" do
+      expect(FoodCatalog::Api).to receive(:loaded?).and_return(false)
+
+      expect(described_class.main([ "PROVIDERS=anthropic:claude-haiku-5-5" ], env:, out:, err:, root:)).to eq(1)
+      expect(err.string).to include("food_catalog:load")
+    end
+  end
+
   describe Evaluation::Report do
     def record(overrides = {})
       { image: "n5k-1", expect: "food", status: "succeeded", latency: 2.0, cost: BigDecimal("0.003"), input_tokens: 1000, output_tokens: 200, error: nil,
@@ -66,6 +135,7 @@ RSpec.describe Evaluation::Run do
 
       expect(text).to include("# Avaliação do Food AI: 2026-11-20 (r1)", "anthropic:claude-haiku-5-5", "MAX_OUTPUT_TOKENS", "not_an_object", "n5k-1", "commons-1")
       expect(text).to include("Taxa de falha | 50,0%")
+      expect(text).to include("Custo por foto respondida (US$) | 0,00300", "Custo por imagem, falhas incluídas (US$) | 0,00150", "Itens com peso real zero ignorados")
       expect(text).not_to include("texto secreto do modelo")
     end
 
@@ -75,6 +145,17 @@ RSpec.describe Evaluation::Run do
 
       expect(described_class.render(date: "d", round: "r", prompt_version: "v", dataset:, providers: slow)).to include("Atenção (AC-03-14)")
       expect(described_class.render(date: "d", round: "r", prompt_version: "v", dataset:, providers: fast)).to include("Nenhum provedor passou de 60 s")
+    end
+
+    it "says what moving from the current to the suggested threshold costs, and that it is a candidate to recalibrate" do
+      current = { threshold: 0.45, right: 26, wrong: 3, missed: 10, unmatched_ok: 1 }
+      suggested = { threshold: 0.55, right: 19, wrong: 2, missed: 18, unmatched_ok: 1 }
+      catalog = { names: [], table: [ current, suggested ], suggested: 0.55, current:, current_threshold: 0.45, occurrences: { total: 4, matched: 3 } }
+
+      text = described_class.render_catalog_only(date: "d", round: "pre-provider", dataset:, catalog:)
+
+      expect(text).to include("Do limiar atual (0,45) ao sugerido (0,55): -7 certos, -1 errados")
+      expect(text).to include("candidato, não uma decisão", "nomes vêm das anotações do projeto, não de saídas dos provedores", "recalibrar")
     end
 
     it "renders the catalog section with the sweep and the suggested threshold" do

@@ -189,4 +189,57 @@ RSpec.describe Evaluation::Fetch do
       expect(described_class.main(manifest_path:, dir: File.join(@dir, "bad"), http: bad, out: StringIO.new)).to eq(1)
     end
   end
+
+  describe "a derivative that does not match, and --print-derived" do
+    let(:original) { png }
+    let(:recipe) { { "op" => "darken", "factor" => 0.1 } }
+    let(:real_sha) { sha(described_class.derive(recipe, original)) }
+    let(:manifest) do
+      { "render" => { "libvips" => "0.0.0", "font" => "DejaVu Sans Bold" },
+        "images" => [ { "id" => "a", "file" => "a.png", "sha256" => sha(original), "fetch" => { "method" => "https", "url" => "https://h/a.png" } },
+                      { "id" => "a-dark", "file" => "a-dark.png", "sha256" => "0" * 64, "derived_from" => "a", "change" => "x", "derive" => recipe } ] }
+    end
+
+    def manifest_file
+      path = File.join(@dir, "manifest.yml")
+      File.write(path, YAML.dump(manifest))
+      path
+    end
+
+    it "reports the sha256 it got, not only that it differs" do
+      transport, = fake_http("https://h/a.png" => original)
+
+      result = described_class.run(manifest:, dir: @dir, http: transport)
+
+      expect(result[:failures]).to eq([ { id: "a-dark", reason: "mismatch", actual: real_sha } ])
+    end
+
+    it "says in the failure which libvips this machine has and which one the manifest was made with, with the hash obtained" do
+      transport, = fake_http("https://h/a.png" => original)
+      out = StringIO.new
+
+      status = described_class.main(manifest_path: manifest_file, dir: File.join(@dir, "img"), http: transport, out:)
+
+      expect(status).to eq(1)
+      expect(out.string).to include("FAIL a-dark: mismatch", "obtained sha256 #{real_sha}", "libvips here #{Vips.version_string}", "manifest libvips 0.0.0")
+    end
+
+    it "--print-derived prints the id and sha256 of each derivative for this environment, and changes nothing" do
+      File.binwrite(File.join(@dir, "a.png"), original)
+      out = StringIO.new
+
+      status = described_class.print_derived(manifest:, dir: @dir, out:)
+
+      expect(status).to eq(0)
+      expect(out.string).to include("a-dark #{real_sha}", "libvips #{Vips.version_string}")
+      expect(File.exist?(File.join(@dir, "a-dark.png"))).to be(false)
+    end
+
+    it "--print-derived fails when a source image is not in the folder (run fetch.rb first)" do
+      out = StringIO.new
+
+      expect(described_class.print_derived(manifest:, dir: @dir, out:)).to eq(1)
+      expect(out.string).to include("a-dark", "fetch.rb")
+    end
+  end
 end

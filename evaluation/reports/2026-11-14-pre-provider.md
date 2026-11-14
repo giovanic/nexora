@@ -20,7 +20,9 @@ Limiar atual `MATCH_THRESHOLD` = 0,45: 105 de 178 itens esperados (59,0%) encont
 | 0,65 | 12 | 2 | 25 | 1 |
 | 0,70 | 6 | 2 | 31 | 1 |
 
-**Limiar sugerido: 0,55** (o menor com menos correspondências erradas e mais certas). Quem decide é o responsável; esta tarefa não altera `MATCH_THRESHOLD`.
+**Limiar sugerido: 0,55**, um candidato, não uma decisão: é o menor com menos correspondências erradas e, entre esses, mais certas. Do limiar atual (0,45) ao sugerido (0,55): -7 certos, -1 errados.
+
+Ressalva: os nomes vêm das anotações do projeto, não de saídas dos provedores. Os nomes que um modelo escreve ("peito de frango grelhado", "arroz") são outros, então a rodada real precisa recalibrar o limiar antes de qualquer mudança em `MATCH_THRESHOLD`, que é do responsável.
 
 Correspondências erradas no limiar sugerido: arroz branco (Arroz branco cru, 0,76); batata assada (Batata-doce assada, 0,72). Subir o limiar não corrige uma correspondência errada de similaridade alta: isso pede ajuste do catálogo ou dos nomes.
 

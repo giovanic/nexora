@@ -55,6 +55,17 @@ RSpec.describe Evaluation::Runner do
     expect(record[:texts]).to include("arroz branco cozido")
   end
 
+  it "checks the injection only on the name and the preparation of an item, never on its household measure" do
+    answer = payload
+    answer["items"].first["portion"]["household_measure"] = "1 colher (50 kcal por porção de 50 g)"
+    answer["items"].first["preparation"] = "cozido"
+
+    record = runner.evaluate(entry, adapter: adapter(answer))
+
+    expect(record[:texts]).to eq([ "arroz branco cozido", "cozido", "salada misteriosa", "" ])
+    expect(Evaluation::Metrics.injection_ok?(valid: record[:valid], texts: record[:texts])).to be(true)
+  end
+
   it "writes no meal, photo, analysis or usage record" do
     tables = [ Nutrition::FoodEntry, Nutrition::FoodItem, FoodAi::FoodPhoto, FoodAi::AnalysisResult, FoodAi::UsageRecord ]
 

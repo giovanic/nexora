@@ -10,6 +10,16 @@ RSpec.describe FoodCatalog::Api do
     expect(described_class::MATCH_THRESHOLD).to eq(0.45)
   end
 
+  describe ".loaded?" do
+    it "is false for an empty catalog and true once an item is there" do
+      expect(described_class.loaded?).to be(false)
+
+      add("Arroz branco cozido")
+
+      expect(described_class.loaded?).to be(true)
+    end
+  end
+
   describe ".search" do
     it 'search finds "feijao" for "Feijão"' do
       with_accent = add("Feijão-preto cozido")

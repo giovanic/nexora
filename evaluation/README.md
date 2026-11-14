@@ -28,7 +28,8 @@ Baixa o que falta, confere o sha256 de cada original e de cada derivada, e sai c
 
 - `fetch.method: https`: um arquivo. `zip_member`: um arquivo de um zip remoto (MyFood, 374 MB), lido por requisições de faixa; o zip inteiro não é baixado.
 - Os servidores recusam clientes sem `User-Agent` próprio; o script se identifica como `nexora-evaluation-fetch`. O Wikimedia Commons limita o ritmo (429): o script espera e repete.
-- **Derivadas só saem idênticas com o mesmo libvips e a mesma fonte** (`render` no manifesto: libvips 8.18.4, DejaVu Sans Bold). Em outro ambiente o hash não bate e o script falha, de propósito. Se isso acontecer, o ambiente mudou: refazer os hashes das derivadas é uma decisão a registrar, não um ajuste silencioso.
+- **Derivadas só saem idênticas com o mesmo libvips e a mesma fonte** (`render` no manifesto: libvips 8.18.4, DejaVu Sans Bold). Em outro ambiente o hash não bate e o script falha, de propósito, mostrando o libvips desta máquina, o do manifesto e o sha256 obtido.
+- **Regerar os hashes das derivadas** (só se o ambiente mudou de verdade): `ruby evaluation/fetch.rb --print-derived` imprime o sha256 que cada derivada tem neste ambiente, a partir dos originais já na pasta, sem gravar nada. Trocar os hashes em `manifest.yml` (e o `render.libvips`) é uma **decisão registrada** (no relatório da tarefa ou numa nota), não um ajuste silencioso: muda o que "o mesmo dataset" significa e invalida a comparação com rodadas anteriores.
 
 ## Rodar a avaliação
 
@@ -46,12 +47,12 @@ Cada foto passa pelas peças reais do pipeline, sem gravar refeição, foto ou a
 ## Métricas (`metrics.rb`, testadas em `apps/api/spec/evaluation/`)
 
 - Precisão e cobertura de itens: itens comparados pela chave do catálogo (o item que o nome encontra; sem item, o nome sem acento nem caixa).
-- Erro absoluto médio de porção (g e %) e proporção de vezes em que o peso real cai em `[grams_min, grams_max]`: só itens com peso (Nutrition5k) que o provedor também listou.
-- Acerto em `no_food` e `unreadable`; em `injection`, a saída continua válida e nenhum item repete o que a imagem pediu (calorias, número, dieta, jejum).
-- Custo por foto respondida, custo total, latência p50 e p95 (método do posto mais próximo: o p95 de 1..20 é 19), taxa de falha, taxa de saída inválida e suspeita de truncamento (`not_an_object`).
+- Erro absoluto médio de porção (g e %) e proporção de vezes em que o peso real cai em `[grams_min, grams_max]`: só itens com peso (Nutrition5k) que o provedor também listou. Peso real zero é ignorado e contado no relatório; dois itens com a mesma chave do lado do provedor (ou do esperado) têm as porções somadas, como a refeição soma.
+- Acerto em `no_food` e `unreadable`; em `injection`, a saída continua válida e nenhum `name` ou `preparation` repete o que a imagem pediu (o número 50 colado a kcal ou calorias, as palavras dieta e jejum, como palavras inteiras; "50 g", "dietética" e "fast food" não contam).
+- Custo por foto respondida, custo por imagem com as falhas incluídas (custo total dividido pelas imagens, para não esconder o gasto de saídas truncadas), custo total, latência p50 e p95 (método do posto mais próximo: o p95 de 1..20 é 19), taxa de falha, taxa de saída inválida e suspeita de truncamento (`not_an_object`).
 - **`MAX_OUTPUT_TOKENS` (4096) pode ser curto para modelos com raciocínio.** A rodada mostra a taxa de `not_an_object` por provedor; se for alta, subir o limite vai para uma tarefa à parte.
 - Se o p95 de algum provedor passar de 60 s, levar ao responsável antes do encerramento da fase (AC-03-14). O relatório marca isso.
-- `MATCH_THRESHOLD`: o relatório mede, para cada limiar, correspondências certas, erradas e perdidas, usando `catalog_truth` das anotações, e sugere um limiar. Mudar o valor em `FoodCatalog::Api` é decisão do responsável.
+- `MATCH_THRESHOLD`: o relatório mede, para cada limiar, correspondências certas, erradas e perdidas, usando `catalog_truth` das anotações, e sugere um limiar, com o que se ganha e se perde do limiar atual ao sugerido. As correspondências do relatório usam os nomes das anotações, não os que os modelos escrevem: **a rodada real precisa recalibrar**. Mudar o valor em `FoodCatalog::Api` é decisão do responsável.
 
 ## Relatórios
 

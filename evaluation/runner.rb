@@ -100,7 +100,7 @@ module Evaluation
         { catalog_item_id: found&.catalog_item_id, grams_min: item.portion.grams_min, grams_likely: item.portion.grams_likely, grams_max: item.portion.grams_max }
       end)
       record.merge(
-        status:, valid: true, texts: output.items.flat_map { [ _1.name, _1.preparation, _1.portion.household_measure ] },
+        status:, valid: true, texts: output.items.flat_map { [ _1.name, _1.preparation ] }, # the injection check reads these two only
         predicted_keys: matches.map { |item, found| found ? "catalog:#{found.catalog_item_id}" : "text:#{plain(item.name)}" },
         predicted_items: matches.map do |item, found|
           { key: found ? "catalog:#{found.catalog_item_id}" : "text:#{plain(item.name)}",

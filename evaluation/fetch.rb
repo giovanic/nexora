@@ -3,6 +3,7 @@
 #
 #   ruby evaluation/fetch.rb          (needs the ruby-vips gem and libvips; no Rails)
 #   cd apps/api && bundle exec ruby ../../evaluation/fetch.rb
+#   ruby evaluation/fetch.rb --print-derived   (prints the derivative hashes of this environment; changes nothing)
 #
 # Images go to $EVALUATION_IMAGES_DIR, or to ~/.cache/nexora-evaluation. Every original and every derivative is
 # checked against the sha256 of the manifest: a file that does not match is never kept, and the exit status is 1.
@@ -27,7 +28,15 @@ module Evaluation
 
     class Error < StandardError; end
     # The bytes are not the ones the manifest names. The message carries the image id only, never content.
-    class Mismatch < Error; end
+    class Mismatch < Error
+      # actual: the sha256 of the bytes obtained (a hash is not content, so it may be shown).
+      attr_reader :actual
+
+      def initialize(message, actual: nil)
+        super(message)
+        @actual = actual
+      end
+    end
 
     module_function
 
@@ -39,7 +48,8 @@ module Evaluation
     def sha256(bytes) = Digest::SHA256.hexdigest(bytes)
 
     def verify!(entry, bytes)
-      raise Mismatch, "sha256 mismatch for #{entry['id']}" unless sha256(bytes) == entry["sha256"]
+      actual = sha256(bytes)
+      raise Mismatch.new("sha256 mismatch for #{entry['id']}", actual:) unless actual == entry["sha256"]
 
       bytes
     end
@@ -195,8 +205,8 @@ module Evaluation
           ready[entry["id"]] = true
           result[:verified] += 1
           result[:downloaded] += 1
-        rescue Mismatch
-          result[:failures] << { id: entry["id"], reason: "mismatch" }
+        rescue Mismatch => error
+          result[:failures] << { id: entry["id"], reason: "mismatch", actual: error.actual }
         rescue Error, SystemCallError, SocketError, Timeout::Error, OpenSSL::SSL::SSLError, Net::ProtocolError, IOError => error
           result[:failures] << { id: entry["id"], reason: error.is_a?(Error) && error.message == "no source" ? "no_source" : "unavailable" }
         end
@@ -213,13 +223,40 @@ module Evaluation
       derive(entry["derive"], File.binread(File.join(dir, files.fetch(source))))
     end
 
+    def libvips_version
+      require "vips"
+      Vips.version_string
+    end
+
+    # --print-derived: the sha256 each derivative gets in THIS environment, from the originals already in the folder.
+    # Writes nothing. To adopt other hashes (new libvips or font) is a decision to record, see README.md.
+    def print_derived(manifest:, dir:, out: $stdout)
+      files = manifest["images"].to_h { [ _1["id"], _1["file"] ] }
+      out.puts "libvips #{libvips_version}, font #{manifest.dig('render', 'font')} (manifest: libvips #{manifest.dig('render', 'libvips')})"
+      status = 0
+      manifest["images"].select { _1["derive"] }.each do |entry|
+        source = File.join(dir, files.fetch(entry["derived_from"]))
+        unless File.file?(source)
+          out.puts "#{entry['id']} source #{entry['derived_from']} is not in #{dir}: run evaluation/fetch.rb first"
+          status = 1
+          next
+        end
+        out.puts "#{entry['id']} #{sha256(derive(entry['derive'], File.binread(source)))}"
+      end
+      status
+    end
+
     def main(manifest_path: MANIFEST, dir: images_dir, http: method(:http_get), out: $stdout)
       manifest = YAML.safe_load_file(manifest_path)
       result = run(manifest:, dir:, http:)
       total = manifest["images"].size
-      result[:failures].each { |failure| out.puts "FAIL #{failure[:id]}: #{failure[:reason]}" }
+      result[:failures].each do |failure|
+        out.puts "FAIL #{failure[:id]}: #{failure[:reason]}#{" (obtained sha256 #{failure[:actual]})" if failure[:actual]}"
+      end
       if result[:failures].any? { |failure| failure[:reason] == "mismatch" && manifest["images"].any? { _1["id"] == failure[:id] && _1["derive"] } }
-        out.puts "derived images depend on libvips #{manifest.dig('render', 'libvips')} and the font #{manifest.dig('render', 'font')} (see README.md)"
+        out.puts "derived images depend on the libvips and the font of the manifest: libvips here #{libvips_version}, " \
+                 "manifest libvips #{manifest.dig('render', 'libvips')}, font #{manifest.dig('render', 'font')}. " \
+                 "See README.md (--print-derived) before touching any hash."
       end
       out.puts "evaluation images: #{result[:verified]}/#{total} sha256 verified (#{result[:downloaded]} fetched), " \
                "#{result[:failures].size} failed, folder #{dir}"
@@ -228,4 +265,9 @@ module Evaluation
   end
 end
 
-exit(Evaluation::Fetch.main) if $PROGRAM_NAME == __FILE__
+if $PROGRAM_NAME == __FILE__
+  if ARGV.include?("--print-derived")
+    exit(Evaluation::Fetch.print_derived(manifest: YAML.safe_load_file(Evaluation::Fetch::MANIFEST), dir: Evaluation::Fetch.images_dir))
+  end
+  exit(Evaluation::Fetch.main)
+end

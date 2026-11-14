@@ -15,6 +15,11 @@ module FoodCatalog
     NutrientsInfo = Data.define(:per_100g, :source, :source_version, :source_item_id, :license, :kind)
 
     class << self
+      # Whether the catalog has any item at all (false before food_catalog:load).
+      def loaded?
+        CatalogItem.exists?
+      end
+
       # Page of CatalogItemInfo; per_page is capped at 50. A blank term finds nothing.
       def search(term:, page: 1, per_page: DEFAULT_PER_PAGE)
         SearchFoods.call(term:, page:, per_page:)
