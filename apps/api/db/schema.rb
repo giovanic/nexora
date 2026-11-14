@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -147,8 +147,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_110000) do
     t.datetime "updated_at", null: false
     t.index ["photo_id"], name: "index_food_entries_on_photo_id"
     t.index ["user_id", "client_request_id"], name: "index_food_entries_on_user_id_and_client_request_id", unique: true
-    t.index ["user_id", "local_date", "id"], name: "index_food_entries_on_user_and_local_date", order: { local_date: :desc, id: :desc }
-    t.check_constraint "calories_min IS NULL AND calories_likely IS NULL AND calories_max IS NULL OR calories_min IS NOT NULL AND calories_likely IS NOT NULL AND calories_max IS NOT NULL AND calories_min <= calories_likely::numeric AND calories_likely <= calories_max::numeric", name: "food_entries_calories_range"
+    t.index ["user_id", "local_date", "meal_at", "id"], name: "index_food_entries_on_user_and_history", order: { local_date: :desc, meal_at: :desc, id: :desc }
+    t.check_constraint "calories_min IS NULL AND calories_likely IS NULL AND calories_max IS NULL OR calories_min IS NOT NULL AND calories_likely IS NOT NULL AND calories_max IS NOT NULL AND calories_min::numeric <= calories_likely::numeric AND calories_likely::numeric <= calories_max::numeric", name: "food_entries_calories_range"
     t.check_constraint "result_code IS NULL OR (result_code::text = ANY (ARRAY['no_food'::character varying, 'unreadable'::character varying]::text[]))", name: "food_entries_result_code_known"
     t.check_constraint "source::text = ANY (ARRAY['photo'::character varying, 'manual'::character varying]::text[])", name: "food_entries_source_known"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'processing'::character varying, 'analyzed'::character varying, 'failed'::character varying, 'confirmed'::character varying]::text[])", name: "food_entries_status_known"
@@ -181,11 +181,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_110000) do
     t.jsonb "nutrition_source_ref"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "hidden_at"
+    t.string "hidden_reason"
     t.index ["food_entry_id"], name: "index_food_items_on_food_entry_id"
+    t.check_constraint "(hidden_at IS NULL) = (hidden_reason IS NULL)", name: "food_items_hidden_pair"
     t.check_constraint "calories_min IS NULL AND calories_likely IS NULL AND calories_max IS NULL OR calories_min IS NOT NULL AND calories_likely IS NOT NULL AND calories_max IS NOT NULL AND calories_min <= calories_likely AND calories_likely <= calories_max", name: "food_items_calories_range"
     t.check_constraint "carbs_g_min IS NULL AND carbs_g_likely IS NULL AND carbs_g_max IS NULL OR carbs_g_min IS NOT NULL AND carbs_g_likely IS NOT NULL AND carbs_g_max IS NOT NULL AND carbs_g_min <= carbs_g_likely AND carbs_g_likely <= carbs_g_max", name: "food_items_carbs_g_range"
     t.check_constraint "confidence IS NULL OR confidence >= 0::numeric AND confidence <= 1::numeric", name: "food_items_confidence_range"
+    t.check_constraint "corrected_from_item_id IS NULL OR origin::text = 'user'::text AND corrected_from_item_id <> id", name: "food_items_correction_is_the_persons"
     t.check_constraint "fat_g_min IS NULL AND fat_g_likely IS NULL AND fat_g_max IS NULL OR fat_g_min IS NOT NULL AND fat_g_likely IS NOT NULL AND fat_g_max IS NOT NULL AND fat_g_min <= fat_g_likely AND fat_g_likely <= fat_g_max", name: "food_items_fat_g_range"
+    t.check_constraint "hidden_reason IS NULL OR (hidden_reason::text = ANY (ARRAY['corrected'::character varying, 'removed'::character varying]::text[]))", name: "food_items_hidden_reason_known"
     t.check_constraint "origin::text = ANY (ARRAY['ai'::character varying, 'user'::character varying]::text[])", name: "food_items_origin_known"
     t.check_constraint "protein_g_min IS NULL AND protein_g_likely IS NULL AND protein_g_max IS NULL OR protein_g_min IS NOT NULL AND protein_g_likely IS NOT NULL AND protein_g_max IS NOT NULL AND protein_g_min <= protein_g_likely AND protein_g_likely <= protein_g_max", name: "food_items_protein_g_range"
     t.check_constraint "quantity_grams_min > 0::numeric AND quantity_grams_min <= quantity_grams_likely AND quantity_grams_likely <= quantity_grams_max", name: "food_items_grams_range"

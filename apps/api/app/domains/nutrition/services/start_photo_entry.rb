@@ -5,10 +5,10 @@ module Nutrition
   # finds the authorized photo and finishes the job. Nothing external runs in a transaction.
   module StartPhotoEntry
     def self.call(user_id:, client_request_id:, content_type:, byte_size:, meal_at:)
-      parsed = parse(meal_at)
-      return Api::Errors.new(code: "validation_failed", details: [ { field: "meal_at", code: "invalid" } ]) unless parsed
+      parsed = MealTime.parse(meal_at)
+      return Api::Errors.new(code: "validation_failed", details: [ MealTime.invalid ]) unless parsed
 
-      zone = zone_for(user_id)
+      zone = MealTime.zone_for(user_id)
       day_start = Time.current.in_time_zone(zone).beginning_of_day
       day_end = (day_start + 1.day).beginning_of_day
       authorization = FoodAi::Api.authorize_photo_upload(user_id:, client_request_id:, content_type:, byte_size:, day_start:, day_end:)
@@ -20,27 +20,17 @@ module Nutrition
                            expires_at: authorization.expires_at)
     end
 
-    # The person's time zone, or UTC while the profile is pending.
-    def self.zone_for(user_id)
-      ActiveSupport::TimeZone[UserProfile::Api.time_zone(user_id:) || "UTC"] || ActiveSupport::TimeZone["UTC"]
-    end
-
-    def self.parse(value)
-      return value if value.is_a?(Time) || value.is_a?(ActiveSupport::TimeWithZone)
-      return unless value.is_a?(String)
-
-      Time.iso8601(value)
-    rescue ArgumentError
-      nil
-    end
-
     def self.find_or_create(user_id:, client_request_id:, photo_id:, meal_at:, local_date:)
       FoodEntry.find_by(user_id:, client_request_id:) ||
         FoodEntry.create!(user_id:, client_request_id:, photo_id:, meal_at:, local_date:, source: "photo", status: "pending")
-    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
-      # The uniqueness validation can lose the race before the index does.
+    rescue ActiveRecord::RecordNotUnique
+      FoodEntry.find_by!(user_id:, client_request_id:)
+    rescue ActiveRecord::RecordInvalid => error
+      # The uniqueness validation can lose the race before the index does. Any other invalid meal is a bug.
+      raise unless error.record.errors.of_kind?(:client_request_id, :taken)
+
       FoodEntry.find_by!(user_id:, client_request_id:)
     end
-    private_class_method :zone_for, :parse, :find_or_create
+    private_class_method :find_or_create
   end
 end

@@ -67,6 +67,17 @@ module FoodAi
         photo && FoodAi.storage.presigned_get(key: photo.object_key, expires_in: Adapters::ObjectStorage::MAX_EXPIRES_IN)
       end
 
+      # { photo_id => signed GET URL } for the person's stored photos among photo_ids, in one query. The
+      # same rules as photo_url; a photo that is absent, deleted or not the person's has no key.
+      def photo_urls(user_id:, photo_ids:)
+        ids = Array(photo_ids).compact
+        return {} if ids.empty?
+
+        FoodPhoto.where(user_id:, id: ids, status: "stored").to_h do |photo|
+          [ photo.id, FoodAi.storage.presigned_get(key: photo.object_key, expires_in: Adapters::ObjectStorage::MAX_EXPIRES_IN) ]
+        end
+      end
+
       def export_user_data(user_id)
         UserData.export(user_id)
       end

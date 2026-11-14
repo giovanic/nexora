@@ -29,6 +29,15 @@ Rails.application.routes.draw do
       post "food_entries/uploads", to: "food_entry_uploads#create"
       get "food_entries/:id", to: "food_entries#show", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
       post "food_entries/:id/analysis", to: "food_entry_analyses#create", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
+      get "food_entries", to: "food_entries#index", format: false
+      post "food_entries", to: "food_entries#create", format: false
+      delete "food_entries/:id", to: "food_entries#destroy", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
+      post "food_entries/:id/confirmation", to: "food_entries#confirm", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
+      post "food_entries/:id/items", to: "food_entry_items#create", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
+      patch "food_entries/:id/items/:item_id", to: "food_entry_items#update",
+                                                     constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/, item_id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
+      delete "food_entries/:id/items/:item_id", to: "food_entry_items#destroy",
+                                                     constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/, item_id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
     end
   end
 

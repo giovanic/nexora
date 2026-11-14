@@ -411,7 +411,8 @@ export interface paths {
          *     then the daily quota of 20 authorized uploads per local day (429 analysis_quota_exceeded, with
          *     Retry-After in seconds until local midnight). content_type is image/jpeg, image/png or image/webp
          *     (other types, such as image/heic, answer 422 unsupported_media_type) and byte_size is at most
-         *     10 MB. Creates a pending meal and returns a signed PUT URL valid for 15 minutes; the PUT must send
+         *     10 MB. meal_at needs a UTC offset and falls between 30 days ago and 1 day ahead (422 validation_failed
+         *     otherwise). Creates a pending meal and returns a signed PUT URL valid for 15 minutes; the PUT must send
          *     exactly upload_headers. Repeating a client_request_id returns the same meal with a new URL and
          *     counts once (201), as long as the photo still awaits its upload. Once it does not, the repeat
          *     answers 200 with the same food_entry_id and the meal status, and no URL (upload_url, upload_headers
@@ -472,10 +473,127 @@ export interface paths {
         get: operations["getFoodEntry"];
         put?: never;
         post?: never;
+        /**
+         * Deletes a meal, its items, its photo and the analysis result.
+         * @description Works in any state, also while the analysis runs (the job then ends without creating anything). The
+         *     items go with the meal; the photo and the model's raw result are erased after the meal is gone. Another
+         *     person's or an unknown meal answers 404.
+         */
+        delete: operations["deleteFoodEntry"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/food_entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The history of meals, newest day first, by cursor.
+         * @description Meals of the person ordered by local_date, meal_at and id, newest first, 20 per page (per_page up to
+         *     50; larger values are served as 50). local_date (YYYY-MM-DD) narrows the list to one local day. cursor is
+         *     the opaque next_cursor of the previous page; a cursor that is not one answers 422 validation_failed.
+         *     A meal still waiting for its photo (pending) is not listed. Each meal is the same FoodEntry as
+         *     getFoodEntry, with its own ranges; there is no total of the day, no sum and no comparison. photo_url is
+         *     a signed URL and a secret: never log it. The response is never cached.
+         */
+        get: operations["listFoodEntries"];
+        put?: never;
+        /**
+         * Registers a meal by hand, with no photo, already confirmed.
+         * @description The meal is born confirmed, with source manual, no photo and no use of the daily photo quota. It needs
+         *     1 to 30 items, each with a catalog_item_id or a free_text_name (up to 80 characters), and grams from 1 to
+         *     2000. A free-text item is unknown: it has no numbers and makes the estimate partial. Repeating a
+         *     client_request_id returns the same meal (200); a client_request_id already used for a photo meal answers
+         *     422 validation_failed. meal_at follows the same rule as the upload (UTC offset required, 30 days back, 1
+         *     day ahead). Details name the field, such as items.0.grams_likely.
+         */
+        post: operations["createManualFoodEntry"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/food_entries/{id}/confirmation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirms an analyzed meal as it stands.
+         * @description Needs an analyzed meal with at least one item. Confirming a confirmed meal answers 200 again and changes
+         *     nothing. A meal still processing, pending or failed, or with no item, answers 409 entry_not_confirmable.
+         *     Another person's or an unknown meal answers 404.
+         */
+        post: operations["confirmFoodEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/food_entries/{id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adds an item to an analyzed or confirmed meal and recalculates it.
+         * @description Exactly one of catalog_item_id (a catalog food, 422 when unknown) or free_text_name (1 to 80
+         *     characters). grams_likely is required, from 1 to 2000; grams_min and grams_max default to it and must
+         *     keep min <= likely <= max, each from 1 to 2000. The item has origin user. A free-text item is unknown: no
+         *     numbers, and the estimate becomes partial. A meal that is not analyzed or confirmed answers 409
+         *     entry_not_editable. Answers the whole meal, recalculated.
+         */
+        post: operations["addFoodEntryItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/food_entries/{id}/items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Removes an item from the meal and recalculates it.
+         * @description The item leaves the meal and the numbers; its row is kept out of sight, not deleted. A meal that is not
+         *     analyzed or confirmed answers 409 entry_not_editable; an item already removed or corrected answers 404.
+         *     Answers the whole meal, recalculated.
+         */
+        delete: operations["removeFoodEntryItem"];
+        options?: never;
+        head?: never;
+        /**
+         * Corrects the portion or the food of an item and recalculates the meal.
+         * @description Needs grams_likely (1 to 2000, 422 validation_failed otherwise and nothing changes), a catalog_item_id,
+         *     or both. The correction creates a new item with origin user and keeps the original out of sight (still
+         *     stored). A new grams_likely derives grams_min and grams_max keeping the proportion of the original; a new
+         *     catalog_item_id takes the name and the nutrients from the catalog. The item in the response has a new id.
+         *     An item already corrected or removed answers 404. A meal that is not analyzed or confirmed answers 409
+         *     entry_not_editable. Answers the whole meal, recalculated.
+         */
+        patch: operations["correctFoodEntryItem"];
         trace?: never;
     };
 }
@@ -590,7 +708,9 @@ export interface components {
             byte_size: number;
             /**
              * Format: date-time
-             * @description When the meal happened, with the UTC offset. The local date comes from the profile time zone.
+             * @description When the meal happened, ISO 8601 with the UTC offset (Z or +hh:mm), never without one. At most 1 day
+             *     in the future and at most 30 days in the past, counted from the server clock; anything else answers
+             *     422 validation_failed (field meal_at). The local date comes from the profile time zone.
              */
             meal_at: string;
         };
@@ -675,6 +795,34 @@ export interface components {
             fat_g_min: number | null;
             fat_g_likely: number | null;
             fat_g_max: number | null;
+        };
+        FoodItemInput: {
+            /** Format: uuid */
+            catalog_item_id?: string;
+            /** @description A food the catalog does not know. It is unknown to nutrition, with no numbers. Never logged. */
+            free_text_name?: string;
+            grams_likely: number;
+            grams_min?: number;
+            grams_max?: number;
+        };
+        FoodItemCorrection: {
+            grams_likely?: number;
+            /** Format: uuid */
+            catalog_item_id?: string;
+        };
+        ManualFoodEntryRequest: {
+            client_request_id: string;
+            /**
+             * Format: date-time
+             * @description ISO 8601 with the UTC offset, between 30 days ago and 1 day ahead.
+             */
+            meal_at: string;
+            items: components["schemas"]["FoodItemInput"][];
+        };
+        FoodEntryPage: {
+            items: components["schemas"]["FoodEntry"][];
+            /** @description Opaque. Null on the last page. */
+            next_cursor: string | null;
         };
         FoodCatalogItem: {
             /** Format: uuid */
@@ -1436,6 +1584,215 @@ export interface operations {
             401: components["responses"]["Error"];
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteFoodEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The meal is gone. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    listFoodEntries: {
+        parameters: {
+            query?: {
+                local_date?: string;
+                cursor?: string;
+                per_page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of meals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntryPage"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    createManualFoodEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualFoodEntryRequest"];
+            };
+        };
+        responses: {
+            /** @description The client_request_id was already used; the same meal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            /** @description The meal was registered. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    confirmFoodEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The confirmed meal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    addFoodEntryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodItemInput"];
+            };
+        };
+        responses: {
+            /** @description The meal with the new item. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    removeFoodEntryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The meal without the item. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    correctFoodEntryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodItemCorrection"];
+            };
+        };
+        responses: {
+            /** @description The meal with the corrected item. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
     };

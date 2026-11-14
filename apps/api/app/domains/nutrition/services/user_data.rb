@@ -11,7 +11,7 @@ module Nutrition
                           item.slice(:id, :catalog_item_id, :display_name, :quantity_grams_min, :quantity_grams_likely, :quantity_grams_max,
                                      :household_measure, :calories_min, :calories_likely, :calories_max, :protein_g_min, :protein_g_likely,
                                      :protein_g_max, :carbs_g_min, :carbs_g_likely, :carbs_g_max, :fat_g_min, :fat_g_likely, :fat_g_max,
-                                     :confidence, :origin, :corrected_from_item_id, :nutrition_source_ref).symbolize_keys
+                                     :confidence, :origin, :corrected_from_item_id, :nutrition_source_ref, :hidden_at, :hidden_reason).symbolize_keys
                         end
                       )
         end

@@ -7,7 +7,7 @@ module Nutrition
     BOUNDS = %w[min likely max].freeze
 
     def self.call(entry, photo_url: nil)
-      items = entry.items.order(:created_at, :id).to_a
+      items = entry.visible_items.sort_by { |item| [ item.created_at, item.id ] }
       meal = Calculator.meal(items)
       {
         id: entry.id, status: entry.status, result_code: entry.result_code, source: entry.source, meal_at: entry.meal_at.iso8601,

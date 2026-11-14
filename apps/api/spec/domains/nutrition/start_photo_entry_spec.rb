@@ -2,6 +2,8 @@ require "rails_helper"
 require "support/food_ai_consent"
 
 RSpec.describe "Nutrition::Api.start_photo_entry" do
+  include ActiveSupport::Testing::TimeHelpers
+
   self.use_transactional_tests = false
 
   let(:user) { Identity::User.create!(email: "nu-#{SecureRandom.hex(4)}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current) }
@@ -69,6 +71,7 @@ RSpec.describe "Nutrition::Api.start_photo_entry" do
   end
 
   it "local_date of a meal at 23:30 in São Paulo is that local day" do
+    travel_to(Time.utc(2026, 11, 12, 12))
     allow(UserProfile::Api).to receive(:time_zone).with(user_id: user.id).and_return("America/Sao_Paulo")
 
     result = Nutrition::Api.start_photo_entry(user_id: user.id, client_request_id: "late", content_type: "image/jpeg", byte_size: 1000,
@@ -99,5 +102,41 @@ RSpec.describe "Nutrition::Api.start_photo_entry" do
     entry = Nutrition::FoodEntry.sole
     expect { entry.update_columns(status: "weird") }.to raise_error(ActiveRecord::StatementInvalid)
     expect { entry.update_columns(calories_min: 500, calories_likely: 400, calories_max: 600) }.to raise_error(ActiveRecord::StatementInvalid)
+  end
+
+  it "meal_at needs a UTC offset, at most 1 day ahead and 30 days back" do
+    now = Time.current
+    [ "2026-11-14T10:00:00", "2026-11-14", (now + 2.days).iso8601, (now - 31.days).iso8601, nil, 5 ].each do |value|
+      result = Nutrition::Api.start_photo_entry(user_id: user.id, client_request_id: "w", content_type: "image/jpeg", byte_size: 1000, meal_at: value)
+
+      expect(result).to have_attributes(code: "validation_failed", details: [ { field: "meal_at", code: "invalid" } ])
+    end
+    expect(Nutrition::FoodEntry.count + FoodAi::FoodPhoto.count).to eq(0)
+  end
+
+  describe "when creating the entry raises RecordInvalid" do
+    it "treats only the client_request_id uniqueness as a lost race" do
+      FoodAi::Api.authorize_photo_upload(user_id: user.id, client_request_id: "race", content_type: "image/jpeg", byte_size: 1000,
+                                         day_start: Time.current.beginning_of_day, day_end: Time.current.end_of_day)
+      taken = Nutrition::FoodEntry.new
+      taken.errors.add(:client_request_id, :taken)
+      winner = Nutrition::FoodEntry.create!(user_id: user.id, client_request_id: "race", meal_at: Time.current, local_date: Date.current)
+      calls = 0
+      allow(Nutrition::FoodEntry).to receive(:find_by).and_wrap_original do |original, *args|
+        calls += 1
+        calls == 1 ? nil : original.call(*args)
+      end
+      allow(Nutrition::FoodEntry).to receive(:create!).and_raise(ActiveRecord::RecordInvalid.new(taken))
+
+      expect(start(client_request_id: "race").food_entry_id).to eq(winner.id)
+    end
+
+    it "does not hide any other validation failure" do
+      other = Nutrition::FoodEntry.new
+      other.errors.add(:meal_at, :blank)
+      allow(Nutrition::FoodEntry).to receive(:create!).and_raise(ActiveRecord::RecordInvalid.new(other))
+
+      expect { start(client_request_id: "other") }.to raise_error(ActiveRecord::RecordInvalid)
+    end
   end
 end

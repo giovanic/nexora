@@ -75,7 +75,8 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
       deletions: Identity::AccountDeletion.where(user_id: a_id).count,
       profile: UserProfile::Profile.find(a_id).attributes,
       sports: UserProfile::SportProfile.where(user_id: a_id).order(:id).map(&:attributes),
-      meals: Nutrition::FoodEntry.where(user_id: a_id).count,
+      meals: Nutrition::FoodEntry.where(user_id: a_id).order(:id).map(&:attributes),
+      meal_items: Nutrition::FoodItem.where(food_entry_id: Nutrition::FoodEntry.where(user_id: a_id).select(:id)).order(:id).map(&:attributes),
       photos: FoodAi::FoodPhoto.where(user_id: a_id).count
     }
   end
@@ -187,6 +188,41 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
       expect(photo.reload.status).to eq("awaiting_upload")
       expect(FoodAi::AnalyzeJob).not_to have_received(:perform_async)
     },
+    # A's meal is analyzed with an item: B confirms, edits, removes and deletes it and gets 404, with no body of A's.
+    "POST /api/v1/food_entries/:id/confirmation" => lambda {
+      post "/api/v1/food_entries/#{a_analyzed.id}/confirmation", headers: b_headers, as: :json
+      expect(response).to have_http_status(:not_found)
+    },
+    "POST /api/v1/food_entries/:id/items" => lambda {
+      post "/api/v1/food_entries/#{a_analyzed.id}/items", params: { free_text_name: "x", grams_likely: 10 }, headers: b_headers, as: :json
+      expect(response).to have_http_status(:not_found)
+    },
+    "PATCH /api/v1/food_entries/:id/items/:item_id" => lambda {
+      patch "/api/v1/food_entries/#{a_analyzed.id}/items/#{a_item.id}", params: { grams_likely: 10 }, headers: b_headers, as: :json
+      expect(response).to have_http_status(:not_found)
+    },
+    "DELETE /api/v1/food_entries/:id/items/:item_id" => lambda {
+      delete "/api/v1/food_entries/#{a_analyzed.id}/items/#{a_item.id}", headers: b_headers, as: :json
+      expect(response).to have_http_status(:not_found)
+    },
+    "DELETE /api/v1/food_entries/:id" => lambda {
+      delete "/api/v1/food_entries/#{a_analyzed.id}", headers: b_headers, as: :json
+      expect(response).to have_http_status(:not_found)
+      expect(FoodAi.storage.head(key: FoodAi::FoodPhoto.find(a_analyzed.photo_id).object_key)).to be_present
+    },
+    # B's history is B's: A's meal is not in it. B's manual meal is B's and changes nothing of A's.
+    "GET /api/v1/food_entries" => lambda {
+      get "/api/v1/food_entries", headers: b_headers
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["items"]).to eq([])
+      expect(response.body).not_to include(a_analyzed.id)
+    },
+    "POST /api/v1/food_entries" => lambda {
+      post "/api/v1/food_entries", params: { client_request_id: "a-req", meal_at: Time.current.iso8601, items: [ { free_text_name: "x", grams_likely: 10 } ] },
+                                   headers: b_headers, as: :json
+      expect(response).to have_http_status(:created)
+      expect(Nutrition::FoodEntry.where(user_id: b_id).count).to eq(1)
+    },
     "POST /api/v1/account/export" => lambda {
       post "/api/v1/account/export", params: { password: IdentityHelpers::PASSWORD }, headers: b_headers, as: :json
       expect(response).to have_http_status(:ok)
@@ -215,9 +251,30 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
     entry
   end
 
+  # A's analyzed meal with an item and its photo, for the routes that change or list a meal.
+  def a_analyzed
+    @a_analyzed ||= a_meal.tap do |entry|
+      entry.update!(status: "analyzed")
+      Nutrition::FoodItem.create!(food_entry: entry, display_name: "Arroz", quantity_grams_min: 100, quantity_grams_likely: 100, quantity_grams_max: 100,
+                                  origin: "ai")
+    end
+  end
+
+  def a_item = a_analyzed.items.first
+
+  # Cases that need A's analyzed meal made before the state is taken.
+  ANALYZED_CASES = [
+    "POST /api/v1/food_entries/:id/confirmation", "POST /api/v1/food_entries/:id/items", "PATCH /api/v1/food_entries/:id/items/:item_id",
+    "DELETE /api/v1/food_entries/:id/items/:item_id", "DELETE /api/v1/food_entries/:id", "GET /api/v1/food_entries"
+  ].freeze
+
   ISOLATION_CASES.each do |action, scenario|
     it "#{action}: B acts and nothing of A's changes" do
-      a_meal if action.include?("food_entries/:id")
+      if ANALYZED_CASES.include?(action)
+        a_analyzed
+      elsif action.include?("food_entries/:id")
+        a_meal
+      end
       before = a_state
 
       instance_exec(&scenario)

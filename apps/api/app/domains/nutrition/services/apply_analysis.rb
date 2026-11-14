@@ -47,9 +47,8 @@ module Nutrition
       matched = match(info)
       if matched
         nutrients, catalog_item = matched
-        attributes.merge!(Calculator.item(per_100g: nutrients.per_100g, grams_min: info.grams_min, grams_likely: info.grams_likely, grams_max: info.grams_max))
-        attributes.merge!(catalog_item_id: catalog_item.id, display_name: catalog_item.name_pt,
-                          nutrition_source_ref: { source: nutrients.source, version: nutrients.source_version, id: nutrients.source_item_id })
+        attributes.merge!(ItemBuilder.with_catalog(nutrients, catalog_item, grams_min: info.grams_min, grams_likely: info.grams_likely,
+                                                                            grams_max: info.grams_max))
       end
       FoodItem.new(attributes)
     end

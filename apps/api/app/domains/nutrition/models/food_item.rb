@@ -6,6 +6,9 @@ module Nutrition
     self.table_name = "food_items"
 
     ORIGINS = %w[ai user].freeze
+    HIDDEN_REASONS = %w[corrected removed].freeze
+
+    scope :visible, -> { where(hidden_at: nil) }
 
     belongs_to :food_entry, class_name: "Nutrition::FoodEntry", inverse_of: :items
 
@@ -13,6 +16,9 @@ module Nutrition
     validates :origin, inclusion: { in: ORIGINS }
     validates :confidence, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }, allow_nil: true
 
+    validates :hidden_reason, inclusion: { in: HIDDEN_REASONS }, allow_nil: true
+
+    def hidden? = !hidden_at.nil?
     def unknown? = catalog_item_id.nil?
   end
 end
