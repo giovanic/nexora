@@ -1,0 +1,56 @@
+# Linguagem proibida em textos estáticos (NFR-SAFETY-002).
+# Origem: docs/security/HEALTH_DATA_SAFETY.md, seção "Linguagem", e
+# .claude/rules/product-safety.md. Um termo ou expressão por linha; "#" comenta.
+# Comparação sem caixa e sem acentos, como palavra ou expressão inteira.
+# Palavras genéricas ("limite", "meta") ficam de fora: entram só as expressões
+# que julgam ou pressionam. Liberar um termo em contexto legítimo exige
+# justificativa no registro da fase.
+# Liberado: "limite de calorias" e "teto de calorias" ficam fora porque o texto
+# de consentimento health_data v1 os usa para NEGAR ("Não define meta nem limite
+# de calorias"). O julgamento "acima do limite" e "passou do limite" continua vetado.
+
+# Calorias como meta, teto, saldo ou compensação
+calorias restantes
+calorias restantes hoje
+acima do limite
+passou do limite
+meta de calorias
+meta calorica
+deficit
+deficit calorico
+queime o que comeu
+queimar o que comeu
+compensar a comida
+compensar o que comeu
+
+# Julgamento moral da comida
+comida boa
+comida ruim
+comida lixo
+comida limpa
+comida suja
+refeicao ruim
+refeicao boa
+besteira
+pecado
+culpa
+trapaca
+
+# Medo, urgência e pressão
+perder sua sequencia
+perder a sua sequencia
+voce vai perder
+sem desculpas
+sem dor, sem ganho
+
+# Foco no corpo
+corpo dos sonhos
+secar
+barriga
+emagrecer
+
+# Prescrição e diagnóstico
+voce deveria
+deveria comer menos
+voce precisa comer menos
+indica deficiencia

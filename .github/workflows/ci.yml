@@ -18,6 +18,10 @@ jobs:
         run: bash scripts/test-verify-harness.sh
       - name: Verify the harness
         run: bash scripts/verify-harness.sh
+      - name: Test the language check
+        run: bash scripts/test-check-language.sh
+      - name: Check static texts against the language list
+        run: python3 scripts/check_language.py
 
   secrets:
     runs-on: ubuntu-24.04
