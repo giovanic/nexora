@@ -24,7 +24,17 @@ module Nutrition
       def ok? = false
     end
 
+    # ranges: calories_min/likely/max (to the ten) and protein_g_, carbs_g_, fat_g_ (to the gram), as EntryView gives
+    # them; nil when no item is known.
+    EstimateInfo = Data.define(:ranges, :estimate_partial, :unknown_items_count)
+
     class << self
+      # EstimateInfo for items [{ catalog_item_id:, grams_min:, grams_likely:, grams_max: }] (catalog_item_id nil: unknown).
+      # Writes nothing: for the evaluation (evaluation/run.rb) or any caller that needs the numbers of a hypothetical meal.
+      def estimate(items:)
+        EstimateMeal.call(items:)
+      end
+
       # EntryUpload or Errors. meal_at is an ISO 8601 string with offset.
       def start_photo_entry(user_id:, client_request_id:, content_type:, byte_size:, meal_at:)
         StartPhotoEntry.call(user_id:, client_request_id:, content_type:, byte_size:, meal_at:)

@@ -29,9 +29,10 @@ module FoodCatalog
         fields.map { |field| { field:, code: "invalid" } }
       end
 
-      # MatchInfo or nil. Compositions come before ingredients on the same score.
-      def match(name:)
-        MatchFood.call(name:)
+      # MatchInfo or nil. Compositions come before ingredients on the same score. threshold is for the calibration
+      # of the evaluation only (evaluation/); the pipeline always uses MATCH_THRESHOLD.
+      def match(name:, threshold: MATCH_THRESHOLD)
+        MatchFood.call(name:, threshold:)
       end
 
       # NutrientsInfo, or nil for an unknown id.

@@ -36,6 +36,6 @@ module Nutrition
     def self.tens(value) = value && (value / 10).round(0, BigDecimal::ROUND_HALF_UP).to_i * 10
     def self.unit(value) = value&.round(0, BigDecimal::ROUND_HALF_UP)&.to_i
     def self.grams(value) = value.frac.zero? ? value.to_i : value.to_f
-    private_class_method :item_view, :ranges, :tens, :unit, :grams
+    private_class_method :item_view, :tens, :unit, :grams
   end
 end

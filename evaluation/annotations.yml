@@ -1,0 +1,680 @@
+# Anotações do dataset de avaliação (versão 1): o que se espera de cada imagem do manifest.yml.
+#
+# expect: food (itens esperados), no_food (sem comida), unreadable (ilegível), injection (texto na imagem que tenta dar ordem ao modelo).
+# items: nomes em português do Brasil, como se pede ao modelo. `grams` é o peso medido, só nos pratos do Nutrition5k
+#   (soma por ingrediente do CSV de metadados, ingredientes com 20 g ou mais e com nome mapeado; temperos e óleo ficam de fora).
+#   `source_name` é o nome do ingrediente no Nutrition5k.
+# Pratos do MyFood e da UNIFEI: itens anotados pelo projeto olhando cada imagem, só o que se vê com clareza, sem gramas.
+#   Os conjuntos publicam máscaras por classe, não a lista de itens do prato.
+# catalog_truth: para cada nome esperado, os itens do catálogo que o projeto aceita como o certo (lista), ou `null` quando
+#   o catálogo não tem nada aceitável. Serve à calibração do MATCH_THRESHOLD (evaluation/catalog_check.rb); é um julgamento do
+#   projeto, sem revisão de nutricionista.
+catalog_truth:
+  arroz:
+  - Arroz branco cozido
+  arroz branco:
+  - Arroz branco cozido
+  arroz integral:
+  - Arroz integral cozido
+  feijão:
+  - Feijão-carioca cozido
+  - Feijão-preto cozido
+  feijão branco:
+  - Feijão-branco cozido
+  tomate:
+  - Tomate cru
+  frango:
+  - Frango assado (sem pele)
+  - Peito de frango assado
+  - Coxa de frango cozida
+  - Sobrecoxa de frango assada
+  frango grelhado:
+  - Frango assado (sem pele)
+  - Peito de frango assado
+  peito de frango:
+  - Peito de frango assado
+  - Peito de frango frito
+  coxa de frango:
+  - Coxa de frango cozida
+  - Sobrecoxa de frango assada
+  bife:
+  - Bife de coxão mole grelhado
+  carne bovina:
+  - Acém cozido
+  - Bife de coxão mole grelhado
+  - Lagarto assado
+  - Peito bovino cozido
+  carne:
+  - Acém cozido
+  - Bife de coxão mole grelhado
+  - Lagarto assado
+  - Peito bovino cozido
+  - Carne moída refogada
+  carne moída:
+  - Carne moída refogada
+  - Carne moída crua
+  carne suína:
+  - Pernil suíno assado
+  - Lombo suíno assado
+  - Filé suíno assado
+  - Carne suína moída cozida
+  - Costelinha suína cozida
+  costela:
+  - Costelinha suína cozida
+  linguiça:
+  - Linguiça de porco frita
+  brócolis:
+  - Brócolis cozido
+  cenoura:
+  - Cenoura cozida
+  - Cenoura crua
+  couve:
+  - Couve-manteiga cozida
+  - Couve crua
+  couve-flor:
+  - Couve-flor cozida
+  alface:
+  - Alface crua
+  pepino:
+  - Pepino cru
+  cebola:
+  - Cebola crua
+  pimentão:
+  - Pimentão verde cru
+  - Pimentão vermelho cru
+  vagem:
+  - Vagem cozida
+  abacate:
+  - Abacate cru
+  beterraba:
+  - Beterraba cozida
+  ervilha:
+  - Ervilha cozida
+  milho:
+  - Milho-verde cozido
+  batata:
+  - Batata cozida
+  - Batata crua
+  batata assada:
+  - Batata cozida
+  batata-doce:
+  - Batata-doce assada
+  - Batata-doce crua
+  batata frita: 
+  farofa:
+  - Farofa simples
+  - Farofa de ovo
+  ovo mexido:
+  - Ovo mexido
+  ovo cozido:
+  - Ovo cozido
+  ovo frito:
+  - Ovo frito
+  salmão:
+  - Salmão assado
+  peixe:
+  - Tilápia assada
+  - Bagre assado
+  - Cavala assada
+  - Salmão assado
+annotations:
+  n5k-1561663580:
+    expect: food
+    total_mass_g: 307.0
+    items:
+    - name: frango
+      source_name: chicken
+      grams: 154.3
+    - name: arroz integral
+      source_name: brown rice
+      grams: 127.4
+  n5k-1562698239:
+    expect: food
+    total_mass_g: 230.0
+    items:
+    - name: carne bovina
+      source_name: beef
+      grams: 103.1
+    - name: arroz branco
+      source_name: white rice
+      grams: 95.0
+  n5k-1562698276:
+    expect: food
+    total_mass_g: 307.0
+    items:
+    - name: brócolis
+      source_name: broccoli
+      grams: 77.0
+    - name: arroz branco
+      source_name: white rice
+      grams: 95.0
+    - name: carne bovina
+      source_name: beef
+      grams: 103.1
+  n5k-1563216440:
+    expect: food
+    total_mass_g: 352.0
+    items:
+    - name: peito de frango
+      source_name: chicken breast
+      grams: 120.7
+    - name: arroz branco
+      source_name: white rice
+      grams: 106.0
+    - name: brócolis
+      source_name: broccoli
+      grams: 99.0
+  n5k-1561661500:
+    expect: food
+    total_mass_g: 268.0
+    items:
+    - name: pepino
+      source_name: cucumbers
+      grams: 51.0
+    - name: carne suína
+      source_name: pork
+      grams: 76.8
+    - name: arroz branco
+      source_name: white rice
+      grams: 113.0
+  n5k-1560367733:
+    expect: food
+    total_mass_g: 388.0
+    items:
+    - name: arroz branco
+      source_name: white rice
+      grams: 97.0
+    - name: carne suína
+      source_name: pork
+      grams: 152.9
+    - name: arroz integral
+      source_name: brown rice
+      grams: 20.4
+    - name: batata
+      source_name: potatoes
+      grams: 83.0
+  n5k-1560888930:
+    expect: food
+    total_mass_g: 151.0
+    items:
+    - name: arroz branco
+      source_name: white rice
+      grams: 34.0
+    - name: frango
+      source_name: chicken
+      grams: 62.4
+    - name: batata assada
+      source_name: roasted potatoes
+      grams: 34.0
+  n5k-1561575327:
+    expect: food
+    total_mass_g: 289.0
+    items:
+    - name: batata assada
+      source_name: roasted potatoes
+      grams: 90.0
+    - name: pimentão
+      source_name: bell peppers
+      grams: 54.0
+    - name: carne bovina
+      source_name: beef
+      grams: 110.7
+  n5k-1562950057:
+    expect: food
+    total_mass_g: 223.0
+    items:
+    - name: ovo mexido
+      source_name: scrambled eggs
+      grams: 81.0
+    - name: batata assada
+      source_name: roasted potatoes
+      grams: 142.0
+  n5k-1562950091:
+    expect: food
+    total_mass_g: 290.0
+    items:
+    - name: batata assada
+      source_name: roasted potatoes
+      grams: 142.0
+    - name: ovo mexido
+      source_name: scrambled eggs
+      grams: 81.0
+    - name: linguiça
+      source_name: sausage
+      grams: 67.0
+  n5k-1563307519:
+    expect: food
+    total_mass_g: 335.0
+    items:
+    - name: carne bovina
+      source_name: beef
+      grams: 190.2
+    - name: arroz branco
+      source_name: white rice
+      grams: 25.4
+    - name: cenoura
+      source_name: carrot
+      grams: 88.0
+  n5k-1563303386:
+    expect: food
+    total_mass_g: 218.0
+    items:
+    - name: batata assada
+      source_name: roasted potatoes
+      grams: 51.0
+    - name: frango
+      source_name: chicken
+      grams: 88.1
+    - name: cenoura
+      source_name: carrot
+      grams: 63.1
+  n5k-1561406789:
+    expect: food
+    total_mass_g: 164.0
+    items:
+    - name: arroz branco
+      source_name: white rice
+      grams: 129.0
+    - name: cenoura
+      source_name: carrot
+      grams: 34.5
+  n5k-1563216412:
+    expect: food
+    total_mass_g: 205.0
+    items:
+    - name: arroz branco
+      source_name: white rice
+      grams: 106.0
+    - name: brócolis
+      source_name: broccoli
+      grams: 99.0
+  n5k-1566328745:
+    expect: food
+    total_mass_g: 203.0
+    items:
+    - name: frango
+      source_name: chicken
+      grams: 167.0
+    - name: tomate
+      source_name: cherry tomatoes
+      grams: 36.0
+  n5k-1563389626:
+    expect: food
+    total_mass_g: 360.0
+    items:
+    - name: frango grelhado
+      source_name: grilled chicken
+      grams: 194.0
+    - name: cenoura
+      source_name: carrot
+      grams: 94.6
+    - name: tomate
+      source_name: cherry tomatoes
+      grams: 70.0
+  n5k-1563309398:
+    expect: food
+    total_mass_g: 604.0
+    items:
+    - name: pimentão
+      source_name: bell peppers
+      grams: 29.0
+    - name: alface
+      source_name: lettuce
+      grams: 66.0
+    - name: frango
+      source_name: chicken
+      grams: 285.7
+    - name: tomate
+      source_name: cherry tomatoes
+      grams: 67.0
+    - name: cenoura
+      source_name: carrot
+      grams: 75.0
+  n5k-1559332418:
+    expect: food
+    total_mass_g: 271.0
+    items:
+    - name: salmão
+      source_name: salmon
+      grams: 203.5
+    - name: arroz integral
+      source_name: brown rice
+      grams: 40.7
+  n5k-1561749818:
+    expect: food
+    total_mass_g: 395.0
+    items:
+    - name: arroz integral
+      source_name: brown rice
+      grams: 24.3
+    - name: salmão
+      source_name: salmon
+      grams: 121.6
+    - name: tomate
+      source_name: cherry tomatoes
+      grams: 66.0
+    - name: brócolis
+      source_name: broccoli
+      grams: 87.0
+    - name: pepino
+      source_name: cucumbers
+      grams: 55.0
+  n5k-1562096933:
+    expect: food
+    total_mass_g: 314.0
+    items:
+    - name: feijão branco
+      source_name: white beans
+      grams: 36.3
+    - name: peixe
+      source_name: fish
+      grams: 181.7
+    - name: vagem
+      source_name: green beans
+      grams: 48.0
+  n5k-1561665452:
+    expect: food
+    total_mass_g: 431.0
+    items:
+    - name: arroz integral
+      source_name: brown rice
+      grams: 24.9
+    - name: cenoura
+      source_name: carrot
+      grams: 24.9
+    - name: frango
+      source_name: chicken
+      grams: 249.3
+    - name: milho
+      source_name: corn on the cob
+      grams: 70.0
+  n5k-1568666230:
+    expect: food
+    total_mass_g: 268.0
+    items:
+    - name: alface
+      source_name: lettuce
+      grams: 190.0
+    - name: brócolis
+      source_name: broccoli
+      grams: 78.0
+  n5k-1571932398:
+    expect: food
+    total_mass_g: 220.0
+    items:
+    - name: ovo mexido
+      source_name: scrambled eggs
+      grams: 103.0
+    - name: linguiça
+      source_name: sausage
+      grams: 45.0
+    - name: batata assada
+      source_name: roasted potatoes
+      grams: 72.0
+  n5k-1572540934:
+    expect: food
+    total_mass_g: 357.0
+    items:
+    - name: ovo mexido
+      source_name: scrambled eggs
+      grams: 201.0
+    - name: linguiça
+      source_name: sausage
+      grams: 91.0
+    - name: batata assada
+      source_name: roasted potatoes
+      grams: 65.0
+  n5k-1557862783:
+    expect: food
+    total_mass_g: 258.0
+    items:
+    - name: couve-flor
+      source_name: cauliflower
+      grams: 77.0
+    - name: bife
+      source_name: steak
+      grams: 118.0
+    - name: frango
+      source_name: chicken
+      grams: 63.0
+  n5k-1561576483:
+    expect: food
+    total_mass_g: 371.0
+    items:
+    - name: couve-flor
+      source_name: cauliflower
+      grams: 308.0
+    - name: carne bovina
+      source_name: beef
+      grams: 48.1
+  n5k-1562614952:
+    expect: food
+    total_mass_g: 403.0
+    items:
+    - name: brócolis
+      source_name: broccoli
+      grams: 148.0
+    - name: coxa de frango
+      source_name: chicken thighs
+      grams: 117.3
+    - name: bife
+      source_name: steak
+      grams: 88.7
+  n5k-1558639752:
+    expect: food
+    total_mass_g: 220.0
+    items:
+    - name: milho
+      source_name: corn on the cob
+      grams: 110.0
+    - name: tomate
+      source_name: cherry tomatoes
+      grams: 89.0
+  n5k-1561739973:
+    expect: food
+    total_mass_g: 280.0
+    items:
+    - name: brócolis
+      source_name: broccoli
+      grams: 55.0
+    - name: ovo mexido
+      source_name: scrambled eggs
+      grams: 146.0
+    - name: batata-doce
+      source_name: sweet potato
+      grams: 79.0
+  n5k-1560543729:
+    expect: food
+    total_mass_g: 213.0
+    items:
+    - name: couve-flor
+      source_name: cauliflower
+      grams: 75.0
+    - name: batata assada
+      source_name: roasted potatoes
+      grams: 86.0
+    - name: frango
+      source_name: chicken
+      grams: 43.0
+  myfood-lunch-102:
+    expect: food
+    items:
+    - name: bife
+    - name: batata frita
+    - name: tomate
+    - name: cebola
+    - name: arroz
+    - name: feijão
+  myfood-lunch-104:
+    expect: food
+    items:
+    - name: bife
+    - name: arroz
+    - name: feijão
+    - name: farofa
+    - name: tomate
+    - name: couve
+    - name: cebola
+  myfood-lunch-107:
+    expect: food
+    items:
+    - name: bife
+    - name: alface
+    - name: arroz
+    - name: feijão
+  myfood-lunch-110:
+    expect: food
+    items:
+    - name: bife
+    - name: feijão
+    - name: farofa
+    - name: arroz
+  myfood-lunch-111:
+    expect: food
+    items:
+    - name: arroz
+    - name: ovo frito
+    - name: couve
+    - name: linguiça
+  myfood-lunch-112:
+    expect: food
+    items:
+    - name: arroz
+    - name: feijão
+  myfood-lunch-115:
+    expect: food
+    items:
+    - name: feijão
+    - name: arroz
+    - name: couve
+    - name: bife
+  myfood-lunch-116:
+    expect: food
+    items:
+    - name: arroz
+    - name: feijão
+    - name: pepino
+    - name: bife
+  myfood-lunch-118:
+    expect: food
+    items:
+    - name: arroz
+    - name: feijão
+    - name: brócolis
+    - name: cenoura
+    - name: couve
+    - name: tomate
+    - name: alface
+    - name: costela
+  myfood-lunch-119:
+    expect: food
+    items:
+    - name: arroz
+    - name: feijão
+    - name: batata frita
+  myfood-lunch-121:
+    expect: food
+    items:
+    - name: arroz
+    - name: feijão
+    - name: couve
+    - name: farofa
+    - name: linguiça
+    - name: ovo frito
+  myfood-lunch-123:
+    expect: food
+    items:
+    - name: alface
+    - name: tomate
+    - name: feijão
+    - name: arroz
+    - name: batata frita
+    - name: ovo frito
+    - name: bife
+  unifei-meal-0004:
+    expect: food
+    items:
+    - name: brócolis
+    - name: ovo cozido
+    - name: cenoura
+    - name: frango
+  unifei-meal-0026:
+    expect: food
+    items:
+    - name: ovo cozido
+    - name: feijão
+    - name: arroz
+    - name: milho
+    - name: tomate
+    - name: abacate
+  unifei-meal-0027:
+    expect: food
+    items:
+    - name: ovo cozido
+    - name: milho
+    - name: tomate
+  unifei-meal-0031:
+    expect: food
+    items:
+    - name: carne
+    - name: milho
+    - name: arroz
+  unifei-meal-0032:
+    expect: food
+    items:
+    - name: arroz
+    - name: milho
+    - name: frango
+  unifei-meal-0033:
+    expect: food
+    items:
+    - name: beterraba
+    - name: cenoura
+    - name: batata
+    - name: milho
+    - name: feijão
+  unifei-meal-0037:
+    expect: food
+    items:
+    - name: ervilha
+    - name: carne moída
+    - name: tomate
+    - name: alface
+    - name: vagem
+  unifei-meal-0039:
+    expect: food
+    items:
+    - name: feijão
+    - name: arroz
+    - name: frango
+    - name: tomate
+  commons-cat-grass:
+    expect: no_food
+    items: []
+  commons-bicycle:
+    expect: no_food
+    items: []
+  commons-building-paulista:
+    expect: no_food
+    items: []
+  commons-mountain-wright:
+    expect: no_food
+    items: []
+  commons-lighthouse-kovalam:
+    expect: no_food
+    items: []
+  derived-dark-n5k:
+    expect: unreadable
+    items: []
+  derived-dark-myfood:
+    expect: unreadable
+    items: []
+  derived-blur-myfood:
+    expect: unreadable
+    items: []
+  derived-injection-myfood:
+    expect: injection
+    items: []
+  derived-injection-n5k:
+    expect: injection
+    items: []

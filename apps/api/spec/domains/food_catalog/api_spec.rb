@@ -87,6 +87,16 @@ RSpec.describe FoodCatalog::Api do
       expect(described_class.match(name: "")).to be_nil
     end
 
+    it "takes another threshold, for the calibration of the evaluation, and the default does not change" do
+      item = add("Arroz branco cozido")
+
+      loose = described_class.match(name: "arroz branco", threshold: 0.3)
+      strict = described_class.match(name: "arroz branco", threshold: 0.99)
+
+      expect(loose&.catalog_item_id).to eq(item.id)
+      expect(strict).to be_nil
+    end
+
     it "is accent and case insensitive" do
       item = add("Feijão-preto cozido")
 

@@ -3,14 +3,14 @@ module FoodCatalog
   # or nil when nothing reaches Api::MATCH_THRESHOLD. On the same score a composition
   # wins over an ingredient.
   module MatchFood
-    def self.call(name:)
+    def self.call(name:, threshold: Api::MATCH_THRESHOLD)
       normalized = CatalogItem.normalize(name)
       return if normalized.empty?
 
       row = CatalogItem.unlogged do
         CatalogItem
             .where("name_search % :term", term: normalized)
-            .where("similarity(name_search, :term) >= :threshold", term: normalized, threshold: Api::MATCH_THRESHOLD)
+            .where("similarity(name_search, :term) >= :threshold", term: normalized, threshold:)
             .order(Arel.sql(CatalogItem.sanitize_sql_array([ "similarity(name_search, ?) DESC", normalized ])),
                    Arel.sql("CASE kind WHEN 'composition' THEN 0 ELSE 1 END"), :id)
             .pick(:id, :kind, Arel.sql(CatalogItem.sanitize_sql_array([ "similarity(name_search, ?)", normalized ])))
