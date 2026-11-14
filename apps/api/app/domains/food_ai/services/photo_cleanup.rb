@@ -20,7 +20,7 @@ module FoodAi
           AnalysisResult.where(id: analysis_ids).delete_all
           locked.update!(status: "deleted", deleted_at: locked.deleted_at || Time.current) unless locked.status == "deleted"
         end
-        PurgeObjectJob.perform_async(photo.id) unless object_deleted
+        enqueue_purge(photo) unless object_deleted
       end
       nil
     end
@@ -33,6 +33,15 @@ module FoodAi
       false
     end
     private_class_method :delete_object
+
+    # The meal is already gone, so a queue failure must not answer an error: the daily sweeper
+    # (PhotoRetentionJob) deletes the object of every deleted photo row. Only the photo id and a code are logged.
+    def self.enqueue_purge(photo)
+      PurgeObjectJob.perform_async(photo.id)
+    rescue StandardError
+      Rails.logger.warn("food photo purge not enqueued photo_id=#{photo.id} code=purge_enqueue_failed")
+    end
+    private_class_method :enqueue_purge
 
     # :discarded, :in_use (an analysis exists or is running) or :not_found, also for another person's photo.
     def self.discard_photo(user_id:, photo_id:)

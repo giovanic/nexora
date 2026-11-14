@@ -3,6 +3,7 @@ module FoodAi
   # keeps a stale copy. Values are never logged.
   module Config
     DEFAULT_DAILY_QUOTA = 20
+    DEFAULT_MONTHLY_ALERT_USD = BigDecimal("10")
 
     class << self
       def operator = present(ENV["FOOD_AI_OPERATOR"])
@@ -14,6 +15,12 @@ module FoodAi
       def daily_quota
         quota = Integer(ENV["FOOD_AI_DAILY_QUOTA"].to_s, 10, exception: false)
         quota&.positive? ? quota : DEFAULT_DAILY_QUOTA
+      end
+
+      # Monthly cost (USD) above which the spend alert fires. An invalid value falls back to the default.
+      def monthly_alert_usd
+        limit = BigDecimal(ENV["FOOD_AI_MONTHLY_ALERT_USD"].to_s.strip, exception: false)
+        limit&.positive? ? limit : DEFAULT_MONTHLY_ALERT_USD
       end
 
       # Names of the settings that do not match the consent text in force, never their values.

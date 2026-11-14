@@ -18,7 +18,18 @@ module FoodAi
     # empty unless succeeded. note_codes: closed list of the prompt schema.
     AnalysisInfo = Data.define(:id, :status, :items, :note_codes)
 
+    # analyses: provider calls (usage records) in the period. cost_usd: BigDecimal.
+    UsageSummary = Data.define(:analyses, :cost_usd)
+
     class << self
+      # The provider calls and their cost in [from, to), for one person or, with user_id nil, for everyone
+      # (records unlinked by the retention included). NFR-COST-001.
+      def usage(user_id:, from:, to:)
+        scope = UsageRecord.where(occurred_at: from...to)
+        scope = scope.where(user_id:) if user_id
+        UsageSummary.new(analyses: scope.count, cost_usd: scope.sum(:cost_usd))
+      end
+
       # :enqueued or Errors (not_uploaded, invalid_photo with details, consent_required,
       # consent_operator_mismatch). The caller owns the meal; FoodAi checks the photo is the person's.
       def request_analysis(user_id:, photo_id:, food_entry_id:)
@@ -35,6 +46,12 @@ module FoodAi
       # fail the erasure: the photo is marked deleted and PurgeObjectJob retries the object.
       def erase_for_entry(user_id:, food_entry_id:, photo_id: nil)
         PhotoCleanup.erase_for_entry(user_id:, food_entry_id:, photo_id:)
+      end
+
+      # Recovery of a meal stuck in processing: :republished, :enqueued, :running, or Errors photo_missing /
+      # analysis_failed (the caller fails the meal). One provider call at most, whatever the repeats.
+      def resume_analysis(user_id:, photo_id:, food_entry_id:)
+        ResumeAnalysis.call(user_id:, photo_id:, food_entry_id:)
       end
 
       # Deletes the object and the photo that has no analysis: :discarded, :in_use or :not_found.

@@ -16,11 +16,12 @@ module FoodAi
       }
     end
 
-    # Safe to run again. Stored objects go first (an external call, outside any transaction),
-    # so a failure leaves the rows for the next attempt to find the keys. Usage records stay
+    # Safe to run again (deleting an object is idempotent). Every object goes first, also those of photos
+    # already marked deleted whose purge is pending: the row is the only record of the key. It is an external
+    # call, outside any transaction, so a failure leaves the rows for the next attempt. Usage records stay
     # as cost only, unlinked from the person and from the analysis (retention table).
     def self.erase(user_id)
-      FoodPhoto.where(user_id:).where.not(status: "deleted").find_each { |photo| FoodAi.storage.delete(key: photo.object_key) }
+      FoodPhoto.where(user_id:).find_each { |photo| FoodAi.storage.delete(key: photo.object_key) }
       ApplicationRecord.transaction do
         UsageRecord.where(user_id:).update_all(user_id: nil, analysis_id: nil)
         AnalysisResult.where(user_id:).delete_all
