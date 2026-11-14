@@ -95,6 +95,41 @@ RSpec.describe FoodAi::NormalizePhoto do
       expect(call(ImageFixtures.heic, "image/heif").content_type).to eq("image/jpeg")
     end
 
+    it "refuses 41 megapixels of HEIF without decoding the pixels" do
+      bytes = ImageFixtures.heic_41_megapixels
+      expect(bytes.bytesize).to be < 10 * 1024 * 1024
+
+      operations = []
+      allow_any_instance_of(Vips::Image).to receive(:method_missing).and_wrap_original do |original, name, *args, **kwargs, &block|
+        operations << name
+        original.call(name, *args, **kwargs, &block)
+      end
+      loads = []
+      allow(Vips::Image).to receive(:new_from_buffer).and_wrap_original do |original, *args, **kwargs|
+        loads << kwargs[:access]
+        original.call(*args, **kwargs)
+      end
+
+      expect(error_code_for(bytes, "image/heic")).to eq("too_many_pixels")
+      expect(loads).to eq([ :sequential ])
+      expect(operations).to be_empty
+    end
+
+    it "returns a rotated HEIC upright, with no metadata left" do
+      bytes = ImageFixtures.heic_rotated(width: 200, height: 100)
+      source = vips(bytes)
+      expect(source.get_fields).to include("exif-data")
+      expect([ source.width, source.height ]).to eq([ 100, 200 ])
+
+      result = call(bytes, "image/heic")
+      output = vips(result.bytes)
+
+      expect([ result.width, result.height ]).to eq([ 100, 200 ])
+      expect([ output.width, output.height ]).to eq([ 100, 200 ])
+      expect(output.get_fields).not_to include("exif-data", "xmp-data", "icc-profile-data")
+      expect(output.get_fields.grep(/\Aexif-ifd/)).to be_empty
+    end
+
     it "refuses a HEIC declared as image/jpeg" do
       expect(error_code_for(ImageFixtures.heic, "image/jpeg")).to eq("unsupported_media_type")
     end

@@ -131,6 +131,22 @@ RSpec.describe FoodCatalog::Api do
       expect(described_class.match(name: "arroz branco cru").catalog_item_id).to eq(raw.id)
     end
 
+    it "does not treat a prepared dish named seco or seca as raw" do
+      dried = add("Carne-seca")
+      add("Carne assada")
+
+      expect(described_class.match(name: "carne seca").catalog_item_id).to eq(dried.id)
+      expect(described_class.match(name: "carne").catalog_item_id).to eq(dried.id)
+    end
+
+    it "prefers the cooked pasta to the dry pasta when the name does not ask for dry" do
+      add("Macarrão seco")
+      cooked = add("Macarrão cozido")
+
+      expect(described_class.match(name: "macarrao").catalog_item_id).to eq(cooked.id)
+      expect(described_class.match(name: "macarrao seco").catalog_item_id).not_to eq(cooked.id)
+    end
+
     it "still matches a raw item when it is the only one, with its plain similarity" do
       raw = add("Alface crua")
 

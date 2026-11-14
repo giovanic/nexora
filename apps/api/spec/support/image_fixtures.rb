@@ -53,6 +53,18 @@ module ImageFixtures
     bytes.b.tap { |b| b[8, 4] = brand }
   end
 
+  # Solid colour: a ~1 KB file whose header declares 41 MP (AV1 inside a HEIF container).
+  def heic_41_megapixels
+    solid(8200, 5000).heifsave_buffer(Q: 30, compression: :av1).b.tap { |b| b[8, 4] = "heic" }
+  end
+
+  # heifsave turns the "orientation" field into a rotation (irot) of the container, so the
+  # loader reports the upright size (height x width) and the file still carries EXIF.
+  def heic_rotated(width: 200, height: 100)
+    gradient(width, height).mutate { |m| m.set_type! GObject::GINT_TYPE, "orientation", 6 }
+                           .heifsave_buffer(Q: 60, compression: :av1).b.tap { |b| b[8, 4] = "heic" }
+  end
+
   def truncated_jpeg
     full = gradient(800, 600).jpegsave_buffer(Q: 95)
     full.byteslice(0, full.bytesize / 2)

@@ -4,18 +4,25 @@ module FoodCatalog
   # wins over an ingredient.
   module MatchFood
     # Tie-break by rule: the AI model names food as it is on the plate, so when the name asked
-    # for does not say cru or seco, an item whose name does loses RAW_PENALTY of similarity in
-    # the ranking. The threshold still uses the plain similarity, and a raw name asked for wins.
+    # for does not say cru or seco, an item that is raw or a dry ingredient loses RAW_PENALTY of
+    # similarity in the ranking. The threshold still uses the plain similarity, and a raw name
+    # asked for wins.
+    #
+    # What counts as raw or dry: a name with cru/crua/crus/cruas, or one of the dry ingredients
+    # below, listed by their normalized name. The word seco/seca alone does not count, because it
+    # also names prepared foods ("Carne-seca", "Bacalhau seco e salgado"). A new dry ingredient
+    # in the catalog is added to DRY_INGREDIENTS.
     RAW_PENALTY = 0.15
-    RAW_WORDS = %w[cru crua crus cruas seco seca secos secas].freeze
-    RAW_SQL = "name_search ~ '\\m(#{RAW_WORDS.join("|")})\\M'".freeze
-    RAW_QUERY = /\b(#{RAW_WORDS.join("|")})\b/
+    RAW_WORDS = %w[cru crua crus cruas].freeze
+    DRY_INGREDIENTS = [ "macarrao seco", "aveia em flocos seca", "gergelim seco", "perola seca" ].freeze
+    RAW_SQL = "name_search ~ '\\m(#{(RAW_WORDS + DRY_INGREDIENTS).join("|")})\\M'".freeze
+    ASKED_RAW = /\b(#{(RAW_WORDS + %w[seco seca secos secas]).join("|")})\b/
 
     def self.call(name:, threshold: Api::MATCH_THRESHOLD)
       normalized = CatalogItem.normalize(name)
       return if normalized.empty?
 
-      penalty = normalized.match?(RAW_QUERY) ? 0 : RAW_PENALTY
+      penalty = normalized.match?(ASKED_RAW) ? 0 : RAW_PENALTY
       score = "similarity(name_search, ?) - CASE WHEN #{RAW_SQL} THEN #{penalty} ELSE 0 END"
       row = CatalogItem.unlogged do
         CatalogItem
