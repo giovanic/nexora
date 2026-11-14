@@ -16,7 +16,8 @@ module FoodAi
     FORBIDDEN_KEY = /kcal|calor|energy/i
     URL = %r{https?://|ftp://|www\.|\b[\w-]+\.(?:com|org|net|br|io|gov|edu|app|dev|co|me|ly|xyz|info)\b}i
     MARKUP = /[<>]/
-    CONTROL = /[[:cntrl:]]/
+    # Controls (Cc), format characters such as zero-width and bidi marks (Cf), line and paragraph separators.
+    CONTROL = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/
 
     ROOT_KEYS = %w[contains_food image_quality items note_codes].freeze
     ITEM_KEYS = %w[name preparation confidence portion hidden_ingredients_possible].freeze
@@ -45,17 +46,24 @@ module FoodAi
 
     def fail!(code) = raise(InvalidOutputError, code)
 
-    # Symbol keys are accepted; nothing else is coerced.
+    # Symbol keys are accepted; nothing else is coerced. Text must be valid UTF-8 (or ASCII),
+    # so no later match can raise an uncoded exception.
     def normalize(value)
       case value
-      when Hash then value.to_h { |k, v| [ k.to_s, normalize(v) ] }
+      when Hash then value.to_h { |k, v| [ encoded!(k.to_s), normalize(v) ] }
       when Array then value.map { |v| normalize(v) }
+      when String then encoded!(value)
       else value
       end
     end
 
+    def encoded!(text)
+      fail!("invalid_encoding") unless [ Encoding::UTF_8, Encoding::US_ASCII ].include?(text.encoding) && text.valid_encoding?
+      text
+    end
+
     def hash!(value)
-      fail!("wrong_type") unless value.is_a?(Hash)
+      fail!("not_an_object") unless value.is_a?(Hash)
       value
     end
 
@@ -92,9 +100,9 @@ module FoodAi
       value
     end
 
-    def text!(value, max)
+    def text!(value, max, allow_empty: false)
       fail!("wrong_type") unless value.is_a?(String)
-      fail!("invalid_text") if value.strip.empty? || value.length > max
+      fail!("invalid_text") if (value.strip.empty? && !allow_empty) || value.length > max
       fail!("invalid_text") if value.match?(CONTROL) || value.match?(MARKUP) || value.match?(URL)
       value
     end
@@ -112,7 +120,7 @@ module FoodAi
 
       ValidatedOutput::Item.new(
         name: text!(item["name"], MAX_NAME),
-        preparation: text!(item["preparation"], MAX_PREPARATION),
+        preparation: text!(item["preparation"], MAX_PREPARATION, allow_empty: true),
         confidence: number!(item["confidence"], 0..1),
         portion: portion!(item["portion"]),
         hidden_ingredients_possible: boolean!(item["hidden_ingredients_possible"])
@@ -135,7 +143,9 @@ module FoodAi
     def note_codes!(value)
       fail!("wrong_type") unless value.is_a?(Array)
 
-      value.map { |code| one_of!(code, NOTE_CODES) }
+      codes = value.map { |code| one_of!(code, NOTE_CODES) }
+      fail!("duplicate_value") unless codes.uniq.size == codes.size
+      codes
     end
   end
 end

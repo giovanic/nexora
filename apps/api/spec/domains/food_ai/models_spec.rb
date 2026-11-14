@@ -61,6 +61,11 @@ RSpec.describe "FoodAi tables" do
       expect(described_class::ERROR_CODES).to include(*codes)
     end
 
+    it "has a plain index on photo_id, which the cascade from food_photos needs" do
+      indexes = ActiveRecord::Base.connection.indexes("food_analysis_results")
+      expect(indexes.any? { |i| i.columns == [ "photo_id" ] && i.where.nil? && !i.unique }).to be(true)
+    end
+
     it "stores raw_response as validated JSON" do
       row = result(photo, status: "succeeded", raw_response: { "contains_food" => false })
       expect(row.reload.raw_response).to eq({ "contains_food" => false })

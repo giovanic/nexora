@@ -63,6 +63,10 @@ RSpec.describe "account deletion scan", :real_consumers do
     "food_analysis_results" => { "photo_id" => ->(user_id) { "(SELECT id FROM food_photos WHERE user_id = #{user_id} LIMIT 1)" } }
   }.freeze
 
+  # Columns that keep a row's cost after the person is gone and hold only a provider or model
+  # identifier (validated in code, never user text), so the scan plants no marker in them.
+  NOT_MARKED = { "ai_usage_records" => %w[provider model] }.freeze
+
   # For a table the flow left without a row of the person, such as a new one.
   def insert_row(table, user_id, owner)
     fixed = ROW_VALUES.fetch(table, {})
@@ -90,7 +94,7 @@ RSpec.describe "account deletion scan", :real_consumers do
     insert_row(table, user_id, owner) unless connection.select_value("SELECT 1 FROM #{table_name(table)} WHERE #{where} LIMIT 1")
 
     connection.columns(table).filter_map do |column|
-      expression = marker_expression(column) unless column.name == owner
+      expression = marker_expression(column) unless column.name == owner || NOT_MARKED.fetch(table, []).include?(column.name)
       next unless expression
 
       connection.transaction(requires_new: true) do

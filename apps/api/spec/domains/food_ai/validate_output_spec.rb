@@ -128,8 +128,49 @@ RSpec.describe FoodAi::ValidateOutput do
     expect(code_for(valid_payload.merge("contains_food" => "yes"))).to eq("wrong_type")
     expect(code_for(with_items(item("confidence" => "0.5")))).to eq("wrong_type")
     expect(code_for(with_items(item("hidden_ingredients_possible" => nil)))).to eq("wrong_type")
-    expect(code_for("not an object")).to eq("wrong_type")
-    expect(code_for(nil)).to eq("wrong_type")
+  end
+
+  it "rejects a payload, item or portion that is not an object" do
+    expect(code_for("not an object")).to eq("not_an_object")
+    expect(code_for(nil)).to eq("not_an_object")
+    expect(code_for([])).to eq("not_an_object")
+    expect(code_for(with_items("arroz"))).to eq("not_an_object")
+    expect(code_for(with_items(item("portion" => 150)))).to eq("not_an_object")
+  end
+
+  it "accepts an empty preparation, which the prompt asks for only when visible" do
+    expect(code_for(with_items(item("preparation" => "")))).to be_nil
+    expect(described_class.call(with_items(item("preparation" => ""))).items.first.preparation).to eq("")
+    expect(code_for(with_items(item("preparation" => "p" * 61)))).to eq("invalid_text")
+    expect(code_for(with_items(item("preparation" => "<b>")))).to eq("invalid_text")
+    expect(code_for(with_items(item("preparation" => nil)))).to eq("wrong_type")
+  end
+
+  it "fails with a code, not an exception, on invalid UTF-8 in a value or a key" do
+    bad = "arroz \xFF".dup.force_encoding("UTF-8")
+    expect(bad.valid_encoding?).to be(false)
+
+    expect(code_for(with_items(item("name" => bad)))).to eq("invalid_encoding")
+    expect(code_for(with_items(with_portion("household_measure" => bad)))).to eq("invalid_encoding")
+    expect(code_for(valid_payload.merge("note_codes" => [ bad ]))).to eq("invalid_encoding")
+    expect(code_for(valid_payload.merge(bad => 1))).to eq("invalid_encoding")
+    expect(code_for(with_items(item(bad => 1)))).to eq("invalid_encoding")
+  end
+
+  it "rejects invisible and layout-changing characters in any text" do
+    {
+      "control" => "arroz\u0007", "line separator" => "arroz\u2028x", "paragraph separator" => "arroz\u2029x",
+      "zero width space" => "ar\u200Broz", "bidi override" => "arroz\u202Eoof", "bidi isolate" => "arroz\u2066x\u2069"
+    }.each do |label, text|
+      expect(code_for(with_items(item("name" => text)))).to eq("invalid_text"), label
+      expect(code_for(with_items(item("preparation" => text)))).to eq("invalid_text"), label
+      expect(code_for(with_items(with_portion("household_measure" => text)))).to eq("invalid_text"), label
+    end
+    expect(code_for(with_items(item("name" => "pão de queijo ção")))).to be_nil
+  end
+
+  it "requires distinct note codes" do
+    expect(code_for(valid_payload.merge("note_codes" => %w[low_light low_light]))).to eq("duplicate_value")
   end
 
   it "InvalidOutputError message holds only the code" do

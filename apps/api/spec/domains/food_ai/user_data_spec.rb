@@ -23,7 +23,8 @@ RSpec.describe FoodAi::UserData do
 
     expect(data[:photos].size).to eq(1)
     expect(data[:photos].first).not_to have_key(:object_key)
-    expect(data[:analyses].first[:raw_response]).to eq({ "contains_food" => true })
+    expect(data[:analyses].first).not_to have_key(:raw_response)
+    expect(data[:analyses].first[:status]).to eq("succeeded")
     expect(data[:usage].first[:cost_usd]).to eq("0.000001")
   end
 
@@ -41,11 +42,15 @@ RSpec.describe FoodAi::UserData do
     expect(FoodAi::UsageRecord.where(user_id: other.id)).to exist
   end
 
-  it "keeps usage provider and model to closed lists" do
-    expect do
-      FoodAi::UsageRecord.new(user_id: user.id, provider: "free text", model: "fake-1", input_tokens: 0, output_tokens: 0, cost_usd: 0,
-                              occurred_at: Time.current).save!(validate: false)
-    end.to raise_error(ActiveRecord::StatementInvalid, /ai_usage_records_provider_known/)
+  it "does not put provider or model values in the database schema" do
+    checks = ActiveRecord::Base.connection.check_constraints("ai_usage_records").map(&:name)
+    expect(checks).to eq([ "ai_usage_records_non_negative" ])
+  end
+
+  it "validates provider and model as plain identifiers in code" do
+    row = FoodAi::UsageRecord.new(provider: "free text!", model: "x" * 65, input_tokens: 0, output_tokens: 0, cost_usd: 0, occurred_at: Time.current)
+    expect(row).not_to be_valid
+    expect(row.errors.attribute_names).to include(:provider, :model)
   end
 
   it "allows every priced model in usage records" do

@@ -7,8 +7,7 @@ module FoodAi
           photo.slice(:id, :content_type, :byte_size, :status, :authorized_at, :analyzed_at, :deleted_at).symbolize_keys
         end,
         analyses: AnalysisResult.where(user_id:).order(:started_at, :id).map do |analysis|
-          analysis.slice(:id, :provider, :model, :prompt_version, :schema_version, :status, :raw_response, :error_code,
-                         :started_at, :finished_at).symbolize_keys
+          analysis.slice(:id, :provider, :model, :prompt_version, :schema_version, :status, :error_code, :started_at, :finished_at).symbolize_keys
         end,
         usage: UsageRecord.where(user_id:).order(:occurred_at, :id).map do |usage|
           { id: usage.id, provider: usage.provider, model: usage.model, input_tokens: usage.input_tokens,

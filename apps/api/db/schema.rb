@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_13_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_13_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -41,8 +41,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_160000) do
     t.index ["occurred_at"], name: "index_ai_usage_records_on_occurred_at"
     t.index ["user_id", "occurred_at"], name: "index_ai_usage_records_on_user_id_and_occurred_at"
     t.check_constraint "input_tokens >= 0 AND output_tokens >= 0 AND cost_usd >= 0::numeric", name: "ai_usage_records_non_negative"
-    t.check_constraint "model::text = ANY (ARRAY['claude-haiku-5-5'::character varying, 'claude-sonnet-5-5'::character varying, 'gemini-3.8-flash'::character varying, 'gemini-3.5-flash-lite'::character varying, 'gpt-6-luna'::character varying, 'gpt-6.1-terra'::character varying, 'fake-1'::character varying]::text[])", name: "ai_usage_records_model_known"
-    t.check_constraint "provider::text = ANY (ARRAY['anthropic'::character varying, 'gemini'::character varying, 'openai'::character varying, 'fake'::character varying]::text[])", name: "ai_usage_records_provider_known"
   end
 
   create_table "audit_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -94,9 +92,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_160000) do
     t.datetime "updated_at", null: false
     t.index ["food_entry_id"], name: "index_food_analysis_results_on_food_entry_id"
     t.index ["photo_id", "prompt_version"], name: "index_food_analysis_results_one_live_run", unique: true, where: "((status)::text <> ALL ((ARRAY['failed'::character varying, 'cancelled'::character varying])::text[]))"
+    t.index ["photo_id"], name: "index_food_analysis_results_on_photo_id"
     t.index ["prompt_version", "status"], name: "index_food_analysis_results_on_prompt_and_status"
     t.index ["user_id", "started_at"], name: "index_food_analysis_results_on_user_and_started_at"
-    t.check_constraint "error_code IS NULL OR (error_code::text = ANY (ARRAY['timeout'::character varying, 'rate_limited'::character varying, 'provider_unavailable'::character varying, 'bad_request'::character varying, 'unauthorized'::character varying, 'model_unavailable'::character varying, 'unsupported_model'::character varying, 'not_an_object'::character varying, 'missing_field'::character varying, 'unexpected_field'::character varying, 'wrong_type'::character varying, 'out_of_range'::character varying, 'too_many_items'::character varying, 'invalid_text'::character varying, 'unknown_value'::character varying, 'forbidden_field'::character varying, 'refusal'::character varying, 'consent_revoked'::character varying, 'photo_missing'::character varying]::text[]))", name: "food_analysis_results_error_code_known"
+    t.check_constraint "error_code IS NULL OR (error_code::text = ANY (ARRAY['timeout'::character varying, 'rate_limited'::character varying, 'provider_unavailable'::character varying, 'bad_request'::character varying, 'unauthorized'::character varying, 'model_unavailable'::character varying, 'unsupported_model'::character varying, 'not_an_object'::character varying, 'missing_field'::character varying, 'unexpected_field'::character varying, 'wrong_type'::character varying, 'out_of_range'::character varying, 'too_many_items'::character varying, 'invalid_text'::character varying, 'unknown_value'::character varying, 'forbidden_field'::character varying, 'refusal'::character varying, 'consent_revoked'::character varying, 'photo_missing'::character varying, 'invalid_encoding'::character varying, 'duplicate_value'::character varying]::text[]))", name: "food_analysis_results_error_code_known"
     t.check_constraint "status::text = ANY (ARRAY['running'::character varying, 'succeeded'::character varying, 'no_food'::character varying, 'unreadable'::character varying, 'failed'::character varying, 'cancelled'::character varying]::text[])", name: "food_analysis_results_status_known"
   end
 
