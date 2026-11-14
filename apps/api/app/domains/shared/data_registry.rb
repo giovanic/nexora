@@ -14,8 +14,12 @@ module Shared
     # the reason it holds no data about a person. A user_id column is not what
     # decides it (users has none, audit_events uses user_ref).
     TABLES_WITHOUT_USER_DATA = {
-      "consumed_events" => "Only a consumer name and an event id; its rows go with outbox_events (ON DELETE CASCADE)."
+      "consumed_events" => "Only a consumer name and an event id; its rows go with outbox_events (ON DELETE CASCADE).",
+      "food_catalog" => "Reference foods (USDA and the project's dishes); no person, and searches are not stored.",
+      "food_compositions" => "Ingredients of the project's dishes; reference data with no person."
     }.freeze
+    # Contexts whose models hold only reference data, so they export and erase nothing.
+    REFERENCE_CONTEXTS = %w[food_catalog].freeze
 
     @entries = {}
 
@@ -51,7 +55,7 @@ module Shared
       # register an exporter; the coverage spec requires contexts_without_exporter
       # to be empty.
       def contexts_with_models(root = Rails.root.join("app/domains"))
-        Dir.children(root.to_s).select { |name| Dir.glob(File.join(root.to_s, name, "models", "**", "*.rb")).any? }.sort
+        (Dir.children(root.to_s) - REFERENCE_CONTEXTS).select { |name| Dir.glob(File.join(root.to_s, name, "models", "**", "*.rb")).any? }.sort
       end
 
       def contexts_without_exporter(contexts_to_check)

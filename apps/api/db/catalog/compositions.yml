@@ -1,0 +1,396 @@
+# Home-style Brazilian dishes of this project: plausible recipes written by the project, not measurements
+# and not taken from any food composition table. Each dish lists USDA ingredients (db/catalog/usda_fdc.yml,
+# by fdc_id) with grams per 100 g of the finished dish, summing to exactly 100. Water counts as an ingredient
+# where the dish holds it. Nutrients are the weighted sum of the ingredients, computed when the catalog loads.
+# Real dishes vary a lot, so any figure built from these is an estimate.
+#
+# review: pending_nutritionist. A nutritionist has not reviewed these recipes yet; that review is a
+# recorded pending item before the beta (docs/superpowers/specs/2026-11-13-food-ai-design.md, 4.6).
+source: project
+source_version: "2026-11"
+license: project-owned
+review: pending_nutritionist
+items:
+  - id: rice_and_beans
+    name: "Rice and beans"
+    name_pt: "Arroz com feijão"
+    notes: "Arroz branco e feijão-carioca cozidos, com refogado simples."
+    parts:
+      - { fdc_id: 168878, grams: 55 } # arroz branco cozido
+      - { fdc_id: 175200, grams: 40 } # feijão-carioca cozido
+      - { fdc_id: 171411, grams: 2 } # óleo de soja
+      - { fdc_id: 170000, grams: 2 } # cebola crua
+      - { fdc_id: 169230, grams: 1 } # alho cru
+
+  - id: seasoned_rice
+    name: "Seasoned white rice"
+    name_pt: "Arroz branco temperado"
+    notes: "Arroz cozido com alho e cebola refogados."
+    parts:
+      - { fdc_id: 168878, grams: 95 }
+      - { fdc_id: 171411, grams: 2 }
+      - { fdc_id: 170000, grams: 2 }
+      - { fdc_id: 169230, grams: 1 }
+
+  - id: feijoada
+    name: "Feijoada"
+    name_pt: "Feijoada"
+    notes: "Feijão-preto com carnes de porco e de boi, em caldo."
+    parts:
+      - { fdc_id: 173735, grams: 50 } # feijão-preto cozido
+      - { fdc_id: 167854, grams: 10 } # costelinha suína cozida
+      - { fdc_id: 174586, grams: 10 } # linguiça de porco frita
+      - { fdc_id: 170604, grams: 8 } # carne-seca
+      - { fdc_id: 167914, grams: 4 } # bacon assado
+      - { fdc_id: 170000, grams: 5 } # cebola crua
+      - { fdc_id: 169230, grams: 1 } # alho cru
+      - { fdc_id: 173647, grams: 12 } # água
+
+  - id: tropeiro_beans
+    name: "Tropeiro beans"
+    name_pt: "Feijão tropeiro"
+    notes: "Feijão com farinha, bacon, linguiça, ovo e couve."
+    parts:
+      - { fdc_id: 175200, grams: 40 }
+      - { fdc_id: 2512377, grams: 15 } # farinha de mandioca
+      - { fdc_id: 167914, grams: 10 }
+      - { fdc_id: 174586, grams: 10 }
+      - { fdc_id: 173424, grams: 10 } # ovo cozido
+      - { fdc_id: 170407, grams: 8 } # couve-manteiga cozida
+      - { fdc_id: 170000, grams: 5 }
+      - { fdc_id: 171411, grams: 2 }
+
+  - id: chicken_stroganoff
+    name: "Chicken stroganoff"
+    name_pt: "Estrogonofe de frango"
+    notes: "Frango em molho de tomate com creme de leite e champignon."
+    parts:
+      - { fdc_id: 171477, grams: 40 } # peito de frango assado
+      - { fdc_id: 170857, grams: 15 } # creme de leite
+      - { fdc_id: 170054, grams: 15 } # molho de tomate
+      - { fdc_id: 169251, grams: 10 } # champignon
+      - { fdc_id: 170000, grams: 8 }
+      - { fdc_id: 171411, grams: 2 }
+      - { fdc_id: 173647, grams: 10 }
+
+  - id: beef_stroganoff
+    name: "Beef stroganoff"
+    name_pt: "Estrogonofe de carne"
+    notes: "Tiras de carne em molho de tomate com creme de leite e champignon."
+    parts:
+      - { fdc_id: 168710, grams: 40 } # bife de coxão mole grelhado
+      - { fdc_id: 170857, grams: 15 }
+      - { fdc_id: 170054, grams: 15 }
+      - { fdc_id: 169251, grams: 10 }
+      - { fdc_id: 170000, grams: 8 }
+      - { fdc_id: 171411, grams: 2 }
+      - { fdc_id: 173647, grams: 10 }
+
+  - id: plain_farofa
+    name: "Plain farofa"
+    name_pt: "Farofa simples"
+    notes: "Farinha de mandioca refogada na manteiga com cebola. A farinha do USDA é a crua."
+    parts:
+      - { fdc_id: 2512377, grams: 80 }
+      - { fdc_id: 173410, grams: 12 } # manteiga
+      - { fdc_id: 170000, grams: 7 }
+      - { fdc_id: 173468, grams: 1 } # sal
+
+  - id: egg_farofa
+    name: "Egg farofa"
+    name_pt: "Farofa de ovo"
+    notes: "Farinha de mandioca com ovo cozido, manteiga e cebola."
+    parts:
+      - { fdc_id: 2512377, grams: 60 }
+      - { fdc_id: 173424, grams: 20 }
+      - { fdc_id: 173410, grams: 10 }
+      - { fdc_id: 170000, grams: 8 }
+      - { fdc_id: 173468, grams: 1 }
+      - { fdc_id: 169230, grams: 1 }
+
+  - id: corn_couscous
+    name: "Brazilian corn couscous"
+    name_pt: "Cuscuz de milho"
+    notes: "Farinha de milho hidratada e cozida no vapor."
+    parts:
+      - { fdc_id: 168867, grams: 40 } # farinha de milho
+      - { fdc_id: 173647, grams: 58 }
+      - { fdc_id: 171411, grams: 1 }
+      - { fdc_id: 173468, grams: 1 }
+
+  - id: couscous_with_cheese
+    name: "Corn couscous with cheese"
+    name_pt: "Cuscuz com queijo"
+    notes: "Cuscuz de milho com queijo muçarela."
+    parts:
+      - { fdc_id: 168867, grams: 35 }
+      - { fdc_id: 173647, grams: 50 }
+      - { fdc_id: 170845, grams: 12 } # queijo muçarela
+      - { fdc_id: 171411, grams: 2 }
+      - { fdc_id: 173468, grams: 1 }
+
+  - id: tapioca_with_cheese
+    name: "Tapioca crepe with cheese"
+    name_pt: "Tapioca com queijo"
+    notes: "Tapioca hidratada, estimada a partir da pérola seca, recheada com queijo."
+    parts:
+      - { fdc_id: 169717, grams: 45 } # tapioca (pérola seca)
+      - { fdc_id: 173647, grams: 20 }
+      - { fdc_id: 170845, grams: 30 }
+      - { fdc_id: 173410, grams: 5 }
+
+  - id: tapioca_with_coconut
+    name: "Tapioca crepe with coconut"
+    name_pt: "Tapioca com coco"
+    notes: "Tapioca hidratada recheada com coco e leite condensado."
+    parts:
+      - { fdc_id: 169717, grams: 50 }
+      - { fdc_id: 173647, grams: 22 }
+      - { fdc_id: 170169, grams: 20 } # coco cru
+      - { fdc_id: 171275, grams: 8 } # leite condensado
+
+  - id: chicken_with_potato
+    name: "Roasted chicken with potato"
+    name_pt: "Frango assado com batata"
+    notes: "Sobrecoxa assada com batata cozida e temperos."
+    parts:
+      - { fdc_id: 172388, grams: 50 }
+      - { fdc_id: 170440, grams: 40 } # batata cozida
+      - { fdc_id: 171411, grams: 3 }
+      - { fdc_id: 170000, grams: 5 }
+      - { fdc_id: 169230, grams: 1 }
+      - { fdc_id: 173468, grams: 1 }
+
+  - id: chicken_with_okra
+    name: "Chicken with okra"
+    name_pt: "Frango com quiabo"
+    notes: "Coxa de frango cozida com quiabo e tomate."
+    parts:
+      - { fdc_id: 172377, grams: 55 } # coxa de frango cozida
+      - { fdc_id: 169261, grams: 30 } # quiabo cozido
+      - { fdc_id: 170000, grams: 6 }
+      - { fdc_id: 170457, grams: 6 } # tomate
+      - { fdc_id: 171411, grams: 2 }
+      - { fdc_id: 169230, grams: 1 }
+
+  - id: galinhada
+    name: "Galinhada (chicken and rice)"
+    name_pt: "Galinhada"
+    notes: "Arroz cozido com frango, ervilha e tomate."
+    parts:
+      - { fdc_id: 168878, grams: 60 }
+      - { fdc_id: 172388, grams: 25 }
+      - { fdc_id: 170420, grams: 5 } # ervilha cozida
+      - { fdc_id: 170457, grams: 4 }
+      - { fdc_id: 170000, grams: 4 }
+      - { fdc_id: 171411, grams: 2 }
+
+  - id: ground_beef_with_potato
+    name: "Ground beef with potato"
+    name_pt: "Carne moída com batata"
+    notes: "Carne moída refogada com batata em molho de tomate."
+    parts:
+      - { fdc_id: 174034, grams: 45 } # carne moída refogada
+      - { fdc_id: 170440, grams: 35 }
+      - { fdc_id: 170054, grams: 12 }
+      - { fdc_id: 170000, grams: 6 }
+      - { fdc_id: 171411, grams: 2 }
+
+  - id: pot_roast_with_vegetables
+    name: "Pot roast with vegetables"
+    name_pt: "Carne de panela com legumes"
+    notes: "Acém cozido com batata e cenoura."
+    parts:
+      - { fdc_id: 170213, grams: 50 } # acém cozido
+      - { fdc_id: 170440, grams: 20 }
+      - { fdc_id: 170394, grams: 20 } # cenoura cozida
+      - { fdc_id: 170000, grams: 6 }
+      - { fdc_id: 170054, grams: 3 }
+      - { fdc_id: 169230, grams: 1 }
+
+  - id: steak_with_onions
+    name: "Steak with onions"
+    name_pt: "Bife acebolado"
+    notes: "Bife grelhado com cebola refogada."
+    parts:
+      - { fdc_id: 168710, grams: 80 }
+      - { fdc_id: 170000, grams: 17 }
+      - { fdc_id: 171411, grams: 3 }
+
+  - id: pasta_bolognese
+    name: "Pasta with meat sauce"
+    name_pt: "Macarrão à bolonhesa"
+    notes: "Macarrão cozido com molho de carne moída e tomate."
+    parts:
+      - { fdc_id: 169737, grams: 60 } # macarrão cozido
+      - { fdc_id: 174034, grams: 20 }
+      - { fdc_id: 170054, grams: 17 }
+      - { fdc_id: 170000, grams: 2 }
+      - { fdc_id: 171411, grams: 1 }
+
+  - id: pasta_tomato_sauce
+    name: "Pasta with tomato sauce"
+    name_pt: "Macarrão ao molho de tomate"
+    notes: "Macarrão cozido com molho de tomate e queijo ralado."
+    parts:
+      - { fdc_id: 169737, grams: 70 }
+      - { fdc_id: 170054, grams: 25 }
+      - { fdc_id: 170000, grams: 2 }
+      - { fdc_id: 171413, grams: 2 } # azeite de oliva
+      - { fdc_id: 170848, grams: 1 } # queijo parmesão
+
+  - id: lasagna
+    name: "Lasagna"
+    name_pt: "Lasanha"
+    notes: "Camadas de massa, carne moída, molho de tomate, presunto e muçarela."
+    parts:
+      - { fdc_id: 169737, grams: 40 }
+      - { fdc_id: 174034, grams: 20 }
+      - { fdc_id: 170054, grams: 20 }
+      - { fdc_id: 170845, grams: 12 }
+      - { fdc_id: 173864, grams: 8 } # presunto
+
+  - id: cheese_omelette
+    name: "Cheese omelette"
+    name_pt: "Omelete de queijo"
+    notes: "Ovos mexidos com queijo muçarela e cebola."
+    parts:
+      - { fdc_id: 172187, grams: 90 } # ovo mexido
+      - { fdc_id: 170845, grams: 8 }
+      - { fdc_id: 170000, grams: 2 }
+
+  - id: baiao_de_dois
+    name: "Baião de dois"
+    name_pt: "Baião de dois"
+    notes: "Arroz com feijão-fradinho, carne-seca e queijo."
+    parts:
+      - { fdc_id: 168878, grams: 45 }
+      - { fdc_id: 173759, grams: 35 } # feijão-fradinho cozido
+      - { fdc_id: 170845, grams: 8 }
+      - { fdc_id: 170604, grams: 6 }
+      - { fdc_id: 170000, grams: 3 }
+      - { fdc_id: 173410, grams: 3 }
+
+  - id: fish_stew_with_coconut
+    name: "Fish stew with coconut milk"
+    name_pt: "Moqueca de peixe"
+    notes: "Peixe cozido com tomate, pimentão, leite de coco e azeite de dendê."
+    parts:
+      - { fdc_id: 175177, grams: 45 } # tilápia assada
+      - { fdc_id: 170457, grams: 12 }
+      - { fdc_id: 170000, grams: 10 }
+      - { fdc_id: 170427, grams: 6 } # pimentão verde
+      - { fdc_id: 170173, grams: 18 } # leite de coco
+      - { fdc_id: 171015, grams: 3 } # azeite de dendê
+      - { fdc_id: 169997, grams: 2 } # coentro
+      - { fdc_id: 173647, grams: 4 }
+
+  - id: cod_with_potatoes
+    name: "Cod with potatoes"
+    name_pt: "Bacalhau com batatas"
+    notes: "Bacalhau com batata, cebola, ovo e azeite. O USDA traz o bacalhau fresco assado, usado como aproximação."
+    parts:
+      - { fdc_id: 171956, grams: 35 } # bacalhau fresco assado
+      - { fdc_id: 170440, grams: 40 }
+      - { fdc_id: 170000, grams: 10 }
+      - { fdc_id: 171413, grams: 5 }
+      - { fdc_id: 173424, grams: 8 }
+      - { fdc_id: 169094, grams: 2 } # azeitona
+
+  - id: baked_fish_with_vegetables
+    name: "Baked fish with vegetables"
+    name_pt: "Peixe assado com legumes"
+    notes: "Tilápia assada com abobrinha e tomate."
+    parts:
+      - { fdc_id: 175177, grams: 55 }
+      - { fdc_id: 169291, grams: 20 } # abobrinha
+      - { fdc_id: 170457, grams: 12 }
+      - { fdc_id: 170000, grams: 8 }
+      - { fdc_id: 171413, grams: 4 }
+      - { fdc_id: 169230, grams: 1 }
+
+  - id: vegetable_soup
+    name: "Vegetable soup"
+    name_pt: "Sopa de legumes"
+    notes: "Cenoura, batata, chuchu e abobrinha em caldo."
+    parts:
+      - { fdc_id: 170394, grams: 20 }
+      - { fdc_id: 170440, grams: 20 }
+      - { fdc_id: 169291, grams: 10 }
+      - { fdc_id: 170403, grams: 15 } # chuchu cozido
+      - { fdc_id: 170000, grams: 3 }
+      - { fdc_id: 173647, grams: 30 }
+      - { fdc_id: 171411, grams: 1 }
+      - { fdc_id: 169230, grams: 1 }
+
+  - id: green_salad_with_tomato
+    name: "Green salad with tomato"
+    name_pt: "Salada de alface e tomate"
+    notes: "Alface, tomate e cebola com azeite."
+    parts:
+      - { fdc_id: 169249, grams: 60 } # alface
+      - { fdc_id: 170457, grams: 35 }
+      - { fdc_id: 170000, grams: 3 }
+      - { fdc_id: 171413, grams: 2 }
+
+  - id: vinaigrette_salsa
+    name: "Brazilian vinaigrette salsa"
+    name_pt: "Vinagrete"
+    notes: "Tomate, cebola e pimentão picados, com vinagre e óleo."
+    parts:
+      - { fdc_id: 170457, grams: 45 }
+      - { fdc_id: 170000, grams: 25 }
+      - { fdc_id: 170427, grams: 15 }
+      - { fdc_id: 172237, grams: 5 } # vinagre
+      - { fdc_id: 171411, grams: 5 }
+      - { fdc_id: 170416, grams: 5 } # salsinha
+
+  - id: mashed_potatoes
+    name: "Mashed potatoes"
+    name_pt: "Purê de batata"
+    notes: "Batata cozida amassada com leite e manteiga."
+    parts:
+      - { fdc_id: 170440, grams: 85 }
+      - { fdc_id: 172217, grams: 10 } # leite integral
+      - { fdc_id: 173410, grams: 5 }
+
+  - id: polenta_with_sauce
+    name: "Polenta with tomato sauce"
+    name_pt: "Polenta com molho"
+    notes: "Polenta cozida com molho de tomate e queijo ralado."
+    parts:
+      - { fdc_id: 171672, grams: 70 }
+      - { fdc_id: 170054, grams: 25 }
+      - { fdc_id: 170848, grams: 5 }
+
+  - id: chicken_salad_mayo
+    name: "Chicken salad with mayonnaise"
+    name_pt: "Salpicão de frango"
+    notes: "Frango desfiado com maionese, cenoura, maçã, ervilha, milho e uva-passa."
+    parts:
+      - { fdc_id: 171477, grams: 35 }
+      - { fdc_id: 171009, grams: 15 } # maionese
+      - { fdc_id: 170393, grams: 12 } # cenoura crua
+      - { fdc_id: 171688, grams: 12 } # maçã
+      - { fdc_id: 170420, grams: 8 }
+      - { fdc_id: 169999, grams: 8 } # milho-verde cozido
+      - { fdc_id: 168165, grams: 5 } # uva-passa
+      - { fdc_id: 171257, grams: 5 } # creme azedo
+
+  - id: brigadeiro
+    name: "Brigadeiro (chocolate fudge ball)"
+    name_pt: "Brigadeiro"
+    notes: "Doce de leite condensado, cacau em pó e manteiga."
+    parts:
+      - { fdc_id: 171275, grams: 85 }
+      - { fdc_id: 169593, grams: 10 } # cacau em pó
+      - { fdc_id: 173410, grams: 5 }
+
+  - id: banana_milk_smoothie
+    name: "Banana milk smoothie"
+    name_pt: "Vitamina de banana"
+    notes: "Banana batida com leite integral e mel."
+    parts:
+      - { fdc_id: 172217, grams: 68 }
+      - { fdc_id: 173944, grams: 30 } # banana
+      - { fdc_id: 169640, grams: 2 } # mel

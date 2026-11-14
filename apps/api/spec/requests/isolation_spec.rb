@@ -150,6 +150,12 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
       delete "/api/v1/sport_profiles/#{a_sport_id}", headers: b_headers
       expect(response).to have_http_status(:not_found)
     },
+    # The catalog is shared reference data: B's search reads it and writes nothing of A's.
+    "POST /api/v1/foods/search" => lambda {
+      post "/api/v1/foods/search", params: { term: "arroz" }, headers: b_headers, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.keys).to eq(%w[items next_page])
+    },
     "POST /api/v1/account/export" => lambda {
       post "/api/v1/account/export", params: { password: IdentityHelpers::PASSWORD }, headers: b_headers, as: :json
       expect(response).to have_http_status(:ok)

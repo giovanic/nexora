@@ -371,6 +371,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/foods/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Searches the food catalog by name, ignoring case and accents.
+         * @description Used to correct a meal. The term travels in the body, never in the URL, and is filtered from the
+         *     logs. The catalog holds USDA FoodData Central ingredients and dishes written by the project
+         *     (kind composition, shown as "composição própria"). Items are ordered by closeness to the term,
+         *     dishes first on a tie. per_page is capped at 50 (20 when omitted). A missing or blank term, a term
+         *     over 100 characters, or a page below 1 answers 422 validation_failed. Needs the health_data consent.
+         */
+        post: operations["searchFoods"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -464,6 +488,33 @@ export interface components {
         };
         SportProfileList: {
             sport_profiles: components["schemas"]["SportProfile"][];
+        };
+        FoodSearchRequest: {
+            term: string;
+            /** @default 1 */
+            page: number;
+            /**
+             * @description Values above 50 are served as 50.
+             * @default 20
+             */
+            per_page: number;
+        };
+        FoodCatalogItem: {
+            /** Format: uuid */
+            id: string;
+            name_pt: string;
+            /**
+             * @description composition is a dish of the project, shown as "composição própria".
+             * @enum {string}
+             */
+            kind: "ingredient" | "composition";
+            /** @enum {string} */
+            source: "usda_fdc" | "project";
+        };
+        FoodSearchPage: {
+            items: components["schemas"]["FoodCatalogItem"][];
+            /** @description The next page number, or null on the last page. */
+            next_page: number | null;
         };
         /** @enum {string} */
         ConsentPurpose: "health_data" | "food_photo_ai" | "strava_integration" | "usage_metrics";
@@ -1088,6 +1139,34 @@ export interface operations {
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    searchFoods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description A page of catalog items. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodSearchPage"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
     };

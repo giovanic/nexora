@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_13_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+  enable_extension "pg_trgm"
 
   create_table "account_deletions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "user_id", null: false
@@ -55,6 +56,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_140000) do
     t.uuid "event_id", null: false
     t.datetime "consumed_at", null: false
     t.index ["event_id"], name: "index_consumed_events_on_event_id"
+  end
+
+  create_table "food_catalog", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "source", null: false
+    t.string "source_version", null: false
+    t.string "source_item_id", null: false
+    t.string "license", null: false
+    t.string "name", null: false
+    t.string "name_pt", null: false
+    t.string "name_search", null: false
+    t.string "kind", null: false
+    t.jsonb "nutrients_per_100g", default: {}, null: false
+    t.string "review"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name_search"], name: "index_food_catalog_on_name_search_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["source", "source_version", "source_item_id"], name: "index_food_catalog_on_source_release_item", unique: true
+    t.check_constraint "kind::text = ANY (ARRAY['ingredient'::text, 'composition'::text])", name: "food_catalog_kind_known"
+    t.check_constraint "length(btrim(license::text)) > 0", name: "food_catalog_license_present"
+    t.check_constraint "source::text = ANY (ARRAY['usda_fdc'::text, 'project'::text])", name: "food_catalog_source_known"
+  end
+
+  create_table "food_compositions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "catalog_item_id", null: false
+    t.uuid "ingredient_catalog_item_id", null: false
+    t.decimal "grams_per_100g", precision: 7, scale: 2, null: false
+    t.string "notes"
+    t.index ["catalog_item_id", "ingredient_catalog_item_id"], name: "index_food_compositions_on_item_and_ingredient", unique: true
+    t.index ["ingredient_catalog_item_id"], name: "index_food_compositions_on_ingredient_catalog_item_id"
+    t.check_constraint "grams_per_100g > 0::numeric AND grams_per_100g <= 100::numeric", name: "food_compositions_grams_in_range"
   end
 
   create_table "outbox_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -135,6 +166,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_140000) do
   add_foreign_key "account_deletions", "users"
   add_foreign_key "consent_records", "users"
   add_foreign_key "consumed_events", "outbox_events", column: "event_id", on_delete: :cascade
+  add_foreign_key "food_compositions", "food_catalog", column: "catalog_item_id", on_delete: :cascade
+  add_foreign_key "food_compositions", "food_catalog", column: "ingredient_catalog_item_id"
   add_foreign_key "sessions", "users"
   add_foreign_key "sport_profiles", "users"
   add_foreign_key "user_profiles", "users"

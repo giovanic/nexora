@@ -506,6 +506,37 @@ paths:
           $ref: "#/components/responses/Error"
         default:
           $ref: "#/components/responses/Error"
+  /api/v1/foods/search:
+    post:
+      operationId: searchFoods
+      summary: Searches the food catalog by name, ignoring case and accents.
+      description: |
+        Used to correct a meal. The term travels in the body, never in the URL, and is filtered from the
+        logs. The catalog holds USDA FoodData Central ingredients and dishes written by the project
+        (kind composition, shown as "composição própria"). Items are ordered by closeness to the term,
+        dishes first on a tie. per_page is capped at 50 (20 when omitted). A missing or blank term, a term
+        over 100 characters, or a page below 1 answers 422 validation_failed. Needs the health_data consent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FoodSearchRequest"
+      responses:
+        "200":
+          description: A page of catalog items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodSearchPage"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     bearerSession:
@@ -729,6 +760,56 @@ components:
           maxItems: 6
           items:
             $ref: "#/components/schemas/SportProfile"
+    FoodSearchRequest:
+      type: object
+      additionalProperties: false
+      required: [term]
+      properties:
+        term:
+          type: string
+          minLength: 1
+          maxLength: 100
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        per_page:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+          description: Values above 50 are served as 50.
+    FoodCatalogItem:
+      type: object
+      additionalProperties: false
+      required: [id, name_pt, kind, source]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name_pt:
+          type: string
+        kind:
+          type: string
+          enum: [ingredient, composition]
+          description: composition is a dish of the project, shown as "composição própria".
+        source:
+          type: string
+          enum: [usda_fdc, project]
+    FoodSearchPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_page]
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/FoodCatalogItem"
+        next_page:
+          type: [integer, "null"]
+          minimum: 2
+          description: The next page number, or null on the last page.
     ConsentPurpose:
       type: string
       enum: [health_data, food_photo_ai, strava_integration, usage_metrics]

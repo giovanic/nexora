@@ -1,0 +1,53 @@
+module FoodCatalog
+  # The only entry point to FoodCatalog for other contexts and controllers. It returns
+  # Data objects, never models. The catalog is reference data with no personal data.
+  module Api
+    # Minimum similarity for match, 0.45 to start, calibrated in Task 13 of the Food AI plan.
+    MATCH_THRESHOLD = 0.45
+    DEFAULT_PER_PAGE = 20
+    MAX_PER_PAGE = 50
+    MAX_TERM_LENGTH = 100
+
+    CatalogItemInfo = Data.define(:id, :name_pt, :kind, :source)
+    Page = Data.define(:items, :next_page)
+    MatchInfo = Data.define(:catalog_item_id, :kind, :similarity)
+    # per_100g: { energy_kcal:, protein_g:, carbs_g:, fat_g: }. The numbers are references, never a measurement.
+    NutrientsInfo = Data.define(:per_100g, :source, :source_version, :source_item_id, :license, :kind)
+
+    class << self
+      # Page of CatalogItemInfo; per_page is capped at 50. A blank term finds nothing.
+      def search(term:, page: 1, per_page: DEFAULT_PER_PAGE)
+        SearchFoods.call(term:, page:, per_page:)
+      end
+
+      # Fields of a search request that are not acceptable, as [{ field:, code: }], never the values.
+      def search_errors(term:, page: 1, per_page: DEFAULT_PER_PAGE)
+        fields = []
+        fields << "term" unless term.is_a?(String) && term.strip.present? && term.length <= MAX_TERM_LENGTH
+        fields << "page" unless page.is_a?(Integer) && page >= 1
+        fields << "per_page" unless per_page.is_a?(Integer) && per_page >= 1
+        fields.map { |field| { field:, code: "invalid" } }
+      end
+
+      # MatchInfo or nil. Compositions come before ingredients on the same score.
+      def match(name:)
+        MatchFood.call(name:)
+      end
+
+      # NutrientsInfo, or nil for an unknown id.
+      def nutrients_for(catalog_item_id:)
+        return unless catalog_item_id.to_s.match?(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/)
+
+        item = CatalogItem.find_by(id: catalog_item_id)
+        return unless item
+
+        NutrientsInfo.new(per_100g: item.nutrients_per_100g.symbolize_keys, source: item.source, source_version: item.source_version,
+                          source_item_id: item.source_item_id, license: item.license, kind: item.kind)
+      end
+
+      def present(item)
+        CatalogItemInfo.new(id: item.id, name_pt: item.name_pt, kind: item.kind, source: item.source)
+      end
+    end
+  end
+end

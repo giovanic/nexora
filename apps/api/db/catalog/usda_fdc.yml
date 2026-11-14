@@ -1,0 +1,1810 @@
+# Curated subset of USDA FoodData Central for the project food catalog.
+#
+# Source: https://fdc.nal.usda.gov/download-datasets/ (official downloads page), read on 2026-11-13.
+# License: CC0 1.0 Universal. USDA states the data are in the public domain and asks that users list
+#   FoodData Central as the source. Suggested citation, as USDA publishes it:
+#   "U.S. Department of Agriculture, Agricultural Research Service. FoodData Central, 2019. fdc.nal.usda.gov."
+#
+# Releases used, as published on the downloads page:
+#   sr_legacy_food   SR Legacy, April 2018   (FoodData_Central_sr_legacy_food_csv_2018-04.zip)      source_version "2018-04"
+#   foundation_food  Foundation Foods, October 2026 (FoodData_Central_foundation_food_json_2026-10-29.zip)  source_version "2026-10-29"
+#
+# FDC nutrient numbers behind each per-100 g field (nutrient.csv / "nutrient_nbr"):
+#   protein_g  203 (id 1003, Protein)
+#   fat_g      204 (id 1004, Total lipid (fat))
+#   carbs_g    205 (id 1005, Carbohydrate, by difference)
+#   energy_kcal  one rule for every record, written in its energy_nutrient field:
+#                208 (id 1008, Energy, KCAL) when the record has it, which is every SR Legacy record;
+#                else 958 (id 2048, Energy (Atwater Specific Factors), KCAL);
+#                else 957 (id 2047, Energy (Atwater General Factors), KCAL).
+#                Foundation Foods records usually lack 208 and carry the Atwater energy instead.
+#
+# name is the FDC description. name_pt is written by this project. Values are per 100 g, as published,
+# with no rounding. The catalog stores only these four fields. Not a medical tool: values are references
+# and any meal figure built from them is shown as an estimate range.
+#
+# Generated from the official files once; the files themselves are not versioned.
+source: usda_fdc
+license: CC0-1.0
+citation: "U.S. Department of Agriculture, Agricultural Research Service. FoodData Central, 2019. fdc.nal.usda.gov."
+items:
+  - fdc_id: 328637
+    data_type: foundation_food
+    source_version: "2026-10-29"
+    name: "Cheese, cheddar"
+    name_pt: "Queijo cheddar"
+    energy_nutrient: "208"
+    energy_kcal: 408
+    protein_g: 23.3
+    carbs_g: 2.44
+    fat_g: 34
+  - fdc_id: 334194
+    data_type: foundation_food
+    source_version: "2026-10-29"
+    name: "Fish, tuna, light, canned in water, drained solids"
+    name_pt: "Atum em lata (água, escorrido)"
+    energy_nutrient: "208"
+    energy_kcal: 90
+    protein_g: 19
+    carbs_g: 0.08
+    fat_g: 0.94
+  - fdc_id: 2512377
+    data_type: foundation_food
+    source_version: "2026-10-29"
+    name: "Flour, cassava"
+    name_pt: "Farinha de mandioca (crua)"
+    energy_nutrient: "958"
+    energy_kcal: 359
+    protein_g: 0.918
+    carbs_g: 87.3
+    fat_g: 0.494
+  - fdc_id: 167746
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Lemons, raw, without peel"
+    name_pt: "Limão-siciliano sem casca"
+    energy_nutrient: "208"
+    energy_kcal: 29
+    protein_g: 1.1
+    carbs_g: 9.32
+    fat_g: 0.3
+  - fdc_id: 167762
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Strawberries, raw"
+    name_pt: "Morango cru"
+    energy_nutrient: "208"
+    energy_kcal: 32
+    protein_g: 0.67
+    carbs_g: 7.68
+    fat_g: 0.3
+  - fdc_id: 167765
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Watermelon, raw"
+    name_pt: "Melancia crua"
+    energy_nutrient: "208"
+    energy_kcal: 30
+    protein_g: 0.61
+    carbs_g: 7.55
+    fat_g: 0.15
+  - fdc_id: 167821
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Pork, fresh, loin, whole, separable lean and fat, cooked, roasted"
+    name_pt: "Lombo suíno assado"
+    energy_nutrient: "208"
+    energy_kcal: 248
+    protein_g: 27.09
+    carbs_g: 0
+    fat_g: 14.65
+  - fdc_id: 167854
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Pork, fresh, spareribs, separable lean and fat, cooked, braised"
+    name_pt: "Costelinha suína cozida"
+    energy_nutrient: "208"
+    energy_kcal: 397
+    protein_g: 29.06
+    carbs_g: 0
+    fat_g: 30.3
+  - fdc_id: 167903
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Pork, fresh, ground, cooked"
+    name_pt: "Carne suína moída cozida"
+    energy_nutrient: "208"
+    energy_kcal: 297
+    protein_g: 25.69
+    carbs_g: 0
+    fat_g: 20.77
+  - fdc_id: 167905
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Pork, fresh, loin, tenderloin, separable lean and fat, cooked, roasted"
+    name_pt: "Filé suíno assado"
+    energy_nutrient: "208"
+    energy_kcal: 147
+    protein_g: 26.04
+    carbs_g: 0
+    fat_g: 3.96
+  - fdc_id: 167914
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Pork, cured, bacon, cooked, baked"
+    name_pt: "Bacon assado"
+    energy_nutrient: "208"
+    energy_kcal: 548
+    protein_g: 35.73
+    carbs_g: 1.35
+    fat_g: 43.27
+  - fdc_id: 168155
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Limes, raw"
+    name_pt: "Limão cru"
+    energy_nutrient: "208"
+    energy_kcal: 30
+    protein_g: 0.7
+    carbs_g: 10.54
+    fat_g: 0.2
+  - fdc_id: 168165
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Raisins, dark, seedless (Includes foods for USDA's Food Distribution Program)"
+    name_pt: "Uva-passa"
+    energy_nutrient: "208"
+    energy_kcal: 299
+    protein_g: 3.3
+    carbs_g: 79.32
+    fat_g: 0.25
+  - fdc_id: 168223
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Pork, fresh, leg (ham), whole, separable lean and fat, cooked, roasted"
+    name_pt: "Pernil suíno assado"
+    energy_nutrient: "208"
+    energy_kcal: 273
+    protein_g: 26.83
+    carbs_g: 0
+    fat_g: 17.61
+  - fdc_id: 168409
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cucumber, with peel, raw"
+    name_pt: "Pepino cru"
+    energy_nutrient: "208"
+    energy_kcal: 15
+    protein_g: 0.65
+    carbs_g: 3.63
+    fat_g: 0.11
+  - fdc_id: 168421
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Kale, raw"
+    name_pt: "Couve crua"
+    energy_nutrient: "208"
+    energy_kcal: 35
+    protein_g: 2.92
+    carbs_g: 4.42
+    fat_g: 1.49
+  - fdc_id: 168449
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Pumpkin, cooked, boiled, drained, without salt"
+    name_pt: "Abóbora cozida"
+    energy_nutrient: "208"
+    energy_kcal: 20
+    protein_g: 0.72
+    carbs_g: 4.9
+    fat_g: 0.07
+  - fdc_id: 168463
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Spinach, cooked, boiled, drained, without salt"
+    name_pt: "Espinafre cozido"
+    energy_nutrient: "208"
+    energy_kcal: 23
+    protein_g: 2.97
+    carbs_g: 3.75
+    fat_g: 0.26
+  - fdc_id: 168482
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Sweet potato, raw, unprepared (Includes foods for USDA's Food Distribution Program)"
+    name_pt: "Batata-doce crua"
+    energy_nutrient: "208"
+    energy_kcal: 86
+    protein_g: 1.57
+    carbs_g: 20.12
+    fat_g: 0.05
+  - fdc_id: 168483
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Sweet potato, cooked, baked in skin, flesh, without salt"
+    name_pt: "Batata-doce assada"
+    energy_nutrient: "208"
+    energy_kcal: 90
+    protein_g: 2.01
+    carbs_g: 20.71
+    fat_g: 0.15
+  - fdc_id: 168569
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Hearts of palm, canned"
+    name_pt: "Palmito em conserva"
+    energy_nutrient: "208"
+    energy_kcal: 28
+    protein_g: 2.52
+    carbs_g: 4.62
+    fat_g: 0.62
+  - fdc_id: 168626
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beef, variety meats and by-products, liver, cooked, braised"
+    name_pt: "Fígado bovino cozido"
+    energy_nutrient: "208"
+    energy_kcal: 191
+    protein_g: 29.08
+    carbs_g: 5.13
+    fat_g: 5.26
+  - fdc_id: 168710
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beef, round, top round, steak, separable lean and fat, trimmed to 1/8\" fat, choice, cooked, broiled"
+    name_pt: "Bife de coxão mole grelhado"
+    energy_nutrient: "208"
+    energy_kcal: 224
+    protein_g: 30.7
+    carbs_g: 0
+    fat_g: 10.27
+  - fdc_id: 168820
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Molasses"
+    name_pt: "Melaço"
+    energy_nutrient: "208"
+    energy_kcal: 290
+    protein_g: 0
+    carbs_g: 74.73
+    fat_g: 0.1
+  - fdc_id: 168833
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Sugars, brown"
+    name_pt: "Açúcar mascavo"
+    energy_nutrient: "208"
+    energy_kcal: 380
+    protein_g: 0.12
+    carbs_g: 98.09
+    fat_g: 0
+  - fdc_id: 168867
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cornmeal, degermed, enriched, yellow"
+    name_pt: "Farinha de milho"
+    energy_nutrient: "208"
+    energy_kcal: 370
+    protein_g: 7.11
+    carbs_g: 79.45
+    fat_g: 1.75
+  - fdc_id: 168877
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Rice, white, long-grain, regular, raw, enriched"
+    name_pt: "Arroz branco cru"
+    energy_nutrient: "208"
+    energy_kcal: 365
+    protein_g: 7.13
+    carbs_g: 79.95
+    fat_g: 0.66
+  - fdc_id: 168878
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Rice, white, long-grain, regular, enriched, cooked"
+    name_pt: "Arroz branco cozido"
+    energy_nutrient: "208"
+    energy_kcal: 130
+    protein_g: 2.69
+    carbs_g: 28.17
+    fat_g: 0.28
+  - fdc_id: 168910
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Pasta, whole-wheat, cooked (Includes foods for USDA's Food Distribution Program)"
+    name_pt: "Macarrão integral cozido"
+    energy_nutrient: "208"
+    energy_kcal: 149
+    protein_g: 5.99
+    carbs_g: 30.07
+    fat_g: 1.71
+  - fdc_id: 168936
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Wheat flour, white, all-purpose, enriched, unbleached"
+    name_pt: "Farinha de trigo"
+    energy_nutrient: "208"
+    energy_kcal: 364
+    protein_g: 10.33
+    carbs_g: 76.31
+    fat_g: 0.98
+  - fdc_id: 169092
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Melons, cantaloupe, raw"
+    name_pt: "Melão cru"
+    energy_nutrient: "208"
+    energy_kcal: 34
+    protein_g: 0.84
+    carbs_g: 8.16
+    fat_g: 0.19
+  - fdc_id: 169094
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Olives, ripe, canned (small-extra large)"
+    name_pt: "Azeitona em conserva"
+    energy_nutrient: "208"
+    energy_kcal: 116
+    protein_g: 0.84
+    carbs_g: 6.04
+    fat_g: 10.9
+  - fdc_id: 169097
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Oranges, raw, all commercial varieties"
+    name_pt: "Laranja crua"
+    energy_nutrient: "208"
+    energy_kcal: 47
+    protein_g: 0.94
+    carbs_g: 11.75
+    fat_g: 0.12
+  - fdc_id: 169098
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Orange juice, raw (Includes foods for USDA's Food Distribution Program)"
+    name_pt: "Suco de laranja natural"
+    energy_nutrient: "208"
+    energy_kcal: 45
+    protein_g: 0.7
+    carbs_g: 10.4
+    fat_g: 0.2
+  - fdc_id: 169105
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Tangerines, (mandarin oranges), raw"
+    name_pt: "Mexerica crua"
+    energy_nutrient: "208"
+    energy_kcal: 53
+    protein_g: 0.81
+    carbs_g: 13.34
+    fat_g: 0.31
+  - fdc_id: 169108
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Passion-fruit, (granadilla), purple, raw"
+    name_pt: "Maracujá cru"
+    energy_nutrient: "208"
+    energy_kcal: 97
+    protein_g: 2.2
+    carbs_g: 23.38
+    fat_g: 0.7
+  - fdc_id: 169118
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Pears, raw"
+    name_pt: "Pera crua"
+    energy_nutrient: "208"
+    energy_kcal: 57
+    protein_g: 0.36
+    carbs_g: 15.23
+    fat_g: 0.14
+  - fdc_id: 169124
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Pineapple, raw, all varieties"
+    name_pt: "Abacaxi cru"
+    energy_nutrient: "208"
+    energy_kcal: 50
+    protein_g: 0.54
+    carbs_g: 13.12
+    fat_g: 0.12
+  - fdc_id: 169130
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Plantains, yellow, raw"
+    name_pt: "Banana-da-terra crua"
+    energy_nutrient: "208"
+    energy_kcal: 122
+    protein_g: 1.3
+    carbs_g: 31.89
+    fat_g: 0.35
+  - fdc_id: 169141
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beans, snap, green, cooked, boiled, drained, without salt"
+    name_pt: "Vagem cozida"
+    energy_nutrient: "208"
+    energy_kcal: 35
+    protein_g: 1.89
+    carbs_g: 7.88
+    fat_g: 0.28
+  - fdc_id: 169146
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beets, cooked, boiled, drained"
+    name_pt: "Beterraba cozida"
+    energy_nutrient: "208"
+    energy_kcal: 44
+    protein_g: 1.68
+    carbs_g: 9.96
+    fat_g: 0.18
+  - fdc_id: 169229
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Eggplant, cooked, boiled, drained, without salt"
+    name_pt: "Berinjela cozida"
+    energy_nutrient: "208"
+    energy_kcal: 35
+    protein_g: 0.83
+    carbs_g: 8.73
+    fat_g: 0.23
+  - fdc_id: 169230
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Garlic, raw"
+    name_pt: "Alho cru"
+    energy_nutrient: "208"
+    energy_kcal: 149
+    protein_g: 6.36
+    carbs_g: 33.06
+    fat_g: 0.5
+  - fdc_id: 169249
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Lettuce, green leaf, raw"
+    name_pt: "Alface crua"
+    energy_nutrient: "208"
+    energy_kcal: 15
+    protein_g: 1.36
+    carbs_g: 2.87
+    fat_g: 0.15
+  - fdc_id: 169251
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Mushrooms, white, raw"
+    name_pt: "Champignon cru"
+    energy_nutrient: "208"
+    energy_kcal: 22
+    protein_g: 3.09
+    carbs_g: 3.26
+    fat_g: 0.34
+  - fdc_id: 169261
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Okra, cooked, boiled, drained, without salt"
+    name_pt: "Quiabo cozido"
+    energy_nutrient: "208"
+    energy_kcal: 22
+    protein_g: 1.87
+    carbs_g: 4.51
+    fat_g: 0.21
+  - fdc_id: 169291
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Squash, summer, zucchini, includes skin, raw"
+    name_pt: "Abobrinha crua"
+    energy_nutrient: "208"
+    energy_kcal: 17
+    protein_g: 1.21
+    carbs_g: 3.11
+    fat_g: 0.32
+  - fdc_id: 169593
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cocoa, dry powder, unsweetened"
+    name_pt: "Cacau em pó"
+    energy_nutrient: "208"
+    energy_kcal: 228
+    protein_g: 19.6
+    carbs_g: 57.9
+    fat_g: 13.7
+  - fdc_id: 169640
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Honey"
+    name_pt: "Mel"
+    energy_nutrient: "208"
+    energy_kcal: 304
+    protein_g: 0.3
+    carbs_g: 82.4
+    fat_g: 0
+  - fdc_id: 169655
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Sugars, granulated"
+    name_pt: "Açúcar refinado"
+    energy_nutrient: "208"
+    energy_kcal: 387
+    protein_g: 0
+    carbs_g: 99.98
+    fat_g: 0
+  - fdc_id: 169698
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cornstarch"
+    name_pt: "Amido de milho"
+    energy_nutrient: "208"
+    energy_kcal: 381
+    protein_g: 0.26
+    carbs_g: 91.27
+    fat_g: 0.05
+  - fdc_id: 169704
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Rice, brown, long-grain, cooked (Includes foods for USDA's Food Distribution Program)"
+    name_pt: "Arroz integral cozido"
+    energy_nutrient: "208"
+    energy_kcal: 123
+    protein_g: 2.74
+    carbs_g: 25.58
+    fat_g: 0.97
+  - fdc_id: 169708
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Rice, white, long-grain, parboiled, enriched, cooked"
+    name_pt: "Arroz parboilizado cozido"
+    energy_nutrient: "208"
+    energy_kcal: 123
+    protein_g: 2.91
+    carbs_g: 26.05
+    fat_g: 0.37
+  - fdc_id: 169717
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Tapioca, pearl, dry"
+    name_pt: "Tapioca (pérola seca)"
+    energy_nutrient: "208"
+    energy_kcal: 358
+    protein_g: 0.19
+    carbs_g: 88.69
+    fat_g: 0.02
+  - fdc_id: 169736
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Pasta, dry, enriched"
+    name_pt: "Macarrão seco"
+    energy_nutrient: "208"
+    energy_kcal: 371
+    protein_g: 13.04
+    carbs_g: 74.67
+    fat_g: 1.51
+  - fdc_id: 169737
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Pasta, cooked, enriched, without added salt"
+    name_pt: "Macarrão cozido"
+    energy_nutrient: "208"
+    energy_kcal: 158
+    protein_g: 5.8
+    carbs_g: 30.86
+    fat_g: 0.93
+  - fdc_id: 169910
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Mangos, raw"
+    name_pt: "Manga crua"
+    energy_nutrient: "208"
+    energy_kcal: 60
+    protein_g: 0.82
+    carbs_g: 14.98
+    fat_g: 0.38
+  - fdc_id: 169926
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Papayas, raw"
+    name_pt: "Mamão cru"
+    energy_nutrient: "208"
+    energy_kcal: 43
+    protein_g: 0.47
+    carbs_g: 10.82
+    fat_g: 0.26
+  - fdc_id: 169967
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Broccoli, cooked, boiled, drained, without salt"
+    name_pt: "Brócolis cozido"
+    energy_nutrient: "208"
+    energy_kcal: 35
+    protein_g: 2.38
+    carbs_g: 7.18
+    fat_g: 0.41
+  - fdc_id: 169975
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cabbage, raw"
+    name_pt: "Repolho cru"
+    energy_nutrient: "208"
+    energy_kcal: 25
+    protein_g: 1.28
+    carbs_g: 5.8
+    fat_g: 0.1
+  - fdc_id: 169985
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cassava, raw"
+    name_pt: "Mandioca crua"
+    energy_nutrient: "208"
+    energy_kcal: 160
+    protein_g: 1.36
+    carbs_g: 38.06
+    fat_g: 0.28
+  - fdc_id: 169988
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Celery, raw"
+    name_pt: "Salsão cru"
+    energy_nutrient: "208"
+    energy_kcal: 14
+    protein_g: 0.69
+    carbs_g: 2.97
+    fat_g: 0.17
+  - fdc_id: 169997
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Coriander (cilantro) leaves, raw"
+    name_pt: "Coentro fresco"
+    energy_nutrient: "208"
+    energy_kcal: 23
+    protein_g: 2.13
+    carbs_g: 3.67
+    fat_g: 0.52
+  - fdc_id: 169999
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Corn, sweet, yellow, cooked, boiled, drained, without salt"
+    name_pt: "Milho-verde cozido"
+    energy_nutrient: "208"
+    energy_kcal: 96
+    protein_g: 3.41
+    carbs_g: 20.98
+    fat_g: 1.5
+  - fdc_id: 170000
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Onions, raw"
+    name_pt: "Cebola crua"
+    energy_nutrient: "208"
+    energy_kcal: 40
+    protein_g: 1.1
+    carbs_g: 9.34
+    fat_g: 0.1
+  - fdc_id: 170005
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Onions, spring or scallions (includes tops and bulb), raw"
+    name_pt: "Cebolinha crua"
+    energy_nutrient: "208"
+    energy_kcal: 32
+    protein_g: 1.83
+    carbs_g: 7.34
+    fat_g: 0.19
+  - fdc_id: 170026
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Potatoes, flesh and skin, raw"
+    name_pt: "Batata crua"
+    energy_nutrient: "208"
+    energy_kcal: 77
+    protein_g: 2.05
+    carbs_g: 17.49
+    fat_g: 0.09
+  - fdc_id: 170054
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Tomato products, canned, sauce"
+    name_pt: "Molho de tomate"
+    energy_nutrient: "208"
+    energy_kcal: 24
+    protein_g: 1.2
+    carbs_g: 5.31
+    fat_g: 0.3
+  - fdc_id: 170071
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Yam, raw"
+    name_pt: "Inhame cru"
+    energy_nutrient: "208"
+    energy_kcal: 118
+    protein_g: 1.53
+    carbs_g: 27.88
+    fat_g: 0.17
+  - fdc_id: 170106
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Peppers, hot chili, red, raw"
+    name_pt: "Pimenta vermelha crua"
+    energy_nutrient: "208"
+    energy_kcal: 40
+    protein_g: 1.87
+    carbs_g: 8.81
+    fat_g: 0.44
+  - fdc_id: 170108
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Peppers, sweet, red, raw"
+    name_pt: "Pimentão vermelho cru"
+    energy_nutrient: "208"
+    energy_kcal: 26
+    protein_g: 0.99
+    carbs_g: 6.03
+    fat_g: 0.3
+  - fdc_id: 170150
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Seeds, sesame seeds, whole, dried"
+    name_pt: "Gergelim"
+    energy_nutrient: "208"
+    energy_kcal: 573
+    protein_g: 17.73
+    carbs_g: 23.45
+    fat_g: 49.67
+  - fdc_id: 170162
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Nuts, cashew nuts, raw"
+    name_pt: "Castanha-de-caju crua"
+    energy_nutrient: "208"
+    energy_kcal: 553
+    protein_g: 18.22
+    carbs_g: 30.19
+    fat_g: 43.85
+  - fdc_id: 170169
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Nuts, coconut meat, raw"
+    name_pt: "Coco cru"
+    energy_nutrient: "208"
+    energy_kcal: 354
+    protein_g: 3.33
+    carbs_g: 15.23
+    fat_g: 33.49
+  - fdc_id: 170173
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Nuts, coconut milk, canned (liquid expressed from grated meat and water)"
+    name_pt: "Leite de coco"
+    energy_nutrient: "208"
+    energy_kcal: 197
+    protein_g: 2.02
+    carbs_g: 2.81
+    fat_g: 21.33
+  - fdc_id: 170174
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Nuts, coconut water (liquid from coconuts)"
+    name_pt: "Água de coco"
+    energy_nutrient: "208"
+    energy_kcal: 19
+    protein_g: 0.72
+    carbs_g: 3.71
+    fat_g: 0.2
+  - fdc_id: 170200
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beef, cured, corned beef, brisket, cooked"
+    name_pt: "Carne bovina em conserva cozida"
+    energy_nutrient: "208"
+    energy_kcal: 251
+    protein_g: 18.17
+    carbs_g: 0.47
+    fat_g: 18.98
+  - fdc_id: 170213
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beef, chuck, arm pot roast, separable lean and fat, trimmed to 0\" fat, all grades, cooked, braised"
+    name_pt: "Acém cozido"
+    energy_nutrient: "208"
+    energy_kcal: 297
+    protein_g: 28.94
+    carbs_g: 0
+    fat_g: 19.17
+  - fdc_id: 170290
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Corn flour, whole-grain, yellow"
+    name_pt: "Fubá"
+    energy_nutrient: "208"
+    energy_kcal: 361
+    protein_g: 6.93
+    carbs_g: 76.85
+    fat_g: 3.86
+  - fdc_id: 170393
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Carrots, raw"
+    name_pt: "Cenoura crua"
+    energy_nutrient: "208"
+    energy_kcal: 41
+    protein_g: 0.93
+    carbs_g: 9.58
+    fat_g: 0.24
+  - fdc_id: 170394
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Carrots, cooked, boiled, drained, without salt"
+    name_pt: "Cenoura cozida"
+    energy_nutrient: "208"
+    energy_kcal: 35
+    protein_g: 0.76
+    carbs_g: 8.22
+    fat_g: 0.18
+  - fdc_id: 170397
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cauliflower, cooked, boiled, drained, without salt"
+    name_pt: "Couve-flor cozida"
+    energy_nutrient: "208"
+    energy_kcal: 23
+    protein_g: 1.84
+    carbs_g: 4.11
+    fat_g: 0.45
+  - fdc_id: 170403
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Chayote, fruit, cooked, boiled, drained, without salt"
+    name_pt: "Chuchu cozido"
+    energy_nutrient: "208"
+    energy_kcal: 24
+    protein_g: 0.62
+    carbs_g: 5.09
+    fat_g: 0.48
+  - fdc_id: 170407
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Collards, cooked, boiled, drained, without salt"
+    name_pt: "Couve-manteiga cozida"
+    energy_nutrient: "208"
+    energy_kcal: 33
+    protein_g: 2.71
+    carbs_g: 5.65
+    fat_g: 0.72
+  - fdc_id: 170416
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Parsley, fresh"
+    name_pt: "Salsinha fresca"
+    energy_nutrient: "208"
+    energy_kcal: 36
+    protein_g: 2.97
+    carbs_g: 6.33
+    fat_g: 0.79
+  - fdc_id: 170420
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Peas, green, cooked, boiled, drained, without salt"
+    name_pt: "Ervilha cozida"
+    energy_nutrient: "208"
+    energy_kcal: 84
+    protein_g: 5.36
+    carbs_g: 15.63
+    fat_g: 0.22
+  - fdc_id: 170427
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Peppers, sweet, green, raw"
+    name_pt: "Pimentão verde cru"
+    energy_nutrient: "208"
+    energy_kcal: 20
+    protein_g: 0.86
+    carbs_g: 4.64
+    fat_g: 0.17
+  - fdc_id: 170440
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Potatoes, boiled, cooked without skin, flesh, without salt"
+    name_pt: "Batata cozida"
+    energy_nutrient: "208"
+    energy_kcal: 86
+    protein_g: 1.71
+    carbs_g: 20.01
+    fat_g: 0.1
+  - fdc_id: 170457
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Tomatoes, red, ripe, raw, year round average"
+    name_pt: "Tomate cru"
+    energy_nutrient: "208"
+    energy_kcal: 18
+    protein_g: 0.88
+    carbs_g: 3.89
+    fat_g: 0.2
+  - fdc_id: 170459
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Tomato products, canned, paste, without salt added (Includes foods for USDA's Food Distribution Program)"
+    name_pt: "Extrato de tomate"
+    energy_nutrient: "208"
+    energy_kcal: 82
+    protein_g: 4.32
+    carbs_g: 18.91
+    fat_g: 0.47
+  - fdc_id: 170569
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Nuts, brazilnuts, dried, unblanched"
+    name_pt: "Castanha-do-pará"
+    energy_nutrient: "208"
+    energy_kcal: 659
+    protein_g: 14.32
+    carbs_g: 11.74
+    fat_g: 67.1
+  - fdc_id: 170604
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beef, cured, dried"
+    name_pt: "Carne-seca"
+    energy_nutrient: "208"
+    energy_kcal: 153
+    protein_g: 31.1
+    carbs_g: 2.76
+    fat_g: 1.94
+  - fdc_id: 170613
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beef, brisket, flat half, separable lean and fat, trimmed to 0\" fat, all grades, cooked, braised"
+    name_pt: "Peito bovino cozido"
+    energy_nutrient: "208"
+    energy_kcal: 213
+    protein_g: 32.9
+    carbs_g: 0
+    fat_g: 8.01
+  - fdc_id: 170845
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cheese, mozzarella, whole milk"
+    name_pt: "Queijo muçarela"
+    energy_nutrient: "208"
+    energy_kcal: 299
+    protein_g: 22.17
+    carbs_g: 2.4
+    fat_g: 22.14
+  - fdc_id: 170847
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cheese, mozzarella, part skim milk"
+    name_pt: "Queijo muçarela (parcialmente desnatado)"
+    energy_nutrient: "208"
+    energy_kcal: 254
+    protein_g: 24.26
+    carbs_g: 2.77
+    fat_g: 15.92
+  - fdc_id: 170848
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cheese, parmesan, hard"
+    name_pt: "Queijo parmesão"
+    energy_nutrient: "208"
+    energy_kcal: 392
+    protein_g: 35.75
+    carbs_g: 3.22
+    fat_g: 25
+  - fdc_id: 170850
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cheese, provolone"
+    name_pt: "Queijo provolone"
+    energy_nutrient: "208"
+    energy_kcal: 351
+    protein_g: 25.58
+    carbs_g: 2.14
+    fat_g: 26.62
+  - fdc_id: 170851
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cheese, ricotta, whole milk"
+    name_pt: "Ricota"
+    energy_nutrient: "208"
+    energy_kcal: 150
+    protein_g: 7.54
+    carbs_g: 7.27
+    fat_g: 10.18
+  - fdc_id: 170857
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cream, fluid, light (coffee cream or table cream)"
+    name_pt: "Creme de leite fresco leve"
+    energy_nutrient: "208"
+    energy_kcal: 195
+    protein_g: 2.96
+    carbs_g: 3.66
+    fat_g: 19.1
+  - fdc_id: 170859
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cream, fluid, heavy whipping"
+    name_pt: "Creme de leite fresco (nata)"
+    energy_nutrient: "208"
+    energy_kcal: 340
+    protein_g: 2.84
+    carbs_g: 2.84
+    fat_g: 36.08
+  - fdc_id: 171009
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Salad dressing, mayonnaise, regular"
+    name_pt: "Maionese"
+    energy_nutrient: "208"
+    energy_kcal: 680
+    protein_g: 0.96
+    carbs_g: 0.57
+    fat_g: 74.85
+  - fdc_id: 171015
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Oil, palm"
+    name_pt: "Azeite de dendê"
+    energy_nutrient: "208"
+    energy_kcal: 884
+    protein_g: 0
+    carbs_g: 0
+    fat_g: 100
+  - fdc_id: 171017
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Oil, sunflower, linoleic (less than 60%)"
+    name_pt: "Óleo de girassol"
+    energy_nutrient: "208"
+    energy_kcal: 884
+    protein_g: 0
+    carbs_g: 0
+    fat_g: 100
+  - fdc_id: 171029
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Oil, corn, industrial and retail, all purpose salad or cooking"
+    name_pt: "Óleo de milho"
+    energy_nutrient: "208"
+    energy_kcal: 900
+    protein_g: 0
+    carbs_g: 0
+    fat_g: 100
+  - fdc_id: 171054
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Chicken, broilers or fryers, meat only, cooked, roasted"
+    name_pt: "Frango assado (sem pele)"
+    energy_nutrient: "208"
+    energy_kcal: 190
+    protein_g: 28.93
+    carbs_g: 0
+    fat_g: 7.41
+  - fdc_id: 171061
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Chicken, liver, all classes, cooked, simmered"
+    name_pt: "Fígado de galinha cozido"
+    energy_nutrient: "208"
+    energy_kcal: 167
+    protein_g: 24.46
+    carbs_g: 0.87
+    fat_g: 6.51
+  - fdc_id: 171077
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw"
+    name_pt: "Peito de frango cru"
+    energy_nutrient: "208"
+    energy_kcal: 120
+    protein_g: 22.5
+    carbs_g: 0
+    fat_g: 2.62
+  - fdc_id: 171078
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Chicken, broilers or fryers, breast, meat only, cooked, fried"
+    name_pt: "Peito de frango frito"
+    energy_nutrient: "208"
+    energy_kcal: 187
+    protein_g: 33.44
+    carbs_g: 0.51
+    fat_g: 4.71
+  - fdc_id: 171251
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cheese, swiss"
+    name_pt: "Queijo suíço"
+    energy_nutrient: "208"
+    energy_kcal: 393
+    protein_g: 26.96
+    carbs_g: 1.44
+    fat_g: 30.99
+  - fdc_id: 171257
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cream, sour, cultured"
+    name_pt: "Creme azedo"
+    energy_nutrient: "208"
+    energy_kcal: 198
+    protein_g: 2.44
+    carbs_g: 4.63
+    fat_g: 19.35
+  - fdc_id: 171275
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Milk, canned, condensed, sweetened"
+    name_pt: "Leite condensado"
+    energy_nutrient: "208"
+    energy_kcal: 321
+    protein_g: 7.91
+    carbs_g: 54.4
+    fat_g: 8.7
+  - fdc_id: 171284
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Yogurt, plain, whole milk"
+    name_pt: "Iogurte natural integral"
+    energy_nutrient: "208"
+    energy_kcal: 61
+    protein_g: 3.47
+    carbs_g: 4.66
+    fat_g: 3.25
+  - fdc_id: 171287
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Egg, whole, raw, fresh"
+    name_pt: "Ovo cru"
+    energy_nutrient: "208"
+    energy_kcal: 143
+    protein_g: 12.56
+    carbs_g: 0.72
+    fat_g: 9.51
+  - fdc_id: 171401
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Lard"
+    name_pt: "Banha de porco"
+    energy_nutrient: "208"
+    energy_kcal: 902
+    protein_g: 0
+    carbs_g: 0
+    fat_g: 100
+  - fdc_id: 171411
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Oil, soybean, salad or cooking"
+    name_pt: "Óleo de soja"
+    energy_nutrient: "208"
+    energy_kcal: 884
+    protein_g: 0
+    carbs_g: 0
+    fat_g: 100
+  - fdc_id: 171412
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Oil, coconut"
+    name_pt: "Óleo de coco"
+    energy_nutrient: "208"
+    energy_kcal: 892
+    protein_g: 0
+    carbs_g: 0
+    fat_g: 99.06
+  - fdc_id: 171413
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Oil, olive, salad or cooking"
+    name_pt: "Azeite de oliva"
+    energy_nutrient: "208"
+    energy_kcal: 884
+    protein_g: 0
+    carbs_g: 0
+    fat_g: 100
+  - fdc_id: 171477
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Chicken, broilers or fryers, breast, meat only, cooked, roasted"
+    name_pt: "Peito de frango assado"
+    energy_nutrient: "208"
+    energy_kcal: 165
+    protein_g: 31.02
+    carbs_g: 0
+    fat_g: 3.57
+  - fdc_id: 171672
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cereals, corn grits, yellow, regular and quick, enriched, cooked with water, without salt"
+    name_pt: "Polenta cozida"
+    energy_nutrient: "208"
+    energy_kcal: 65
+    protein_g: 1.23
+    carbs_g: 13.86
+    fat_g: 0.39
+  - fdc_id: 171686
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Acerola, (west indian cherry), raw"
+    name_pt: "Acerola crua"
+    energy_nutrient: "208"
+    energy_kcal: 32
+    protein_g: 0.4
+    carbs_g: 7.69
+    fat_g: 0.3
+  - fdc_id: 171688
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Apples, raw, with skin (Includes foods for USDA's Food Distribution Program)"
+    name_pt: "Maçã crua"
+    energy_nutrient: "208"
+    energy_kcal: 52
+    protein_g: 0.26
+    carbs_g: 13.81
+    fat_g: 0.17
+  - fdc_id: 171705
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Avocados, raw, all commercial varieties"
+    name_pt: "Abacate cru"
+    energy_nutrient: "208"
+    energy_kcal: 160
+    protein_g: 2
+    carbs_g: 8.53
+    fat_g: 14.66
+  - fdc_id: 171796
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beef, ground, 85% lean meat / 15% fat, raw (Includes foods for USDA's Food Distribution Program)"
+    name_pt: "Carne moída crua"
+    energy_nutrient: "208"
+    energy_kcal: 215
+    protein_g: 18.59
+    carbs_g: 0
+    fat_g: 15
+  - fdc_id: 171890
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beverages, coffee, brewed, prepared with tap water"
+    name_pt: "Café coado"
+    energy_nutrient: "208"
+    energy_kcal: 1
+    protein_g: 0.12
+    carbs_g: 0
+    fat_g: 0.02
+  - fdc_id: 171956
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Fish, cod, Atlantic, cooked, dry heat"
+    name_pt: "Bacalhau fresco assado"
+    energy_nutrient: "208"
+    energy_kcal: 105
+    protein_g: 22.83
+    carbs_g: 0
+    fat_g: 0.86
+  - fdc_id: 171971
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Crustaceans, shrimp, mixed species, cooked, moist heat (may contain additives to retain moisture)"
+    name_pt: "Camarão cozido"
+    energy_nutrient: "208"
+    energy_kcal: 119
+    protein_g: 22.78
+    carbs_g: 1.52
+    fat_g: 1.7
+  - fdc_id: 172176
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cheese, brick"
+    name_pt: "Queijo prato"
+    energy_nutrient: "208"
+    energy_kcal: 371
+    protein_g: 23.24
+    carbs_g: 2.79
+    fat_g: 29.68
+  - fdc_id: 172179
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cheese, cottage, creamed, large or small curd"
+    name_pt: "Queijo cottage"
+    energy_nutrient: "208"
+    energy_kcal: 98
+    protein_g: 11.12
+    carbs_g: 3.38
+    fat_g: 4.3
+  - fdc_id: 172187
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Egg, whole, cooked, scrambled"
+    name_pt: "Ovo mexido"
+    energy_nutrient: "208"
+    energy_kcal: 149
+    protein_g: 9.99
+    carbs_g: 1.61
+    fat_g: 10.98
+  - fdc_id: 172205
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Milk, reduced fat, fluid, 2% milkfat, without added vitamin A and vitamin D"
+    name_pt: "Leite semidesnatado"
+    energy_nutrient: "208"
+    energy_kcal: 50
+    protein_g: 3.3
+    carbs_g: 4.8
+    fat_g: 1.98
+  - fdc_id: 172217
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Milk, whole, 3.25% milkfat, without added vitamin A and vitamin D"
+    name_pt: "Leite integral"
+    energy_nutrient: "208"
+    energy_kcal: 61
+    protein_g: 3.15
+    carbs_g: 4.78
+    fat_g: 3.27
+  - fdc_id: 172237
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Vinegar, distilled"
+    name_pt: "Vinagre"
+    energy_nutrient: "208"
+    energy_kcal: 18
+    protein_g: 0
+    carbs_g: 0.04
+    fat_g: 0
+  - fdc_id: 172346
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Margarine, regular, 80% fat, composite, stick, with salt"
+    name_pt: "Margarina"
+    energy_nutrient: "208"
+    energy_kcal: 717
+    protein_g: 0.16
+    carbs_g: 0.7
+    fat_g: 80.71
+  - fdc_id: 172377
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Chicken, broilers or fryers, drumstick, meat only, cooked, stewed"
+    name_pt: "Coxa de frango cozida"
+    energy_nutrient: "208"
+    energy_kcal: 169
+    protein_g: 27.5
+    carbs_g: 0
+    fat_g: 5.71
+  - fdc_id: 172388
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Chicken, broilers or fryers, thigh, meat only, cooked, roasted"
+    name_pt: "Sobrecoxa de frango assada"
+    energy_nutrient: "208"
+    energy_kcal: 179
+    protein_g: 24.76
+    carbs_g: 0
+    fat_g: 8.15
+  - fdc_id: 172421
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Lentils, mature seeds, cooked, boiled, without salt"
+    name_pt: "Lentilha cozida"
+    energy_nutrient: "208"
+    energy_kcal: 116
+    protein_g: 9.02
+    carbs_g: 20.13
+    fat_g: 0.38
+  - fdc_id: 172430
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Peanuts, all types, raw"
+    name_pt: "Amendoim cru"
+    energy_nutrient: "208"
+    energy_kcal: 567
+    protein_g: 25.8
+    carbs_g: 16.13
+    fat_g: 49.24
+  - fdc_id: 172675
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Bread, french or vienna (includes sourdough)"
+    name_pt: "Pão francês"
+    energy_nutrient: "208"
+    energy_kcal: 272
+    protein_g: 10.75
+    carbs_g: 51.88
+    fat_g: 2.42
+  - fdc_id: 172688
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Bread, whole-wheat, commercially prepared"
+    name_pt: "Pão de forma integral"
+    energy_nutrient: "208"
+    energy_kcal: 252
+    protein_g: 12.45
+    carbs_g: 42.71
+    fat_g: 3.5
+  - fdc_id: 173044
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Guavas, common, raw"
+    name_pt: "Goiaba crua"
+    energy_nutrient: "208"
+    energy_kcal: 68
+    protein_g: 2.55
+    carbs_g: 14.32
+    fat_g: 0.95
+  - fdc_id: 173227
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beverages, tea, black, brewed, prepared with tap water"
+    name_pt: "Chá preparado"
+    energy_nutrient: "208"
+    energy_kcal: 1
+    protein_g: 0
+    carbs_g: 0.3
+    fat_g: 0
+  - fdc_id: 173410
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Butter, salted"
+    name_pt: "Manteiga com sal"
+    energy_nutrient: "208"
+    energy_kcal: 717
+    protein_g: 0.85
+    carbs_g: 0.06
+    fat_g: 81.11
+  - fdc_id: 173418
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cheese, cream"
+    name_pt: "Cream cheese"
+    energy_nutrient: "208"
+    energy_kcal: 350
+    protein_g: 6.15
+    carbs_g: 5.52
+    fat_g: 34.44
+  - fdc_id: 173420
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cheese, feta"
+    name_pt: "Queijo feta"
+    energy_nutrient: "208"
+    energy_kcal: 265
+    protein_g: 14.21
+    carbs_g: 3.88
+    fat_g: 21.49
+  - fdc_id: 173423
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Egg, whole, cooked, fried"
+    name_pt: "Ovo frito"
+    energy_nutrient: "208"
+    energy_kcal: 196
+    protein_g: 13.61
+    carbs_g: 0.83
+    fat_g: 14.84
+  - fdc_id: 173424
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Egg, whole, cooked, hard-boiled"
+    name_pt: "Ovo cozido"
+    energy_nutrient: "208"
+    energy_kcal: 155
+    protein_g: 12.58
+    carbs_g: 1.12
+    fat_g: 10.61
+  - fdc_id: 173432
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Milk, nonfat, fluid, without added vitamin A and vitamin D (fat free or skim)"
+    name_pt: "Leite desnatado"
+    energy_nutrient: "208"
+    energy_kcal: 35
+    protein_g: 3.37
+    carbs_g: 4.86
+    fat_g: 0.18
+  - fdc_id: 173468
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Salt, table"
+    name_pt: "Sal de cozinha"
+    energy_nutrient: "208"
+    energy_kcal: 0
+    protein_g: 0
+    carbs_g: 0
+    fat_g: 0
+  - fdc_id: 173647
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beverages, water, tap, drinking"
+    name_pt: "Água"
+    energy_nutrient: "208"
+    energy_kcal: 0
+    protein_g: 0
+    carbs_g: 0
+    fat_g: 0
+  - fdc_id: 173734
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beans, black, mature seeds, raw"
+    name_pt: "Feijão-preto cru"
+    energy_nutrient: "208"
+    energy_kcal: 341
+    protein_g: 21.6
+    carbs_g: 62.36
+    fat_g: 1.42
+  - fdc_id: 173735
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beans, black, mature seeds, cooked, boiled, without salt"
+    name_pt: "Feijão-preto cozido"
+    energy_nutrient: "208"
+    energy_kcal: 132
+    protein_g: 8.86
+    carbs_g: 23.71
+    fat_g: 0.54
+  - fdc_id: 173757
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Chickpeas (garbanzo beans, bengal gram), mature seeds, cooked, boiled, without salt"
+    name_pt: "Grão-de-bico cozido"
+    energy_nutrient: "208"
+    energy_kcal: 164
+    protein_g: 8.86
+    carbs_g: 27.42
+    fat_g: 2.59
+  - fdc_id: 173759
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cowpeas, common (blackeyes, crowder, southern), mature seeds, cooked, boiled, without salt"
+    name_pt: "Feijão-fradinho cozido"
+    energy_nutrient: "208"
+    energy_kcal: 116
+    protein_g: 7.73
+    carbs_g: 20.76
+    fat_g: 0.53
+  - fdc_id: 173856
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Bologna, pork"
+    name_pt: "Mortadela de porco"
+    energy_nutrient: "208"
+    energy_kcal: 247
+    protein_g: 15.3
+    carbs_g: 0.73
+    fat_g: 19.87
+  - fdc_id: 173862
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Frankfurter, beef, unheated"
+    name_pt: "Salsicha bovina"
+    energy_nutrient: "208"
+    energy_kcal: 315
+    protein_g: 11.69
+    carbs_g: 2.97
+    fat_g: 28.1
+  - fdc_id: 173864
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Ham, sliced, regular (approximately 11% fat)"
+    name_pt: "Presunto fatiado"
+    energy_nutrient: "208"
+    energy_kcal: 164
+    protein_g: 16.6
+    carbs_g: 3.63
+    fat_g: 8.8
+  - fdc_id: 173904
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Cereals, oats, regular and quick, not fortified, dry"
+    name_pt: "Aveia em flocos"
+    energy_nutrient: "208"
+    energy_kcal: 379
+    protein_g: 13.15
+    carbs_g: 67.7
+    fat_g: 6.52
+  - fdc_id: 173944
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Bananas, raw"
+    name_pt: "Banana crua"
+    energy_nutrient: "208"
+    energy_kcal: 89
+    protein_g: 1.09
+    carbs_g: 22.84
+    fat_g: 0.33
+  - fdc_id: 174034
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beef, ground, 85% lean meat / 15% fat, crumbles, cooked, pan-browned"
+    name_pt: "Carne moída refogada"
+    energy_nutrient: "208"
+    energy_kcal: 256
+    protein_g: 27.73
+    carbs_g: 0
+    fat_g: 15.3
+  - fdc_id: 174060
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beef, round, eye of round, roast, separable lean only, trimmed to 1/8\" fat, choice, cooked, roasted"
+    name_pt: "Lagarto assado"
+    energy_nutrient: "208"
+    energy_kcal: 175
+    protein_g: 29.87
+    carbs_g: 0
+    fat_g: 5.3
+  - fdc_id: 174190
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Fish, cod, Atlantic, dried and salted"
+    name_pt: "Bacalhau seco e salgado"
+    energy_nutrient: "208"
+    energy_kcal: 290
+    protein_g: 62.82
+    carbs_g: 0
+    fat_g: 2.37
+  - fdc_id: 174217
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Mollusks, mussel, blue, cooked, moist heat"
+    name_pt: "Mexilhão cozido"
+    energy_nutrient: "208"
+    energy_kcal: 172
+    protein_g: 23.8
+    carbs_g: 7.39
+    fat_g: 4.48
+  - fdc_id: 174266
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Peanut butter, smooth style, with salt (Includes foods for USDA's Food Distribution Program)"
+    name_pt: "Pasta de amendoim"
+    energy_nutrient: "208"
+    energy_kcal: 598
+    protein_g: 22.21
+    carbs_g: 22.31
+    fat_g: 51.36
+  - fdc_id: 174271
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Soybeans, mature cooked, boiled, without salt"
+    name_pt: "Soja cozida"
+    energy_nutrient: "208"
+    energy_kcal: 172
+    protein_g: 18.21
+    carbs_g: 8.36
+    fat_g: 8.97
+  - fdc_id: 174277
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Soy sauce made from soy and wheat (shoyu)"
+    name_pt: "Molho de soja (shoyu)"
+    energy_nutrient: "208"
+    energy_kcal: 53
+    protein_g: 8.14
+    carbs_g: 4.93
+    fat_g: 0.57
+  - fdc_id: 174586
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Sausage, Italian, pork, mild, cooked, pan-fried"
+    name_pt: "Linguiça de porco frita"
+    energy_nutrient: "208"
+    energy_kcal: 324
+    protein_g: 18.4
+    carbs_g: 1.86
+    fat_g: 26.4
+  - fdc_id: 174683
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Grapes, red or green (European type, such as Thompson seedless), raw"
+    name_pt: "Uva crua"
+    energy_nutrient: "208"
+    energy_kcal: 69
+    protein_g: 0.72
+    carbs_g: 18.1
+    fat_g: 0.16
+  - fdc_id: 174924
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Bread, white, commercially prepared (includes soft bread crumbs)"
+    name_pt: "Pão de forma branco"
+    energy_nutrient: "208"
+    energy_kcal: 266
+    protein_g: 8.85
+    carbs_g: 49.42
+    fat_g: 3.33
+  - fdc_id: 174928
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Bread, crumbs, dry, grated, plain"
+    name_pt: "Farinha de rosca"
+    energy_nutrient: "208"
+    energy_kcal: 395
+    protein_g: 13.35
+    carbs_g: 71.98
+    fat_g: 5.3
+  - fdc_id: 175120
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Fish, mackerel, Atlantic, cooked, dry heat"
+    name_pt: "Cavala assada"
+    energy_nutrient: "208"
+    energy_kcal: 262
+    protein_g: 23.85
+    carbs_g: 0
+    fat_g: 17.81
+  - fdc_id: 175139
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Fish, sardine, Atlantic, canned in oil, drained solids with bone"
+    name_pt: "Sardinha em lata (óleo, escorrida)"
+    energy_nutrient: "208"
+    energy_kcal: 208
+    protein_g: 24.62
+    carbs_g: 0
+    fat_g: 11.45
+  - fdc_id: 175166
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Fish, catfish, channel, farmed, cooked, dry heat"
+    name_pt: "Bagre assado"
+    energy_nutrient: "208"
+    energy_kcal: 144
+    protein_g: 18.44
+    carbs_g: 0
+    fat_g: 7.19
+  - fdc_id: 175168
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Fish, salmon, Atlantic, farmed, cooked, dry heat"
+    name_pt: "Salmão assado"
+    energy_nutrient: "208"
+    energy_kcal: 206
+    protein_g: 22.1
+    carbs_g: 0
+    fat_g: 12.35
+  - fdc_id: 175177
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Fish, tilapia, cooked, dry heat"
+    name_pt: "Tilápia assada"
+    energy_nutrient: "208"
+    energy_kcal: 128
+    protein_g: 26.15
+    carbs_g: 0
+    fat_g: 2.65
+  - fdc_id: 175194
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beans, kidney, red, mature seeds, cooked, boiled, without salt"
+    name_pt: "Feijão-vermelho cozido"
+    energy_nutrient: "208"
+    energy_kcal: 127
+    protein_g: 8.67
+    carbs_g: 22.8
+    fat_g: 0.5
+  - fdc_id: 175199
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beans, pinto, mature seeds, raw (Includes foods for USDA's Food Distribution Program)"
+    name_pt: "Feijão-carioca cru"
+    energy_nutrient: "208"
+    energy_kcal: 347
+    protein_g: 21.42
+    carbs_g: 62.55
+    fat_g: 1.23
+  - fdc_id: 175200
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beans, pinto, mature seeds, cooked, boiled, without salt"
+    name_pt: "Feijão-carioca cozido"
+    energy_nutrient: "208"
+    energy_kcal: 143
+    protein_g: 9.01
+    carbs_g: 26.22
+    fat_g: 0.65
+  - fdc_id: 175203
+    data_type: sr_legacy_food
+    source_version: "2018-04"
+    name: "Beans, white, mature seeds, cooked, boiled, without salt"
+    name_pt: "Feijão-branco cozido"
+    energy_nutrient: "208"
+    energy_kcal: 139
+    protein_g: 9.73
+    carbs_g: 25.09
+    fat_g: 0.35
