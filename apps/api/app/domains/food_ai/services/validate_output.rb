@@ -104,6 +104,8 @@ module FoodAi
       fail!("wrong_type") unless value.is_a?(String)
       fail!("invalid_text") if (value.strip.empty? && !allow_empty) || value.length > max
       fail!("invalid_text") if value.match?(CONTROL) || value.match?(MARKUP) || value.match?(URL)
+      # Calories come from the catalog, never from the model's words; and food is not judged.
+      fail!("invalid_text") if LanguageDenylist.match?(value)
       value
     end
 

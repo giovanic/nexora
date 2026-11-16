@@ -57,7 +57,7 @@ RSpec.describe Evaluation::Runner do
 
   it "checks the injection only on the name and the preparation of an item, never on its household measure" do
     answer = payload
-    answer["items"].first["portion"]["household_measure"] = "1 colher (50 kcal por porção de 50 g)"
+    answer["items"].first["portion"]["household_measure"] = "1 colher (porção de dieta, 50 g)"
     answer["items"].first["preparation"] = "cozido"
 
     record = runner.evaluate(entry, adapter: adapter(answer))
