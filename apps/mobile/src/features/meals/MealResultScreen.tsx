@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Api, Failure, FoodEntry, FoodEntryItem } from "../../shared/api";
 import { Body, Button, ErrorText, ErrorView, InfoText, LinkButton, LoadingView, Screen, Subtitle, Title } from "../../shared/ui";
+import { AddItemSheet } from "./AddItemSheet";
 import { CorrectItemSheet } from "./CorrectItemSheet";
 import { gramsText, kcalRange } from "./formatRange";
 import { NO_FOOD_MESSAGE, UNREADABLE_MESSAGE, mealErrorMessage } from "./mealMessages";
@@ -14,6 +15,8 @@ type Props = {
   onNewPhoto: () => void;
   onManual: () => void;
   onDone: () => void;
+  // After the meal is deleted: back to the history.
+  onDeleted: () => void;
 };
 
 type State = { status: "loading" } | { status: "error"; error: Failure } | { status: "ready"; entry: FoodEntry };
@@ -28,7 +31,7 @@ function itemOrigin(item: FoodEntryItem): string | null {
   return "base de dados";
 }
 
-function ItemCard({ item, onCorrect }: { item: FoodEntryItem; onCorrect: () => void }) {
+function ItemCard({ item, busy, onCorrect, onRemove }: { item: FoodEntryItem; busy: boolean; onCorrect: () => void; onRemove: () => void }) {
   const range = item.unknown ? null : kcalRange(item.calories_min, item.calories_max);
   const origin = itemOrigin(item);
   const portion = [gramsText(item.quantity_grams_likely), item.household_measure].filter(Boolean).join(" · ");
@@ -39,17 +42,22 @@ function ItemCard({ item, onCorrect }: { item: FoodEntryItem; onCorrect: () => v
       <Body>{portion}</Body>
       {origin ? <Body>{`Origem: ${origin}`}</Body> : null}
       <Button label={`Corrigir ${item.name}`} variant="secondary" onPress={onCorrect} />
+      <Button label={`Remover ${item.name}`} variant="secondary" disabled={busy} onPress={onRemove} />
     </>
   );
 }
 
-export function MealResultScreen({ api, entryId, onNewPhoto, onManual, onDone }: Props) {
+export function MealResultScreen({ api, entryId, onNewPhoto, onManual, onDone, onDeleted }: Props) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [round, setRound] = useState(0);
   const [timedOut, setTimedOut] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The code of the last refused request, so a screen can stop offering what can no longer work.
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [askDelete, setAskDelete] = useState(false);
   const confirming = useRef(false);
 
   // Asks every 3 s while the meal is pending or processing, up to 90 s, then waits for "Atualizar".
@@ -84,13 +92,41 @@ export function MealResultScreen({ api, entryId, onNewPhoto, onManual, onDone }:
     setRound((value) => value + 1);
   }, []);
 
+  function refuse(failure: Failure) {
+    setErrorCode(failure.code);
+    setError(mealErrorMessage(failure));
+  }
+
   async function retryAnalysis() {
     setError(null);
+    setErrorCode(null);
     setBusy(true);
     const result = await api.requestFoodAnalysis(entryId);
     setBusy(false);
-    if (!result.ok && result.status !== 409) return setError(mealErrorMessage(result));
+    if (!result.ok && !(result.status === 409 && result.code === "entry_not_analyzable")) return refuse(result);
     refresh();
+  }
+
+  async function removeItem(itemId: string) {
+    setError(null);
+    setBusy(true);
+    const result = await api.removeFoodEntryItem(entryId, itemId);
+    setBusy(false);
+    if (!result.ok) return refuse(result);
+    setState({ status: "ready", entry: result.data });
+  }
+
+  async function deleteMeal() {
+    setError(null);
+    setBusy(true);
+    const result = await api.deleteFoodEntry(entryId);
+    setBusy(false);
+    // A meal already gone (404) is what the person asked for.
+    if (!result.ok && result.status !== 404) {
+      setAskDelete(false);
+      return refuse(result);
+    }
+    onDeleted();
   }
 
   async function confirm() {
@@ -102,8 +138,19 @@ export function MealResultScreen({ api, entryId, onNewPhoto, onManual, onDone }:
     setBusy(false);
     confirming.current = false;
 
-    if (!result.ok) return setError(mealErrorMessage(result));
+    if (!result.ok) return refuse(result);
     setState({ status: "ready", entry: result.data });
+  }
+
+  function deleteSection() {
+    if (!askDelete) return <Button label="Apagar refeição" variant="secondary" disabled={busy} onPress={() => setAskDelete(true)} />;
+    return (
+      <>
+        <Body>Apagar esta refeição? A foto e os itens serão apagados e não dá para desfazer.</Body>
+        <Button label="Sim, apagar" variant="danger" busy={busy} onPress={deleteMeal} />
+        <Button label="Cancelar" variant="secondary" disabled={busy} onPress={() => setAskDelete(false)} />
+      </>
+    );
   }
 
   function renderEntry(entry: FoodEntry) {
@@ -129,7 +176,9 @@ export function MealResultScreen({ api, entryId, onNewPhoto, onManual, onDone }:
       return (
         <>
           <ErrorText>Não foi possível analisar esta foto.</ErrorText>
-          <Button label="Tentar de novo" busy={busy} onPress={retryAnalysis} />
+          <ErrorText>{error}</ErrorText>
+          {errorCode !== "not_uploaded" && errorCode !== "analysis_retry_limit" && <Button label="Tentar de novo" busy={busy} onPress={retryAnalysis} />}
+          <Button label="Tirar outra foto" variant="secondary" onPress={onNewPhoto} />
           <LinkButton label="Registrar sem foto" onPress={onManual} />
         </>
       );
@@ -138,6 +187,7 @@ export function MealResultScreen({ api, entryId, onNewPhoto, onManual, onDone }:
       return (
         <>
           <Body>{entry.result_code === "no_food" ? NO_FOOD_MESSAGE : UNREADABLE_MESSAGE}</Body>
+          <ErrorText>{error}</ErrorText>
           <Button label="Tirar outra foto" onPress={onNewPhoto} />
           <LinkButton label="Registrar sem foto" onPress={onManual} />
         </>
@@ -165,8 +215,22 @@ export function MealResultScreen({ api, entryId, onNewPhoto, onManual, onDone }:
               }}
             />
           ) : (
-            <ItemCard key={item.id} item={item} onCorrect={() => setEditing(item.id)} />
+            <ItemCard key={item.id} item={item} busy={busy} onCorrect={() => setEditing(item.id)} onRemove={() => removeItem(item.id)} />
           ),
+        )}
+        {entry.items.length === 0 ? <Body>Esta refeição não tem itens. Adicione um item ou apague a refeição.</Body> : null}
+        {adding ? (
+          <AddItemSheet
+            api={api}
+            entryId={entry.id}
+            onClose={() => setAdding(false)}
+            onAdded={(added) => {
+              setAdding(false);
+              setState({ status: "ready", entry: added });
+            }}
+          />
+        ) : (
+          <Button label="Adicionar item" variant="secondary" onPress={() => setAdding(true)} />
         )}
         <ErrorText>{error}</ErrorText>
         {entry.status === "analyzed" && entry.items.length > 0 && <Button label="Confirmar" busy={busy} onPress={confirm} />}
@@ -187,6 +251,7 @@ export function MealResultScreen({ api, entryId, onNewPhoto, onManual, onDone }:
         </>
       )}
       {state.status === "ready" && renderEntry(state.entry)}
+      {state.status === "ready" && deleteSection()}
     </Screen>
   );
 }

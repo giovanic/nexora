@@ -13,7 +13,7 @@ function sequence(...entries: ReturnType<typeof foodEntry>[]): Route {
 
 function setup(routes: Record<string, unknown>) {
   const ctx = makeApi(routes as never);
-  const handlers = { onManual: jest.fn(), onNewPhoto: jest.fn(), onDone: jest.fn() };
+  const handlers = { onManual: jest.fn(), onNewPhoto: jest.fn(), onDone: jest.fn(), onDeleted: jest.fn() };
   const element = <MealResultScreen api={ctx.api} entryId={ENTRY_ID} {...handlers} />;
   const count = (key: string) => ctx.calls.filter((call) => call.key === key).length;
   return { ...ctx, ...handlers, element, count };

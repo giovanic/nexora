@@ -28,7 +28,8 @@ describe("local copy", () => {
     files.seed("file:///cache/a.jpg");
     const photos = createPendingPhotos(files.fs);
     await photos.save("req-a", "file:///cache/a.jpg");
-    await photos.save("req-b", "file:///cache/a.jpg");
+    files.seed("file:///cache/b.jpg");
+    await photos.save("req-b", "file:///cache/b.jpg");
     expect(files.pending()).toHaveLength(2);
     await photos.remove("req-a");
     expect(files.pending()).toEqual(["file:///docs/pending-photos/req-b"]);

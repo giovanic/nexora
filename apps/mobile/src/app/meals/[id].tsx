@@ -11,6 +11,7 @@ export default function MealResult() {
       onNewPhoto={() => router.replace("/meals")}
       onManual={() => router.replace("/meals/manual")}
       onDone={() => router.replace("/meals")}
+      onDeleted={() => router.replace("/meals/history")}
     />
   );
 }
