@@ -6,6 +6,8 @@ module FoodCatalog
     MATCH_THRESHOLD = 0.45
     DEFAULT_PER_PAGE = 20
     MAX_PER_PAGE = 50
+    # A huge offset is a scan of the table (and an out-of-range integer is a 500): the app narrows the term instead.
+    MAX_PAGE = 1000
     MAX_TERM_LENGTH = 100
 
     CatalogItemInfo = Data.define(:id, :name_pt, :kind, :source)
@@ -29,7 +31,7 @@ module FoodCatalog
       def search_errors(term:, page: 1, per_page: DEFAULT_PER_PAGE)
         fields = []
         fields << "term" unless term.is_a?(String) && term.strip.present? && term.length <= MAX_TERM_LENGTH
-        fields << "page" unless page.is_a?(Integer) && page >= 1
+        fields << "page" unless page.is_a?(Integer) && page.between?(1, MAX_PAGE)
         fields << "per_page" unless per_page.is_a?(Integer) && per_page >= 1
         fields.map { |field| { field:, code: "invalid" } }
       end

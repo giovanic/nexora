@@ -19,7 +19,8 @@ RSpec.describe "FoodAi request_analysis and consent revocation", :real_consumers
     let(:photo) { create_photo(user:, status: "awaiting_upload") }
 
     def request(photo: self.photo, user_id: user.id, food_entry_id: photo.food_entry_id)
-      FoodAi::Api.request_analysis(user_id:, photo_id: photo.id, food_entry_id:)
+      day_start = Time.current.beginning_of_day
+      FoodAi::Api.request_analysis(user_id:, photo_id: photo.id, food_entry_id:, day_start:, day_end: day_start + 1.day)
     end
 
     it "marks the photo stored and enqueues the job" do
@@ -36,6 +37,55 @@ RSpec.describe "FoodAi request_analysis and consent revocation", :real_consumers
       expect(request(food_entry_id: entry_id)).to eq(:enqueued)
 
       expect(photo.reload.food_entry_id).to eq(entry_id)
+    end
+
+    describe "new requests after a failure" do
+      def fail_it(target = photo) = target.update!(quota_refunded_at: Time.current)
+
+      it "allows the first request and two more, then answers analysis_retry_limit without enqueueing" do
+        3.times do
+          expect(request).to eq(:enqueued)
+          fail_it
+        end
+
+        expect(request).to have_attributes(code: "analysis_retry_limit")
+
+        expect(FoodAi::AnalyzeJob).to have_received(:perform_async).exactly(3).times
+        expect(photo.reload.quota_refunded_at).to be_present
+      end
+
+      it "counts the unit again, today, and refuses when the day's quota is used" do
+        request
+        fail_it
+        allow(FoodAi::Config).to receive(:daily_quota).and_return(1)
+        create_photo(user:) # another photo of the day, not refunded: uses the only unit
+
+        refused = request
+
+        expect(refused).to have_attributes(code: "analysis_quota_exceeded")
+        expect(refused.retry_at).to be_present
+        expect(photo.reload.quota_refunded_at).to be_present
+        expect(FoodAi::AnalyzeJob).to have_received(:perform_async).once
+      end
+
+      it "takes the unit back when there is room" do
+        request
+        fail_it
+        photo.update!(authorized_at: 3.days.ago)
+
+        expect(request).to eq(:enqueued)
+
+        expect(photo.reload).to have_attributes(quota_refunded_at: nil)
+        expect(photo.authorized_at).to be > 1.minute.ago
+      end
+
+      it "checks the quota under the person's lock" do
+        allow(FoodAi::PersonLock).to receive(:call).and_call_original
+
+        request
+
+        expect(FoodAi::PersonLock).to have_received(:call).with(user.id)
+      end
     end
 
     it "not_uploaded when the object is not there" do

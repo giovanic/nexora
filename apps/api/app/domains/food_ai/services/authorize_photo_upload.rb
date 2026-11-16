@@ -1,7 +1,7 @@
 module FoodAi
   # Authorizes one photo upload: consent, input, quota, then a row and a signed PUT URL.
   # The same client_request_id gives back the same photo with a new URL, uncounted again, or with no URL
-  # once the photo is past the upload.
+  # once the photo is past the upload, or upload_expired when the upload was abandoned and swept.
   # The person's advisory lock serializes the quota check and the insert; the unique index
   # on (user_id, client_request_id) stays the last defence. Signing is local, and it runs
   # outside the transaction.
@@ -39,7 +39,7 @@ module FoodAi
       attempts = 0
       begin
         FoodPhoto.transaction do
-          lock(user_id)
+          PersonLock.call(user_id)
           existing = FoodPhoto.find_by(user_id:, client_request_id:)
           next reuse(existing, content_type:, byte_size:) if existing
 
@@ -56,6 +56,10 @@ module FoodAi
     end
 
     def self.reuse(photo, content_type:, byte_size:)
+      # An upload that was swept as abandoned, and never went on to the analysis: its meal is gone, and the
+      # app must start over with a new client_request_id.
+      return Api::Errors.new(code: "upload_expired") if photo.status == "deleted" && photo.analysis_requests.zero?
+
       # Past the upload: the same meal, and no URL to upload to again.
       return Api::UploadAuthorization.new(photo_id: photo.id, upload_url: nil, upload_headers: nil, expires_at: nil) unless photo.status == "awaiting_upload"
 
@@ -63,13 +67,9 @@ module FoodAi
       photo
     end
 
-    def self.lock(user_id)
-      FoodPhoto.connection.execute(FoodPhoto.sanitize_sql([ "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))::text", "food_photo:#{user_id}" ]))
-    end
-
     def self.failure(code, field: nil, **detail)
       Api::Errors.new(code:, details: field ? [ { field:, **detail } ] : [])
     end
-    private_class_method :invalid_fields, :reserve, :reuse, :lock, :failure
+    private_class_method :invalid_fields, :reserve, :reuse, :failure
   end
 end

@@ -15,7 +15,9 @@ module Nutrition
       return conflict unless FoodEntry.where(id: entry.id, status: previous).update_all(status: "processing", resume_attempts: 0, updated_at: Time.current) == 1
 
       begin
-        result = FoodAi::Api.request_analysis(user_id:, photo_id: entry.photo_id, food_entry_id: entry.id)
+        day_start = Time.current.in_time_zone(MealTime.zone_for(user_id)).beginning_of_day
+        result = FoodAi::Api.request_analysis(user_id:, photo_id: entry.photo_id, food_entry_id: entry.id,
+                                              day_start:, day_end: (day_start + 1.day).beginning_of_day)
       rescue StandardError
         revert(entry, previous)
         raise
@@ -23,7 +25,7 @@ module Nutrition
       return Api::EntryInfo.new(id: entry.id, status: "processing", local_date: entry.local_date, meal_at: entry.meal_at) if result == :enqueued
 
       revert(entry, previous)
-      Api::Errors.new(code: result.code, details: result.details)
+      Api::Errors.new(code: result.code, details: result.details, retry_at: result.retry_at)
     end
 
     def self.revert(entry, previous)

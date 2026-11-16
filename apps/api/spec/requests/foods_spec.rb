@@ -42,7 +42,7 @@ RSpec.describe "POST /api/v1/foods/search", :identity do
   end
 
   it "answers 422 validation_failed for a missing, blank or oversized term and a bad page" do
-    [ {}, { term: " " }, { term: "a" * 101 }, { term: "feijao", page: 0 }, { term: "feijao", per_page: 0 }, { term: %w[feijao] } ].each do |body|
+    [ {}, { term: " " }, { term: "a" * 101 }, { term: "feijao", page: 0 }, { term: "feijao", page: 1001 }, { term: "feijao", page: 10**30 }, { term: "feijao", per_page: 0 }, { term: %w[feijao] } ].each do |body|
       search(body)
 
       expect(response).to have_http_status(:unprocessable_content), body.inspect

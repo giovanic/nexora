@@ -7,7 +7,7 @@ module FoodCatalog
 
     def self.call(term:, page: 1, per_page: Api::DEFAULT_PER_PAGE)
       normalized = CatalogItem.normalize(term).first(Api::MAX_TERM_LENGTH)
-      page = [ page.to_i, 1 ].max
+      page = page.to_i.clamp(1, Api::MAX_PAGE)
       per_page = per_page.to_i.clamp(1, Api::MAX_PER_PAGE)
       return Api::Page.new(items: [], next_page: nil) if normalized.empty?
 

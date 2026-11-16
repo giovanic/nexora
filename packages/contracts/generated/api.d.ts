@@ -386,7 +386,7 @@ export interface paths {
          *     logs. The catalog holds USDA FoodData Central ingredients and dishes written by the project
          *     (kind composition, shown as "composição própria"). Items are ordered by closeness to the term,
          *     dishes first on a tie. per_page is capped at 50 (20 when omitted). A missing or blank term, a term
-         *     over 100 characters, or a page below 1 answers 422 validation_failed. Needs the health_data consent.
+         *     over 100 characters, or a page below 1 or above 1000 answers 422 validation_failed. Needs the health_data consent.
          */
         post: operations["searchFoods"];
         delete?: never;
@@ -417,7 +417,11 @@ export interface paths {
          *     exactly upload_headers. Repeating a client_request_id returns the same meal with a new URL and
          *     counts once (201), as long as the photo still awaits its upload. Once it does not, the repeat
          *     answers 200 with the same food_entry_id and the meal status, and no URL (upload_url, upload_headers
-         *     and expires_at are null). The URL is a secret: never log it.
+         *     and expires_at are null). If the upload was abandoned and swept before it went on to the analysis,
+         *     the repeat answers 409 upload_expired and creates no meal: the app starts over with a new
+         *     client_request_id. A 422 carries details naming the field (client_request_id, byte_size, meal_at
+         *     or, for unsupported_media_type, content_type) and a code, so the app can choose its message.
+         *     The URL is a secret: never log it.
          */
         post: operations["startFoodEntryUpload"];
         delete?: never;
@@ -443,7 +447,11 @@ export interface paths {
          *     answers 404; a meal in any other state answers 409 entry_not_analyzable; 422 not_uploaded when
          *     the object was not sent, 422 invalid_photo (details: field photo, code size_mismatch or
          *     type_mismatch) when it differs from the authorization; 403 consent_required or
-         *     consent_operator_mismatch. A refusal leaves the meal as it was.
+         *     consent_operator_mismatch. A refusal leaves the meal as it was. A photo takes the first request and
+         *     two more after a failure: the next answers 409 analysis_retry_limit (the app offers another photo or
+         *     a meal written by hand). A new request after a failure counts the photo's unit again in the quota of
+         *     today: 429 analysis_quota_exceeded, with Retry-After, when the day is used up. One person may ask
+         *     10 times a minute (429, Retry-After 60).
          */
         post: operations["requestFoodEntryAnalysis"];
         delete?: never;
@@ -1529,6 +1537,7 @@ export interface operations {
             };
             401: components["responses"]["Error"];
             403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
             422: components["responses"]["Error"];
             429: components["responses"]["TooManyRequests"];
             default: components["responses"]["Error"];
@@ -1559,6 +1568,7 @@ export interface operations {
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
             422: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
             default: components["responses"]["Error"];
         };
     };

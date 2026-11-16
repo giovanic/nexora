@@ -79,11 +79,13 @@ RSpec.describe "POST /api/v1/food_entries/uploads", :identity, :real_consumers d
       expect_response_to_match_contract
     end
 
-    it "422 unsupported_media_type for image/gif" do
+    it "422 unsupported_media_type for image/gif, naming every accepted format and the field" do
       upload(content_type: "image/gif")
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(error_code).to eq("unsupported_media_type")
+      expect(response.parsed_body.dig("error", "message")).to include("JPEG", "PNG", "WebP", "HEIC", "HEIF")
+      expect(response.parsed_body.dig("error", "details")).to eq([ { "field" => "content_type", "code" => "unsupported" } ])
       expect_response_to_match_contract
     end
 
@@ -95,7 +97,35 @@ RSpec.describe "POST /api/v1/food_entries/uploads", :identity, :real_consumers d
       expect_response_to_match_contract
     end
 
-    it "422 for a missing client_request_id or a bad meal_at" do
+    it "422 validation_failed says which field, so the app can choose the message" do
+    upload(byte_size: (10 * 1024 * 1024) + 1)
+    expect(response.parsed_body.dig("error", "details")).to eq([ { "field" => "byte_size", "code" => "too_large" } ])
+
+    upload(meal_at: "yesterday")
+    expect(response.parsed_body.dig("error", "details")).to eq([ { "field" => "meal_at", "code" => "invalid" } ])
+
+    upload(client_request_id: nil)
+    expect(response.parsed_body.dig("error", "details")).to eq([ { "field" => "client_request_id", "code" => "invalid" } ])
+    expect_response_to_match_contract
+  end
+
+  it "409 upload_expired when the same client_request_id comes back after the abandoned upload was swept" do
+    use_operator_consent_version
+    grant
+    upload
+    entry = Nutrition::FoodEntry.find(response.parsed_body["food_entry_id"])
+    FoodAi::Api.discard_photo(user_id:, photo_id: entry.photo_id)
+    entry.destroy!
+
+    upload
+
+    expect(response).to have_http_status(:conflict)
+    expect(error_code).to eq("upload_expired")
+    expect_response_to_match_contract
+    expect(Nutrition::FoodEntry.where(user_id:).count).to eq(0)
+  end
+
+  it "422 for a missing client_request_id or a bad meal_at" do
       upload(client_request_id: nil)
       expect(response).to have_http_status(:unprocessable_content)
       expect(error_code).to eq("validation_failed")

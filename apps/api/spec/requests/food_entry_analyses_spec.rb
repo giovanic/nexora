@@ -81,6 +81,34 @@ RSpec.describe "POST /api/v1/food_entries/{id}/analysis", :identity, :real_consu
     expect(response).to have_http_status(:accepted)
   end
 
+  it "409 analysis_retry_limit after the third request for the same photo, and the meal stays failed" do
+    entry_id = start_entry
+    photo = upload(entry_id)
+    3.times do
+      Nutrition::FoodEntry.find(entry_id).update!(status: "failed")
+      photo.update!(quota_refunded_at: Time.current)
+      analyze(entry_id)
+      expect(response).to have_http_status(:accepted)
+    end
+    Nutrition::FoodEntry.find(entry_id).update!(status: "failed")
+    photo.update!(quota_refunded_at: Time.current)
+
+    analyze(entry_id)
+
+    expect(response).to have_http_status(:conflict)
+    expect(error_code).to eq("analysis_retry_limit")
+    expect_response_to_match_contract
+    expect(Nutrition::FoodEntry.find(entry_id).status).to eq("failed")
+  end
+
+  it "429 when one person asks for more than 10 analyses in a minute" do
+    11.times { analyze(SecureRandom.uuid) }
+
+    expect(response).to have_http_status(:too_many_requests)
+    expect(response.headers["Retry-After"]).to be_present
+    expect_response_to_match_contract
+  end
+
   it "409 for a meal already analyzed or confirmed" do
     entry_id = start_entry
     upload(entry_id)

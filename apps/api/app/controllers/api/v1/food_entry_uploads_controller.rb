@@ -12,6 +12,7 @@ module Api
         "consent_operator_mismatch" => :forbidden,
         "unsupported_media_type" => :unprocessable_content,
         "validation_failed" => :unprocessable_content,
+        "upload_expired" => :conflict,
         "analysis_quota_exceeded" => :too_many_requests
       }.freeze
 

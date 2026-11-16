@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -212,12 +212,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_130000) do
     t.datetime "quota_refunded_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "analysis_requests", default: 0, null: false
     t.index ["food_entry_id"], name: "index_food_photos_on_food_entry_id"
     t.index ["object_key"], name: "index_food_photos_on_object_key", unique: true
     t.index ["status", "analyzed_at"], name: "index_food_photos_on_status_and_analyzed_at"
     t.index ["status", "authorized_at"], name: "index_food_photos_on_status_and_authorized_at"
     t.index ["user_id", "authorized_at"], name: "index_food_photos_on_user_and_authorized_at"
     t.index ["user_id", "client_request_id"], name: "index_food_photos_on_user_id_and_client_request_id", unique: true
+    t.check_constraint "analysis_requests >= 0", name: "food_photos_analysis_requests_non_negative"
     t.check_constraint "status::text = ANY (ARRAY['awaiting_upload'::character varying, 'stored'::character varying, 'deleted'::character varying]::text[])", name: "food_photos_status_known"
   end
 

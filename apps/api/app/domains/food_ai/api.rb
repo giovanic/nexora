@@ -7,7 +7,7 @@ module FoodAi
     UploadAuthorization = Data.define(:photo_id, :upload_url, :upload_headers, :expires_at) do
       def ok? = true
     end
-    # code: consent_required, consent_operator_mismatch, unsupported_media_type, validation_failed
+    # code: consent_required, consent_operator_mismatch, unsupported_media_type, validation_failed, upload_expired
     # or analysis_quota_exceeded (with retry_at, the end of the local day). details: [{ field:, code: }].
     Errors = Data.define(:code, :details, :retry_at) do
       def initialize(code:, details: [], retry_at: nil) = super
@@ -31,9 +31,10 @@ module FoodAi
       end
 
       # :enqueued or Errors (not_uploaded, invalid_photo with details, consent_required,
-      # consent_operator_mismatch). The caller owns the meal; FoodAi checks the photo is the person's.
-      def request_analysis(user_id:, photo_id:, food_entry_id:)
-        RequestAnalysis.call(user_id:, photo_id:, food_entry_id:)
+      # consent_operator_mismatch, analysis_retry_limit, analysis_quota_exceeded with retry_at). The caller owns the
+      # meal; FoodAi checks the photo is the person's. day_start and day_end bound the person's local day.
+      def request_analysis(user_id:, photo_id:, food_entry_id:, day_start:, day_end:)
+        RequestAnalysis.call(user_id:, photo_id:, food_entry_id:, day_start:, day_end:)
       end
 
       # AnalysisInfo, or :not_found. By identifier only: it comes from an event, never from a client.
