@@ -136,7 +136,8 @@ describe("CameraScreen", () => {
     expect(await screen.findByText(/volta em cerca de 2 horas/)).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("link", { name: "Registrar sem foto" }));
     expect(onManual).toHaveBeenCalledTimes(1);
-    expect(files.pending()).toEqual([]);
+    // A 429 is temporary: the photo stays for another try.
+    expect(files.pending().sort()).toEqual(["file:///docs/pending-photos/req-1", "file:///docs/pending-photos/req-1.json"]);
   });
 
   it("HEIC from the picker is uploaded as image/heic and converted by the backend", async () => {

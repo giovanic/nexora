@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import type { Api } from "../../shared/api";
 import { errorMessage } from "../../shared/messages";
 import { useResource } from "../../shared/useResource";
-import { Body, Button, ErrorText, ErrorView, LinkButton, LoadingView, Screen, Title } from "../../shared/ui";
+import { Body, Button, ErrorText, ErrorView, InfoText, LinkButton, LoadingView, Screen, Title } from "../../shared/ui";
 import { PhotoConsentStep } from "./PhotoConsentStep";
 import type { PendingPhotos } from "../../shared/PendingPhotos";
 import { createUploadFlow, type Prepared, type SendResult, type Uploader } from "./UploadFlow";
@@ -31,6 +31,10 @@ type Status =
 
 const UNSUPPORTED = errorMessage({ ok: false, status: 422, code: "unsupported_media_type" });
 const COPY_FAILED = "Não foi possível guardar a foto no aparelho. Tente de novo.";
+const TOO_LARGE = errorMessage({ ok: false, status: 422, code: "validation_failed", field: "byte_size" });
+const PICKER_FAILED = "Não foi possível abrir a câmera ou a galeria. Tente de novo ou registre a refeição sem foto.";
+const PHOTO_UNAVAILABLE =
+  "A análise por foto ainda não está disponível. Sua foto continua guardada no aparelho. Você pode registrar a refeição sem foto.";
 
 export function CameraScreen({ api, picker, photos, uploader, newId, onResult, onManual, onHistory, onOpenSettings, openDeviceSettings }: Props) {
   const flow = useMemo(() => createUploadFlow({ api, photos, uploader, newId }), [api, photos, uploader, newId]);
@@ -38,6 +42,9 @@ export function CameraScreen({ api, picker, photos, uploader, newId, onResult, o
   const consents = useResource(loadConsents);
   const [askConsent, setAskConsent] = useState(false);
   const [justGranted, setJustGranted] = useState(false);
+  // True from accepting the consent until a photo is sent: a mismatch now means the text in force
+  // still does not match the server, and asking again would only loop.
+  const acceptedNow = useRef(false);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   // The photo that still has to be sent, kept for retry with the same client_request_id.
   const pending = useRef<Prepared | null>(null);
@@ -64,14 +71,24 @@ export function CameraScreen({ api, picker, photos, uploader, newId, onResult, o
     await refreshKept();
 
     if (result.kind === "sent") {
+      acceptedNow.current = false;
       pending.current = null;
       setCurrentId(null);
       setStatus({ kind: "idle" });
       return onResult(result.entryId);
     }
-    if (result.kind === "network") return setStatus({ kind: "network", copyKept: result.copyKept });
+    if (result.kind === "network") {
+      pending.current = result.prepared;
+      setCurrentId(result.prepared.clientRequestId);
+      return setStatus({ kind: "network", copyKept: result.copyKept });
+    }
 
     const { failure } = result;
+    if (failure.code === "consent_operator_mismatch" && acceptedNow.current) {
+      pending.current = null;
+      setCurrentId(null);
+      return setStatus({ kind: "message", text: PHOTO_UNAVAILABLE });
+    }
     if (failure.code === "consent_operator_mismatch" || failure.code === "consent_required") {
       // The photo stays on the device: it is sent once the person agrees.
       setStatus({ kind: "idle" });
@@ -85,14 +102,20 @@ export function CameraScreen({ api, picker, photos, uploader, newId, onResult, o
 
   async function pick(source: "takePhoto" | "choosePhoto") {
     setStatus({ kind: "busy" });
-    const picked = await picker[source]();
-    if (picked.kind === "denied") return setStatus({ kind: "denied" });
-    if (picked.kind === "canceled") return setStatus({ kind: "idle" });
+    try {
+      const picked = await picker[source]();
+      if (picked.kind === "denied") return setStatus({ kind: "denied" });
+      if (picked.kind === "canceled") return setStatus({ kind: "idle" });
 
-    const prepared = await flow.prepare(picked.photo);
-    if (prepared.kind === "unsupported") return setStatus({ kind: "message", text: UNSUPPORTED });
-    if (prepared.kind === "copy_failed") return setStatus({ kind: "message", text: COPY_FAILED });
-    await send(prepared.prepared);
+      const prepared = await flow.prepare(picked.photo);
+      if (prepared.kind === "unsupported") return setStatus({ kind: "message", text: UNSUPPORTED });
+      if (prepared.kind === "too_large") return setStatus({ kind: "message", text: TOO_LARGE });
+      if (prepared.kind === "copy_failed") return setStatus({ kind: "message", text: COPY_FAILED });
+      await send(prepared.prepared);
+    } catch {
+      // A picker or permission error must never leave the screen on "Enviando a foto…".
+      setStatus({ kind: "message", text: PICKER_FAILED });
+    }
   }
 
   async function discard(item: Prepared) {
@@ -103,6 +126,7 @@ export function CameraScreen({ api, picker, photos, uploader, newId, onResult, o
   async function consentGranted() {
     setAskConsent(false);
     setJustGranted(true);
+    acceptedNow.current = true;
     if (pending.current) await send(pending.current);
   }
 
@@ -123,9 +147,9 @@ export function CameraScreen({ api, picker, photos, uploader, newId, onResult, o
           {status.kind === "busy" && <LoadingView label="Enviando a foto…" />}
           {status.kind === "denied" && (
             <>
-              <Body>
+              <InfoText>
                 Sem acesso à câmera, não dá para tirar a foto. Você pode liberar o acesso nos ajustes do aparelho ou registrar a refeição sem foto.
-              </Body>
+              </InfoText>
               <Button label="Abrir os ajustes do aparelho" variant="secondary" onPress={openDeviceSettings} />
             </>
           )}

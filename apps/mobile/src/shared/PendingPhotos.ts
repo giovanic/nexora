@@ -71,9 +71,25 @@ export function createPendingPhotos(fs: PendingFs) {
         const target = uriFor(id);
         const existing = await fs.getInfoAsync(target);
         if (!existing.exists) await fs.copyAsync({ from: sourceUri, to: target });
+        // The picker's file lives in the cache, outside the app's own folder, and may be backed up
+        // or read by other code. Once the copy exists the source is not needed. A failure here
+        // never blocks the upload.
+        if (sourceUri !== target) await fs.deleteAsync(sourceUri, { idempotent: true }).catch(() => {});
         return target;
       } catch {
         return null;
+      }
+    },
+    // Moves a kept photo to a new id (an expired upload starts over). Returns false when there is no copy.
+    async rename(oldId: string, newId: string): Promise<boolean> {
+      try {
+        if (!(await fs.getInfoAsync(uriFor(oldId))).exists) return false;
+        await fs.copyAsync({ from: uriFor(oldId), to: uriFor(newId) });
+        await fs.deleteAsync(uriFor(oldId), { idempotent: true });
+        await fs.deleteAsync(metaUri(oldId), { idempotent: true });
+        return true;
+      } catch {
+        return false;
       }
     },
     exists,
