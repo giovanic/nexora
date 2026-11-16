@@ -64,6 +64,10 @@ Lista usada em revisão e em verificação automática de textos estáticos (NFR
 
 A lista serve como ponto de partida. Palavras em contexto legítimo podem ser liberadas com justificativa.
 
+**Verificação automática (existe desde a Fase 03).** `python3 scripts/check_language.py` confere os textos estáticos do produto (pastas e arquivos listados em `SCAN_PATHS`: textos das telas de refeição do app, mensagens do app, consentimentos, `config/locales` e as mensagens de erro da API) contra `scripts/language_denylist.txt`, sem caixa e sem acentos, por palavra ou expressão inteira. Ela roda no CI, junto com `bash scripts/test-check-language.sh`. Exceções ficam em `scripts/language_allow.txt`, com caminho, linha exata e motivo; entrada cuja linha deixou de existir é reportada. O catálogo de alimentos (`apps/api/db/catalog/*.yml`) não está em `SCAN_PATHS`: nomes de alimentos não são texto de interface.
+
+**Filtro do texto do modelo (Fase 03).** O texto livre que o modelo devolve (nome de item, medida caseira) é recusado por `FoodAi::LanguageDenylist` (`apps/api/app/domains/food_ai/services/language_denylist.rb`), com a lista `scripts/language_denylist_model_text.txt` e um padrão de energia (kcal, caloria, kj, energia). A lista do modelo é um subconjunto explícito e menor que a completa, para não recusar nomes de comida legítimos como "barriga de porco" ou "pão integral". O custo é que uma frase de julgamento fora da lista passa pelo filtro, e o prompt continua a proibi-la. Um spec confirma que a implementação em Ruby e a em Python concordam sobre a mesma lista. Texto recusado faz a análise falhar com `invalid_text`.
+
 ## Textos gerados por IA
 
 - **Food AI:** o modelo só observa alimentos; o texto não traz conselhos nem julgamento.
@@ -112,7 +116,8 @@ Textos genéricos, sem dados de saúde, conteúdo de refeição ou dados do Stra
 |---|---|
 | Teste de critérios proibidos de XP | Fase 06 |
 | Rejeição de tipos de meta proibidos | Fase 05 |
-| Verificação de textos estáticos contra a lista de linguagem | Fase 03 em diante |
+| Verificação de textos estáticos contra a lista de linguagem (`scripts/check_language.py`, no CI) | Fase 03 em diante |
+| Filtro do texto livre do modelo (`FoodAi::LanguageDenylist`) | Fase 03 |
 | Estimativas sempre em faixa, por teste de contrato | Fase 03 |
 | Revisão pelo `security-reviewer` e pelo `qa-reviewer` | A cada fase com texto ou regra novos |
 | Revisão por profissional de saúde | M1 e Fase 09 |

@@ -1,6 +1,6 @@
 # Variáveis de ambiente
 
-Lista sem valores. As da Fase 01 estão em uso; as demais são planejadas, e cada fase confirma as suas. Os nomes finais vão para `.env.example`, sem valores reais. No desenvolvimento, as variáveis da API são opcionais, porque os padrões batem com o `docker-compose.yml`.
+Lista sem valores. As das Fases 01, 02 e 03 estão em uso e foram conferidas contra o código; as demais são planejadas, e cada fase confirma as suas. O catálogo de alimentos é carregado de arquivos versionados (`bin/rails food_catalog:load`), sem chave do FoodData Central. Os nomes finais vão para `.env.example`, sem valores reais. No desenvolvimento, as variáveis da API são opcionais, porque os padrões batem com o `docker-compose.yml`.
 
 ## Regras
 
@@ -29,16 +29,14 @@ Lista sem valores. As da Fase 01 estão em uso; as demais são planejadas, e cad
 | `MAIL_FROM` | 02 | Não | Remetente dos e-mails da conta, como o link de recuperação de senha. Padrão `no-reply@localhost`. Em desenvolvimento os e-mails vão para arquivos em `apps/api/tmp/mails`, e em teste ficam em memória |
 | `MAIL_*` (demais) | M1 | Sim | Credenciais do provedor de e-mail, escolhido no M1 |
 | `STORAGE_BUCKET`, `STORAGE_REGION` | 03 | Não | Bucket privado e região do armazenamento S3 compatível. Obrigatórias em produção; em desenvolvimento e teste, `app-dev-photos` e `us-east-1` (SeaweedFS do `docker-compose.yml`) |
-| `STORAGE_ENDPOINT` | 03 | Não | Endpoint S3 compatível. Em desenvolvimento e teste, `http://127.0.0.1:8334`; em produção, vazio usa o endpoint padrão do provedor |
+| `STORAGE_ENDPOINT` | 03 | Não | Endpoint S3 compatível. Em desenvolvimento e teste, `http://127.0.0.1:8334`; em produção, vazio usa o endpoint padrão do provedor. A validade das URLs assinadas não é configurável: é de no máximo 900 segundos, fixada no código (`MAX_EXPIRES_IN`) |
 | `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` | 03 | Sim | Credenciais do armazenamento. Obrigatórias em produção; em desenvolvimento e teste, valores fixos e públicos de `infra/seaweedfs/s3.json`, sem uso fora da máquina |
-| `SIGNED_URL_TTL_SECONDS` | 03 | Não | No máximo 900 |
-| `FOOD_AI_PROVIDER`, `FOOD_AI_MODEL` | 03 | Não | Provedor e modelo ativos da análise de refeições |
-| `FOOD_AI_OPERATOR`, `FOOD_AI_REGION` | 03 | Não | Operador e região do provedor ativo. Precisam bater com a versão vigente do consentimento `food_photo_ai`; senão o envio é recusado e o teste de inicialização falha |
-| `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` | 03 | Sim | Chave de cada provedor candidato. Só a do provedor ativo é obrigatória em produção; as demais servem à avaliação, fora da suíte comum |
-| `FOOD_AI_DAILY_QUOTA` | 03 | Não | Envios autorizados por pessoa e por dia local. Padrão 20 |
-| `FOOD_AI_MONTHLY_ALERT_USD` | 03 | Não | Alerta de gasto mensal total com IA, em dólares. Padrão 10 |
-| `EVALUATION_IMAGES_DIR` | 03 | Não | Diretório local do dataset de imagens da avaliação de IA. Nunca versionado |
-| `USDA_FDC_API_KEY` | 03 | Sim | API do FoodData Central, se usada |
+| `FOOD_AI_PROVIDER`, `FOOD_AI_MODEL` | 03 | Não | Provedor (`anthropic`, `gemini` ou `openai`) e modelo ativos da análise de refeições; o modelo precisa estar na tabela de preços (`FoodAi::Pricing`), senão a análise falha com `unsupported_model`. Sem `FOOD_AI_PROVIDER`, a aplicação sobe e todo envio de foto é recusado (`consent_operator_mismatch`). **Nenhum provedor está configurado na Fase 03** (chaves na Fase 07) |
+| `FOOD_AI_OPERATOR`, `FOOD_AI_REGION` | 03 | Não | Operador e região do provedor ativo. Precisam bater com a versão vigente do consentimento `food_photo_ai`; senão o envio é recusado. Em produção, com `FOOD_AI_PROVIDER` definido, a aplicação não sobe se não baterem (`FoodAi::Api.verify_operator!`) |
+| `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` | 03 | Sim | Chave de cada provedor candidato, lida do ambiente quando o provedor está ativo (chave ausente faz a análise falhar com `unauthorized`) e pela avaliação (`evaluation/cli.rb`, fora da suíte comum). Não há verificação no boot |
+| `FOOD_AI_DAILY_QUOTA` | 03 | Não | Fotos autorizadas por pessoa e por dia local. Padrão 20; valor inválido volta ao padrão |
+| `FOOD_AI_MONTHLY_ALERT_USD` | 03 | Não | Alerta de gasto mensal total com IA, em dólares. Padrão 10; valor inválido volta ao padrão |
+| `EVALUATION_IMAGES_DIR` | 03 | Não | Diretório local do dataset de imagens da avaliação de IA. Padrão `~/.cache/nexora-evaluation`. Nunca versionado |
 | `STRAVA_CLIENT_ID` | 04 | Não | Aplicação do Strava |
 | `STRAVA_CLIENT_SECRET` | 04 | Sim | Só no backend |
 | `STRAVA_WEBHOOK_VERIFY_TOKEN` | 04 | Sim | Validação do webhook |

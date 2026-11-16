@@ -141,3 +141,12 @@ Todas as regras de produto, segurança e arquitetura do `CLAUDE.md` e de `.claud
 ## 6. O que fica a critério de quem executar
 
 Nomes de classes internas, organização dos specs, o limiar exato de similaridade do catálogo (calibrado no dataset), a lista concreta dos 150 ingredientes e dos 30 pratos, o texto das telas dentro da lista de linguagem, e a ordem das tarefas, desde que cada uma cite os `AC-03-*` que comprova.
+
+## Errata (2026-11-16, no encerramento da Fase 03)
+
+O texto acima registra o que foi aprovado em 2026-11-13 e não foi reescrito. Na execução, dois pontos mudaram:
+
+- **A foto passou ao Food AI.** A tabela é `food_photos` (dona do ciclo de vida do objeto) e o adaptador é `FoodAi::Adapters::ObjectStorage` (instância `FoodAi.storage`), em vez de `photo_key` na refeição e de um armazenamento do Nutrition. `food_entries.photo_id` referencia a foto, sem chave estrangeira. Ver [DATABASE_DESIGN.md](../../architecture/DATABASE_DESIGN.md) e a [ADR 0019](../../architecture/decisions/0019-photo-storage-and-image-processing.md).
+- **`image_processing` não entrou.** Só `ruby-vips` (e `aws-sdk-s3`, `marcel`): `image_processing` usa arquivos temporários, e a foto não deve ir ao disco.
+
+Também mudaram por decisão do responsável: HEIC e HEIF são aceitos e convertidos para JPEG no backend (2026-11-14), e a escolha do provedor, as chaves e a rodada real de avaliação ficaram para a Fase 07 (2026-11-14 e 2026-11-16).

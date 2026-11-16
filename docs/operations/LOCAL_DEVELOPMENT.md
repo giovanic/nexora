@@ -14,11 +14,13 @@ Comandos testados a partir de um clone limpo em 2026-11-07, no WSL 2 com Ubuntu,
 
 Dependências de sistema para compilar as gems no Ubuntu: `build-essential`, `libpq-dev`, `libyaml-dev`, `libffi-dev`.
 
+**Fase 03, imagens:** a gem `ruby-vips` carrega a biblioteca nativa libvips em tempo de execução, então ela precisa estar instalada: `sudo apt install libvips42` (verificado nesta máquina: `libvips42` 8.12.1). No CI do `ubuntu-24.04` o pacote se chama `libvips42t64`. Para **HEIC e HEIF** (fotos do iPhone) a libvips usa a `libheif`, e o pacote `libheif1` do Ubuntu traz só os decodificadores AV1: HEVC, o codec do HEIC do iPhone, exige o plugin `libde265`. Nesta máquina, `libheif1` 1.12 e `libde265-0` estão instalados. No CI, o passo instala `libheif-plugin-libde265` junto da `libvips42t64`. Sem o suporte a HEIC, o spec que monta uma foto HEIC é pulado, e o envio de HEIC real falharia com `invalid_photo`.
+
 ## Subir tudo
 
 Cada processo fica em um terminal próprio, a partir da raiz do repositório.
 
-**Serviços de apoio:** PostgreSQL em `127.0.0.1:5434` e Valkey em `127.0.0.1:6380`.
+**Serviços de apoio:** PostgreSQL em `127.0.0.1:5434`, Valkey em `127.0.0.1:6380` e, desde a Fase 03, o armazenamento de fotos compatível com S3, o **SeaweedFS** 4.53 (`chrislusf/seaweedfs:4.53`), em `127.0.0.1:8334`. Ele só escuta no loopback, e as chaves de `infra/seaweedfs/s3.json` valem apenas para desenvolvimento. O bucket `app-dev-photos` é criado no primeiro uso.
 
 ```bash
 docker compose up -d --wait
@@ -34,6 +36,13 @@ bin/rails server -p 3010 -b 0.0.0.0
 ```
 
 O `-p 3010` é obrigatório: `bin/rails server` ignora a porta do `puma.rb` e tentaria a 3000. O `-b 0.0.0.0` é necessário só para o emulador alcançar a API.
+
+**Catálogo de alimentos (Fase 03):** carrega as bases licenciadas (subconjunto do USDA FoodData Central e as composições próprias). É idempotente; rode depois de `db:prepare` e sempre que os arquivos de `apps/api/db/catalog/` mudarem.
+
+```bash
+cd apps/api
+bin/rails food_catalog:load
+```
 
 **Sidekiq:**
 
@@ -51,6 +60,14 @@ npm run dev -w apps/web
 ```
 
 **Mobile:** veja a seção seguinte.
+
+### Food AI na Fase 03
+
+- **Sem provedor de IA:** nenhuma chave existe nesta fase (as chaves ficam para a Fase 07). Sem `FOOD_AI_PROVIDER`, a API sobe, mas todo envio de foto responde `consent_operator_mismatch`, porque o consentimento `food_photo_ai` está na v1, sem operador. A análise de ponta a ponta só roda com dublê, na suíte (`FakeAdapter`).
+- **Sidekiq** também executa a análise, as retenções e as rotinas de `config/schedule.yml`.
+- **Specs de armazenamento real** (`apps/api/spec/integration/object_storage_spec.rb`, tag `:object_storage`) precisam do SeaweedFS no ar.
+- **Dataset de avaliação:** as imagens ficam fora do repositório. `ruby evaluation/fetch.rb` as baixa para `$EVALUATION_IMAGES_DIR` (padrão `~/.cache/nexora-evaluation`), e `bin/rails runner ../../evaluation/run.rb CATALOG_ONLY=1` mede só a correspondência com o catálogo, sem provedor e sem rede. A rodada com provedor exige chaves e fica fora da suíte comum. Passo a passo e limites em [evaluation/README.md](../../evaluation/README.md).
+- **Verificações de linguagem:** `python3 scripts/check_language.py` confere os textos estáticos contra a lista proibida, e `bash scripts/test-check-language.sh` prova que o verificador detecta os defeitos. Ambos rodam no CI ([HEALTH_DATA_SAFETY.md](../security/HEALTH_DATA_SAFETY.md)).
 
 ### Identidade na Fase 02
 
@@ -112,6 +129,7 @@ bundle exec bundle-audit check --update
 npm run typecheck -w apps/web && npm run lint -w apps/web && npm test -w apps/web && npm run build -w apps/web
 npm run typecheck -w apps/mobile && npm run lint -w apps/mobile && npm test -w apps/mobile
 npm run check -w @app/contracts
+python3 scripts/check_language.py && bash scripts/test-check-language.sh
 npm audit --audit-level=high
 ```
 
