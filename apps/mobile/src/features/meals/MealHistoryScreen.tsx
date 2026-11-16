@@ -18,8 +18,13 @@ function timeText(iso: string): string {
 
 function summary(entry: FoodEntry): string {
   if (entry.status === "processing") return "Analisando a foto";
+  if (entry.status === "pending") return "Aguardando a foto chegar";
   if (entry.status === "failed") return "A análise não terminou";
-  return kcalRange(entry.calories_min, entry.calories_max) ?? "Sem estimativa";
+  if (entry.result_code === "no_food") return "Não encontramos comida na foto";
+  if (entry.result_code === "unreadable") return "Não foi possível ler a foto";
+  const range = kcalRange(entry.calories_min, entry.calories_max);
+  if (!range) return "Sem estimativa";
+  return entry.estimate_partial ? `${range} · estimativa parcial` : range;
 }
 
 // Meals grouped by local date, newest first, by cursor. Each meal shows only its own range.

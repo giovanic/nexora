@@ -135,9 +135,9 @@ describe("CameraScreen resilience", () => {
   it("a failure to delete the source does not block the upload", async () => {
     const { element, files, onResult } = setup();
     const original = files.fs.deleteAsync.getMockImplementation();
-    files.fs.deleteAsync.mockImplementation(async (uri: string, options?: { idempotent?: boolean }) => {
+    files.fs.deleteAsync.mockImplementation(async (uri: string) => {
       if (uri === "file:///cache/photo.jpg") throw new Error("cannot delete");
-      return original?.(uri, options);
+      return original?.(uri);
     });
     await render(element);
 

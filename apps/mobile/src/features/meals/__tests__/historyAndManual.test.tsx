@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { errorResponse, jsonResponse, makeApi } from "../../../shared/testing/fakes";
-import { ENTRY_ID, foodEntry } from "../../../shared/testing/mealFakes";
+import { ENTRY_ID, NO_NUMBERS, foodEntry } from "../../../shared/testing/mealFakes";
 import { ManualEntryScreen } from "../ManualEntryScreen";
 import { MealHistoryScreen } from "../MealHistoryScreen";
 
@@ -27,6 +27,27 @@ describe("MealHistoryScreen", () => {
 
     await fireEvent.press(screen.getAllByRole("button", { name: /Abrir refeição/ })[0]);
     expect(onOpen).toHaveBeenCalledWith(ENTRY_ID);
+  });
+
+  it("has its own text for pending, no food, unreadable and partial meals", async () => {
+    const ids = ["a1111111-1111-4111-8111-111111111111", "b2222222-2222-4222-8222-222222222222", "c3333333-3333-4333-8333-333333333333", "d4444444-4444-4444-8444-444444444444"];
+    const page = {
+      items: [
+        foodEntry({ id: ids[0], status: "pending", ...NO_NUMBERS }),
+        foodEntry({ id: ids[1], result_code: "no_food", ...NO_NUMBERS }),
+        foodEntry({ id: ids[2], result_code: "unreadable", ...NO_NUMBERS }),
+        foodEntry({ id: ids[3], estimate_partial: true }),
+      ],
+      next_cursor: null,
+    };
+    const ctx = makeApi({ "GET /api/v1/food_entries": jsonResponse(200, page) });
+    await render(<MealHistoryScreen api={ctx.api} onOpen={jest.fn()} onNewMeal={jest.fn()} />);
+
+    expect(await screen.findByText("Aguardando a foto chegar")).toBeOnTheScreen();
+    expect(screen.getByText("Não encontramos comida na foto")).toBeOnTheScreen();
+    expect(screen.getByText("Não foi possível ler a foto")).toBeOnTheScreen();
+    expect(screen.getByText("cerca de 420 a 610 kcal · estimativa parcial")).toBeOnTheScreen();
+    expect(screen.queryByText("Sem estimativa")).toBeNull();
   });
 
   it("shows loading while the first page loads", async () => {
@@ -102,5 +123,29 @@ describe("ManualEntryScreen", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Registrar refeição" }));
 
     expect(await screen.findByText(/entre 1 e 2000 g/)).toBeOnTheScreen();
+  });
+
+  it("uses a new client_request_id once the items change after a failure, and the same one when nothing changed", async () => {
+    let next = 0;
+    const ctx = makeApi({ "POST /api/v1/food_entries": errorResponse(500, "internal_error") });
+    await render(<ManualEntryScreen api={ctx.api} onCreated={jest.fn()} newId={() => `manual-${++next}`} />);
+    const add = async (name: string) => {
+      await fireEvent.changeText(screen.getByLabelText("Buscar alimento"), name);
+      await fireEvent.press(screen.getByRole("button", { name: "Usar este nome" }));
+      await fireEvent.changeText(screen.getByLabelText("Quantidade em gramas"), "100");
+      await fireEvent.press(screen.getByRole("button", { name: "Adicionar à refeição" }));
+    };
+    const ids = () => ctx.calls.filter((call) => call.key === "POST /api/v1/food_entries").map((call) => JSON.parse(call.init.body as string).client_request_id);
+
+    await add("Pão");
+    await fireEvent.press(screen.getByRole("button", { name: "Registrar refeição" }));
+    await screen.findByText(/Algo deu errado do nosso lado/);
+    await fireEvent.press(screen.getByRole("button", { name: "Registrar refeição" }));
+    await screen.findByText(/Algo deu errado do nosso lado/);
+    await add("Queijo");
+    await fireEvent.press(screen.getByRole("button", { name: "Registrar refeição" }));
+
+    await waitFor(() => expect(ids()).toHaveLength(3));
+    expect(ids()).toEqual(["manual-1", "manual-1", "manual-2"]);
   });
 });

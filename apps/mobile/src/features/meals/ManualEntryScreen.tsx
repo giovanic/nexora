@@ -27,6 +27,8 @@ export function ManualEntryScreen({ api, onCreated, newId }: Props) {
     const input: FoodItemInput = draft.catalogId
       ? { catalog_item_id: draft.catalogId, grams_likely: value }
       : { free_text_name: draft.name, grams_likely: value };
+    // Other items are another meal: the next request gets its own id.
+    requestId.current = null;
     setLines((current) => [...current, { key: Date.now() + current.length, name: draft.name, grams: value, input }]);
     setDraft(null);
     setGrams("");
@@ -73,7 +75,10 @@ export function ManualEntryScreen({ api, onCreated, newId }: Props) {
           key={line.key}
           label={`Remover ${line.name}`}
           variant="secondary"
-          onPress={() => setLines((current) => current.filter((other) => other.key !== line.key))}
+          onPress={() => {
+            requestId.current = null;
+            setLines((current) => current.filter((other) => other.key !== line.key));
+          }}
         />
       ))}
       {lines.map((line) => (

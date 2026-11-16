@@ -132,7 +132,13 @@ export function Choice({ label, selected, onPress, kind = "checkbox" }: ChoicePr
       onPress={onPress}
       style={[styles.choice, selected && styles.choiceOn]}
     >
-      <Text style={styles.choiceText}>{`${selected ? "[x]" : "[ ]"} ${label}`}</Text>
+      <Text style={styles.choiceText}>
+        {/* The state is already announced by the checked state; the marker is only for the eyes. */}
+        <Text accessible={false} importantForAccessibility="no">
+          {selected ? "[x]" : "[ ]"}
+        </Text>
+        {` ${label}`}
+      </Text>
     </Pressable>
   );
 }
