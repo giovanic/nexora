@@ -598,6 +598,38 @@ RSpec.describe "managing meals", :identity, :real_consumers do
       expect(usage.reload.analysis_id).to be_nil
     end
 
+    it "works with the health_data consent revoked, and still erases items, photo and analyses" do
+      meal = entry
+      item(meal)
+      photo = photo_for(meal)
+      analysis = FoodAi::AnalysisResult.create!(user_id:, photo_id: photo.id, provider: "fake", model: "fake-1", prompt_version: "food_vision_v1", schema_version: "1",
+                                                status: "succeeded", raw_response: { "contains_food" => true }, started_at: Time.current)
+      call(:delete, "/consents/health_data")
+      expect(response).to have_http_status(:no_content)
+
+      call(:delete, "/food_entries/#{meal.id}")
+
+      expect(response).to have_http_status(:no_content)
+      expect_response_to_match_contract
+      expect(Nutrition::FoodEntry.where(id: meal.id)).to be_empty
+      expect(Nutrition::FoodItem.where(food_entry_id: meal.id)).to be_empty
+      expect(FoodAi.storage.head(key: photo.object_key)).to be_nil
+      expect(photo.reload.status).to eq("deleted")
+      expect(FoodAi::AnalysisResult.where(id: analysis.id)).to be_empty
+    end
+
+    it "with the consent revoked, another user's meal is still 404 and stays" do
+      other = Identity::Api.register(email: "caio@example.test", password: IdentityHelpers::PASSWORD, adult_confirmed: true, time_zone: "UTC",
+                                     client: "mobile", device_label: "x", ip: nil).user_id
+      theirs = entry(user: other)
+      call(:delete, "/consents/health_data")
+
+      call(:delete, "/food_entries/#{theirs.id}")
+
+      expect(response).to have_http_status(:not_found)
+      expect(Nutrition::FoodEntry.where(id: theirs.id)).to exist
+    end
+
     it "calls FoodAi after the commit, outside the transaction" do
       meal = entry
       inside = nil
@@ -718,12 +750,12 @@ RSpec.describe "managing meals", :identity, :real_consumers do
 
     let(:routes) do
       [
-      [ :get, "/food_entries" ], [ :post, "/food_entries" ], [ :delete, "/food_entries/ID" ], [ :post, "/food_entries/ID/confirmation" ],
+      [ :get, "/food_entries" ], [ :post, "/food_entries" ], [ :post, "/food_entries/ID/confirmation" ],
       [ :post, "/food_entries/ID/items" ], [ :patch, "/food_entries/ID/items/ITEM" ], [ :delete, "/food_entries/ID/items/ITEM" ]
       ]
     end
 
-    it "every route needs a session and the health_data consent" do
+    it "every route but the delete of a whole meal needs a session and the health_data consent" do
       without_consent = mobile_token(email: "bia@example.test")
       routes.each do |verb, path|
         path = path.sub("ID", uuid).sub("ITEM", uuid)
@@ -736,6 +768,34 @@ RSpec.describe "managing meals", :identity, :real_consumers do
         expect(response).to have_http_status(:forbidden), "#{verb} #{path}"
         expect_response_to_match_contract
       end
+    end
+
+    it "deleting a whole meal needs a session, but not the health_data consent (right to erasure)" do
+      without_consent = mobile_token(email: "bia@example.test")
+
+      call(:delete, "/food_entries/#{uuid}", nil, headers: {})
+      expect(response).to have_http_status(:unauthorized)
+      expect_response_to_match_contract
+
+      call(:delete, "/food_entries/#{uuid}", nil, headers: bearer(without_consent))
+      expect(response).to have_http_status(:not_found)
+      expect_response_to_match_contract
+    end
+
+    it "after a revocation of health_data the other meal routes keep answering 403 consent_required" do
+      meal = entry
+      kept = item(meal)
+      call(:delete, "/consents/health_data")
+      expect(response).to have_http_status(:no_content)
+
+      [ [ :get, "/food_entries/#{meal.id}" ], [ :get, "/food_entries" ], [ :post, "/food_entries/#{meal.id}/confirmation" ],
+        [ :post, "/food_entries/#{meal.id}/items" ], [ :patch, "/food_entries/#{meal.id}/items/#{kept.id}" ],
+        [ :delete, "/food_entries/#{meal.id}/items/#{kept.id}" ] ].each do |verb, path|
+        call(verb, path)
+        expect(response).to have_http_status(:forbidden), "#{verb} #{path}"
+        expect(error_code).to eq("consent_required")
+      end
+      expect(Nutrition::FoodEntry.where(id: meal.id)).to exist
     end
 
     it "the free text name and the catalog terms are filtered from logs" do

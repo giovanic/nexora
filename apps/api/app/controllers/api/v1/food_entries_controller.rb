@@ -6,7 +6,8 @@ module Api
     class FoodEntriesController < ApplicationController
       include EntryResponses
 
-      require_consent :health_data
+      # Deleting a whole meal is erasure (LGPD art. 18): it must work after health_data is revoked.
+      require_consent :health_data, except: :destroy
 
       ITEM_FIELDS = %i[catalog_item_id free_text_name grams_min grams_likely grams_max].freeze
 

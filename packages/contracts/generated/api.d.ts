@@ -486,7 +486,8 @@ export interface paths {
          * Deletes a meal, its items, its photo and the analysis result.
          * @description Works in any state, also while the analysis runs (the job then ends without creating anything). The
          *     items go with the meal; the photo and the model's raw result are erased after the meal is gone. Another
-         *     person's or an unknown meal answers 404.
+         *     person's or an unknown meal answers 404. It does not need the health_data consent: erasing a meal stays
+         *     possible after that consent is revoked.
          */
         delete: operations["deleteFoodEntry"];
         options?: never;
@@ -1618,7 +1619,6 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
             404: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
