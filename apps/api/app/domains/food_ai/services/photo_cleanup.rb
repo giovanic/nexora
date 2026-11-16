@@ -49,11 +49,13 @@ module FoodAi
       return :not_found unless photo
       return :in_use if AnalysisResult.where(photo_id: photo.id, status: %w[running succeeded no_food unreadable]).exists?
 
-      FoodAi.storage.delete(key: photo.object_key)
+      # A storage failure is not an error here: the photo is marked deleted and PurgeObjectJob retries the object.
+      object_deleted = delete_object(photo)
       FoodPhoto.transaction do
         locked = FoodPhoto.lock.find(photo.id)
         locked.update!(status: "deleted", deleted_at: Time.current) unless locked.status == "deleted"
       end
+      enqueue_purge(photo) unless object_deleted
       :discarded
     end
 

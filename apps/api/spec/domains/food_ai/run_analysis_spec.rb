@@ -279,6 +279,9 @@ RSpec.describe "FoodAi analysis pipeline" do
       expect(adapter.calls).to eq(0)
       expect(FoodAi::UsageRecord.count).to eq(0)
       expect(bad.reload.quota_refunded_at).to be_present
+      # the original has EXIF and was never normalized: it goes now, like a photo with no food
+      expect(bad.status).to eq("deleted")
+      expect(FoodAi.storage.head(key: bad.object_key)).to be_nil
       expect(completed_events.sole).to include("outcome" => "failed", "error_code" => "invalid_photo")
     end
 
@@ -580,6 +583,16 @@ RSpec.describe "FoodAi analysis pipeline" do
 
       expect(photo.reload.status).to eq("deleted")
       expect(FoodAi.storage.head(key: photo.object_key)).to be_nil
+    end
+
+    it "discard_photo marks the photo deleted and queues the object again when storage fails, with no error" do
+      allow(FoodAi.storage).to receive(:delete).and_raise(IOError)
+      allow(FoodAi::PurgeObjectJob).to receive(:perform_async)
+
+      expect(FoodAi::Api.discard_photo(user_id: user.id, photo_id: photo.id)).to eq(:discarded)
+
+      expect(photo.reload.status).to eq("deleted")
+      expect(FoodAi::PurgeObjectJob).to have_received(:perform_async).with(photo.id)
     end
 
     it "discard_photo refuses a photo with an analysis, and another person's photo" do

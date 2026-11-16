@@ -196,6 +196,8 @@ module FoodAi
       retry_step = next_attempt(kind)
       settle(run) do |photo, analysis|
         analysis.update!(status: "failed", error_code: code, finished_at: Time.current)
+        # The original was never normalized, so it still has its EXIF and GPS: it goes now, like a photo with no food.
+        discard(photo) if code == "invalid_photo"
         if retry_step
           log("analysis will retry", analysis, error_code: code)
         else

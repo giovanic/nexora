@@ -1,7 +1,7 @@
 module FoodAi
   module Adapters
-    # OpenAI Responses API with a strict json_schema, store: false (nothing kept by the API),
-    # image as a base64 data URL.
+    # OpenAI Responses API with a strict json_schema, store: false (the response is not stored; the API still keeps
+    # abuse-monitoring logs for up to 30 days, see docs/architecture/EXTERNAL_SOURCES.md), image as a base64 data URL.
     class OpenaiAdapter < HttpAdapter
       PROVIDER = "openai".freeze
       URL = "https://api.openai.com/v1/responses".freeze

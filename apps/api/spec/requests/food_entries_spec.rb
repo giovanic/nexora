@@ -151,6 +151,20 @@ RSpec.describe "GET /api/v1/food_entries/{id}", :identity, :real_consumers do
     expect(response.parsed_body["photo_url"]).to be_nil
   end
 
+  it "does not sign a photo url for the history list, which shows no photo" do
+    photo = FoodAi::FoodPhoto.create!(user_id:, client_request_id: SecureRandom.uuid, object_key: "food-photos/#{SecureRandom.uuid}", content_type: "image/jpeg",
+                                      status: "stored", authorized_at: Time.current)
+    entry(photo_id: photo.id)
+    allow(FoodAi.storage).to receive(:presigned_get).and_call_original
+
+    get "/api/v1/food_entries", headers: bearer(token), as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body["items"].map { |item| item["photo_url"] }).to eq([ nil ])
+    expect(FoodAi.storage).not_to have_received(:presigned_get)
+    expect_response_to_match_contract
+  end
+
   it "is not cached" do
     show(entry.id)
 

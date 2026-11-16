@@ -525,14 +525,14 @@ RSpec.describe "managing meals", :identity, :real_consumers do
       expect(body["items"].first["items"].map { |found| found["name"] }).to eq([ "Arroz" ])
     end
 
-    it "shows the signed photo url while the photo exists" do
+    it "gives no photo url in the history, even while the photo exists" do
       photo = FoodAi::FoodPhoto.create!(user_id:, client_request_id: SecureRandom.uuid, object_key: "food-photos/#{SecureRandom.uuid}", content_type: "image/jpeg",
                                         status: "stored", authorized_at: Time.current)
       entry(photo_id: photo.id)
 
       call(:get, "/food_entries")
 
-      expect(body["items"].first["photo_url"]).to eq("memory://download/#{photo.object_key}")
+      expect(body["items"].first["photo_url"]).to be_nil
     end
 
     it "history query count is the same for 5 and 15 entries" do

@@ -704,7 +704,8 @@ paths:
         the opaque next_cursor of the previous page; a cursor that is not one answers 422 validation_failed.
         A meal still waiting for its photo (pending) is not listed. Each meal is the same FoodEntry as
         getFoodEntry, with its own ranges; there is no total of the day, no sum and no comparison. photo_url is
-        a signed URL and a secret: never log it. The response is never cached.
+        always null here (the list shows no photo and signs no URL): getFoodEntry gives the signed URL. The
+        response is never cached.
       parameters:
         - name: local_date
           in: query

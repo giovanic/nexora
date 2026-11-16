@@ -396,6 +396,7 @@ DEPENDENCIES
   bundler-audit
   debug
   lograge (~> 0.15)
+  marcel (~> 1.1)
   openapi_first (~> 4.3)
   pg (~> 1.1)
   puma (>= 5.0)

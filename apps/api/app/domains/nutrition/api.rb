@@ -89,8 +89,8 @@ module Nutrition
         return result if result.is_a?(Errors)
 
         entries = result.fetch(:entries)
-        urls = FoodAi::Api.photo_urls(user_id:, photo_ids: entries.map(&:photo_id))
-        EntryPage.new(views: entries.map { |entry| EntryView.call(entry, photo_url: urls[entry.photo_id]) }, next_cursor: result.fetch(:next_cursor))
+        # No photo_url in the history: the list shows no photo, and a signed URL per row is a secret issued for nothing.
+        EntryPage.new(views: entries.map { |entry| EntryView.call(entry) }, next_cursor: result.fetch(:next_cursor))
       end
 
       # :deleted or :not_found. The items go with the meal, then FoodAi erases the photo and the result.
