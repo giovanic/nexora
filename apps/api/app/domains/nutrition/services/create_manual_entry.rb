@@ -52,6 +52,7 @@ module Nutrition
       entry = FoodEntry.transaction do
         meal = FoodEntry.create!(user_id:, client_request_id:, meal_at: time, local_date:, source: "manual", status: "confirmed", confirmed_at: Time.current)
         attributes.each { |item| FoodItem.create!(item.merge(food_entry: meal)) }
+        Shared::Outbox.publish!(name: "food_entry.confirmed", user_id:, payload: { food_entry_id: meal.id, local_date: local_date.iso8601 })
         RecalculateEntry.call(meal)
       end
       [ entry, true ]

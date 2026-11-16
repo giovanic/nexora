@@ -91,7 +91,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Modelos:** `FoodAnalysisResult`, `AiUsageRecord`, `PromptVersion`.
 - **Serviços:** `AuthorizeUpload`, `AnalyzeFoodPhoto`, `ProviderAdapter` (interface), `RecordAiUsage`, `CheckAnalysisQuota`.
 - **Publica:** `food_analysis.completed`, `food_analysis.failed`.
-- **Consome:** `consent.revoked`.
+- **Consome:** `consent.revoked`, `food_entry.deleted` (consumidor `food_ai.erase_on_entry_deleted`, apaga a foto, as análises e o objeto da refeição apagada).
 - **Permitido:** Identity & Access (consentimento).
 - **Proibido:** gravar em `food_entries`; calcular nutrição; receber dados do Strava.
 
@@ -189,7 +189,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 | `food_analysis.completed` / `food_analysis.failed` | Food AI | `analysis_id`, `food_entry_id` (itens e porções ficam na API de Food AI) | Nutrition |
 | `food_entry.confirmed` | Nutrition | `food_entry_id`, data local | Goals, Missions, Gamification, Progress & Analytics |
 | `food_entry.corrected` | Nutrition | `food_entry_id` | Progress & Analytics |
-| `food_entry.deleted` | Nutrition | `food_entry_id` | Goals, Gamification, Progress & Analytics |
+| `food_entry.deleted` | Nutrition | `food_entry_id`, `photo_id` | Food AI, Goals, Gamification, Progress & Analytics |
 | `activity.imported` / `activity.updated` | Activities | `activity_id`, tipo, data local, origem, `backfill` | Goals, Missions, Gamification, Progress & Analytics |
 | `activity.deleted` | Activities | `activity_id` | Goals, Gamification, Progress & Analytics |
 | `integration.connected` / `integration.disconnected` | Strava Integration | provedor | Progress & Analytics |

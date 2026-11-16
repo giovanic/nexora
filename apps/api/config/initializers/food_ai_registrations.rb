@@ -32,6 +32,9 @@ Rails.application.config.to_prepare do
   # A revoked food_photo_ai consent discards the photos not analyzed yet and tells their meals.
   Shared::Outbox.subscribe("consent.revoked", consumer: "food_ai.cancel_on_revocation") { |event| FoodAi::CancelOnRevocation.call(event) }
 
+  # A deleted meal takes its photo, analyses and object with it, even if the process died after the commit.
+  Shared::Outbox.subscribe("food_entry.deleted", consumer: "food_ai.erase_on_entry_deleted") { |event| FoodAi::EraseOnEntryDeleted.call(event) }
+
   # FoodAi's tables in account export and deletion. prompt_versions holds no person
   # (Shared::DataRegistry::TABLES_WITHOUT_USER_DATA).
   Shared::DataRegistry.register(
