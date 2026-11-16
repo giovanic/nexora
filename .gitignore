@@ -12,6 +12,7 @@
 .superpowers/
 
 # Dependências e artefatos
+__pycache__/
 node_modules/
 tmp/
 log/

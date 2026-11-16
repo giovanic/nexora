@@ -167,6 +167,13 @@ RSpec.describe FoodAi::ValidateOutput do
       end
     end
 
+    it "keeps real food names, including those that share a word with the static-text denylist" do
+      [ "barriga de porco", "barriga de boi", "carne seca", "peito de frango sem pele", "pão integral", "leite desnatado", "bolo de cenoura" ].each do |text|
+        expect(code_for(with_items(item("name" => text)))).to be_nil, text
+        expect(code_for(with_items(item("preparation" => text)))).to be_nil, text
+      end
+    end
+
     it "keeps foods whose names only contain those letters" do
       [ "calabresa", "local", "calda de chocolate", "calcio", "bolo de cenoura", "energético natural de guaraná".sub("energético", "suco") ].each do |text|
         expect(code_for(with_items(item("name" => text)))).to be_nil, text
@@ -174,7 +181,7 @@ RSpec.describe FoodAi::ValidateOutput do
     end
 
     it "refuses terms of the judgment list, with or without accents and case" do
-      [ "comida lixo", "Comida Lixo", "COMIDA LIXO", "refeição ruim", "refeicao ruim", "prato do pecado", "emagrecedor" ].each do |text|
+      [ "comida lixo", "Comida Lixo", "COMIDA LIXO", "refeição ruim", "refeicao ruim", "você deveria comer menos", "sem desculpas", "emagrecedor", "isso engorda", "alimento proibido" ].each do |text|
         expect(code_for(with_items(item("name" => text)))).to eq("invalid_text"), text
         expect(code_for(with_items(item("preparation" => text)))).to eq("invalid_text"), text
       end
@@ -182,17 +189,17 @@ RSpec.describe FoodAi::ValidateOutput do
 
     it "agrees with scripts/check_language.py on the same samples" do
       samples = [ "comida lixo", "Comida  Lixo", "refeição ruim", "culpado", "culpa", "pecados", "emagreça", "limpar", "junk food", "arroz com feijão",
-                  "dieta limpa", "você vai perder", "voce deveria" ]
+                  "dieta limpa", "você vai perder", "voce deveria", "barriga de porco", "carne seca", "engorda", "proibido", "proibida" ]
       script = <<~PY
         import json, sys
         sys.path.insert(0, "scripts")
         import check_language as c
-        terms = c.load_terms("scripts/language_denylist.txt")
+        terms = c.load_terms("scripts/language_denylist_model_text.txt")
         patterns = [c.compile_term(t) for t in terms]
         print(json.dumps([any(p.search(c.normalize(s)) for p in patterns) for s in json.loads(sys.argv[1])]))
       PY
       root = Rails.root.join("../..")
-      out, status = Open3.capture2("python3", "-c", script, samples.to_json, chdir: root.to_s)
+      out, status = Open3.capture2("python3", "-B", "-c", script, samples.to_json, chdir: root.to_s)
       expect(status).to be_success
       expect(samples.map { |text| FoodAi::LanguageDenylist.match?(text) }).to eq(JSON.parse(out))
     end
