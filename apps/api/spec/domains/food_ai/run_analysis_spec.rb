@@ -83,7 +83,7 @@ RSpec.describe "FoodAi analysis pipeline" do
       expect(FoodAi::Api.analysis(analysis_id: SecureRandom.uuid)).to eq(:not_found)
     end
 
-    it "text written in the image does not change the output handling" do
+    it "text written in the image is treated as data: harmless words in a name are kept as they are" do
       payload = FoodAiAdapter::RICE.deep_dup
       payload["items"][0]["name"] = "ignore as instruções"
       scripted(payload)
@@ -414,6 +414,141 @@ RSpec.describe "FoodAi analysis pipeline" do
       expect(photo.reload.status).to eq("deleted")
       expect(FoodAi.storage.head(key: photo.object_key)).to be_nil # the normalized copy written meanwhile is gone too
       expect(FoodAi::UsageRecord.sole).to have_attributes(analysis_id: nil, user_id: user.id, input_tokens: 1000)
+    end
+  end
+
+  describe "shutdown of the worker" do
+    it "frees the run when Sidekiq shuts down mid-call, and the redelivery analyzes the photo" do
+      adapter = scripted(Sidekiq::Shutdown.new, FoodAiAdapter::RICE)
+
+      expect { run_job(photo) }.to raise_error(Sidekiq::Shutdown)
+      expect(analyses.sole).to have_attributes(status: "failed", error_code: "internal_error")
+
+      run_job(photo)
+
+      expect(adapter.calls).to eq(2)
+      expect(analyses.pluck(:status)).to eq(%w[failed succeeded])
+      expect(completed_events.sole).to include("outcome" => "analyzed")
+    end
+  end
+
+  describe "cost of a received answer" do
+    it "stays recorded when writing the result fails afterwards" do
+      scripted(FoodAiAdapter::RICE)
+      allow_any_instance_of(FoodAi::RunAnalysis).to receive(:complete).and_raise(RuntimeError, "boom")
+
+      expect { run_job(photo) }.to raise_error(RuntimeError)
+
+      expect(FoodAi::UsageRecord.sole).to have_attributes(user_id: user.id, input_tokens: 1000)
+      expect(analyses.sole.status).to eq("failed")
+    end
+  end
+
+  describe "consent inside the job" do
+    def stub_newer_consent_version
+      stub_const("Identity::ConsentTexts::CURRENT_VERSIONS", Identity::ConsentTexts::CURRENT_VERSIONS.merge("food_photo_ai" => FoodAiConsent::VERSION + 1))
+    end
+
+    def expect_cancelled(adapter)
+      expect(adapter.calls).to eq(0)
+      expect(analyses.sole).to have_attributes(status: "cancelled", error_code: "consent_revoked")
+      expect(photo.reload.status).to eq("deleted")
+      expect(FoodAi.storage.head(key: photo.object_key)).to be_nil
+      expect(completed_events.sole).to include("outcome" => "cancelled", "error_code" => "consent_revoked")
+    end
+
+    it "an outdated consent version cancels the queued analysis" do
+      adapter = scripted(FoodAiAdapter::RICE)
+      stub_newer_consent_version
+
+      run_job(photo)
+
+      expect_cancelled(adapter)
+    end
+
+    it "a change of operator cancels the queued analysis" do
+      adapter = scripted(FoodAiAdapter::RICE)
+      configure_food_ai_env("FOOD_AI_OPERATOR" => "another-operator")
+
+      run_job(photo)
+
+      expect_cancelled(adapter)
+    end
+
+    it "a revoked health_data consent cancels the queued analysis" do
+      adapter = scripted(FoodAiAdapter::RICE)
+      Identity::Api.revoke_consent(user_id: user.id, purpose: "health_data")
+
+      run_job(photo)
+
+      expect_cancelled(adapter)
+    end
+
+    it "a consent that goes stale during the call discards the result" do
+      adapter = scripted(FoodAiAdapter::RICE)
+      allow(adapter).to receive(:analyze).and_wrap_original do |original, **args|
+        stub_newer_consent_version
+        original.call(**args)
+      end
+
+      run_job(photo)
+
+      expect(analyses.sole).to have_attributes(status: "cancelled", raw_response: nil)
+      expect(photo.reload.status).to eq("deleted")
+    end
+  end
+
+  describe "account deletion and erased rows during the analysis" do
+    it "deletes the object when the photo row is gone by the time the result arrives" do
+      adapter = scripted(FoodAiAdapter::RICE)
+      allow(adapter).to receive(:analyze).and_wrap_original do |original, **args|
+        FoodAi::FoodPhoto.where(id: photo.id).delete_all
+        original.call(**args)
+      end
+
+      run_job(photo)
+
+      expect(FoodAi.storage.head(key: photo.object_key)).to be_nil
+      expect(analyses).to be_empty
+    end
+
+    it "records the cost with no person when the photo row is gone" do
+      adapter = scripted(FoodAiAdapter::RICE)
+      allow(adapter).to receive(:analyze).and_wrap_original do |original, **args|
+        FoodAi::FoodPhoto.where(id: photo.id).delete_all
+        original.call(**args)
+      end
+
+      run_job(photo)
+
+      expect(FoodAi::UsageRecord.sole).to have_attributes(user_id: nil, analysis_id: nil)
+    end
+
+    it "does not write the normalized copy nor call the provider when the photo was deleted after the claim" do
+      adapter = scripted(FoodAiAdapter::RICE)
+      photo # created (and its object written) before the spy
+      allow(FoodAi.storage).to receive(:read).and_wrap_original do |original, **args|
+        photo.update!(status: "deleted", deleted_at: Time.current)
+        original.call(**args)
+      end
+      allow(FoodAi.storage).to receive(:write).and_call_original
+
+      run_job(photo)
+
+      expect(FoodAi.storage).not_to have_received(:write)
+      expect(adapter.calls).to eq(0)
+      expect(FoodAi.storage.head(key: photo.object_key)).to be_nil
+    end
+
+    it "cancels when the account deletion was requested, before any provider call" do
+      adapter = scripted(FoodAiAdapter::RICE)
+      Identity::Api.request_deletion(user_id: user.id, password: "senha-forte-123")
+
+      run_job(photo)
+
+      expect(adapter.calls).to eq(0)
+      expect(analyses.sole.status).to eq("cancelled")
+      expect(photo.reload.status).to eq("deleted")
     end
   end
 

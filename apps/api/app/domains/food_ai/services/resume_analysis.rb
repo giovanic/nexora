@@ -10,6 +10,8 @@ module FoodAi
   #    again (consumers are idempotent). Not while the earlier event still waits in the outbox;
   #  - Errors analysis_failed: the last run ended in failure (the quota unit was refunded), so the meal fails;
   #  - :running: a run that is not stale is in progress;
+  #  - :cancelled: stored, but the consent (version, operator, region, health_data) no longer stands: the photo is
+  #    deleted and the meal told, as on a revocation;
   #  - :enqueued: stored, with no live analysis or only a stale one.
   module ResumeAnalysis
     CONCLUDED = RunAnalysis::LIVE_STATUSES
@@ -28,8 +30,20 @@ module FoodAi
       running = analyses.find_by(status: "running")
       return :running if running && running.updated_at >= RunAnalysis::STALE_AFTER.ago
 
+      return cancel(photo) if ConsentGate.check_for_job(user_id:)
+
       AnalyzeJob.perform_async(photo.id)
       :enqueued
+    end
+
+    # The consent no longer stands (revoked, outdated, other operator, health_data gone): as on a revocation,
+    # the photo goes and the meal is told it was cancelled. A Symbol, so the caller does not fail the meal.
+    def self.cancel(photo)
+      FoodPhoto.transaction do
+        locked = FoodPhoto.lock.find(photo.id)
+        CancelOnRevocation.cancel_photo(locked) unless locked.status == "deleted"
+      end
+      :cancelled
     end
 
     def self.republish(photo, analysis, food_entry_id)
@@ -43,6 +57,6 @@ module FoodAi
     end
 
     def self.missing = Api::Errors.new(code: "photo_missing")
-    private_class_method :republish, :missing
+    private_class_method :republish, :cancel, :missing
   end
 end

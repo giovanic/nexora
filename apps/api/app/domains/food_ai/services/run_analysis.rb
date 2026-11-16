@@ -20,6 +20,8 @@ module FoodAi
 
     Retry = Data.define(:delay, :transient_attempts, :invalid_attempts)
     Run = Data.define(:analysis_id, :photo_id, :user_id, :object_key, :content_type, :prompt)
+    # An object to delete after the transaction. The row may be gone, so the key travels with it.
+    Purge = Data.define(:photo_id, :object_key)
 
     class << self
       def call(photo_id:, transient_attempts: 0, invalid_attempts: 0)
@@ -93,7 +95,7 @@ module FoodAi
 
           live.update!(status: "failed", error_code: "timeout", finished_at: Time.current)
         end
-        next cancel(photo, new_analysis(photo, prompt, status: "cancelled", error_code: "consent_revoked", finished_at: Time.current)) if consent_gone?(photo)
+        next cancel(photo, new_analysis(photo, prompt, status: "cancelled", error_code: "consent_revoked", finished_at: Time.current)) if refused?(photo)
 
         analysis = new_analysis(photo, prompt, status: "running")
         Run.new(analysis_id: analysis.id, photo_id: photo.id, user_id: photo.user_id, object_key: photo.object_key, content_type: photo.content_type, prompt:)
@@ -108,19 +110,21 @@ module FoodAi
 
       return unless guard(run)
 
-      response = nil
       begin
         response = FoodAi.adapter.analyze(image: normalized.bytes, content_type: normalized.content_type, prompt: run.prompt, schema: run.prompt.schema)
+        # The answer is paid for: its cost is recorded in a transaction of its own, before anything that can fail.
+        record_usage(run, response)
         output = ValidateOutput.call(response.payload)
       rescue TransientProviderError => error
         return failed(run, error.code, kind: :transient)
       rescue InvalidOutputError => error
-        return failed(run, error.code, kind: :invalid, response:)
+        return failed(run, error.code, kind: :invalid)
       rescue PermanentProviderError => error
         return failed(run, error.code, kind: :permanent)
       end
       persist(run, response, output)
-    rescue StandardError => error
+    # Sidekiq::Shutdown is an Interrupt, not a StandardError: without it a run would stay running until it goes stale.
+    rescue StandardError, Sidekiq::Shutdown => error
       release(run, error)
       raise
     end
@@ -131,6 +135,9 @@ module FoodAi
       return failed(run, "photo_missing", kind: :permanent) if bytes.nil?
 
       normalized = NormalizePhoto.call(bytes:, declared_type: run.content_type)
+      # The meal may have been erased since the claim: the copy must not be written back.
+      return abandon(run) unless FoodPhoto.exists?(id: run.photo_id, status: "stored")
+
       FoodAi.storage.write(key: run.object_key, bytes: normalized.bytes, content_type: normalized.content_type)
       # The stored object is now the normalized one; the record follows it, so a retry reads it as it is.
       FoodPhoto.where(id: run.photo_id).update_all(content_type: normalized.content_type, byte_size: normalized.bytes.bytesize, updated_at: Time.current)
@@ -139,11 +146,17 @@ module FoodAi
       failed(run, "invalid_photo", kind: :permanent)
     end
 
+    # The photo is gone or deleted: nothing is written or called. Its object, if the row says deleted, is purged.
+    def abandon(run)
+      settle(run) { nil }
+      nil
+    end
+
     # Right before the provider call: the meal may be gone and the consent revoked. True to go on.
     def guard(run)
       go = false
       settle(run) do |photo, analysis|
-        if consent_gone?(photo)
+        if refused?(photo)
           cancel(photo, analysis)
         else
           go = true
@@ -153,8 +166,8 @@ module FoodAi
     end
 
     def persist(run, response, output)
-      settle(run, response:) do |photo, analysis|
-        next cancel(photo, analysis) if consent_gone?(photo)
+      settle(run) do |photo, analysis|
+        next cancel(photo, analysis) if refused?(photo)
 
         status = status_for(output)
         attributes = { status:, provider: response.provider, model: response.model, finished_at: Time.current }
@@ -178,10 +191,10 @@ module FoodAi
       output.items.empty? ? "unreadable" : "succeeded"
     end
 
-    # Retry or finish the run as failed. Cost of an answer that was received is recorded either way.
+    # Retry or finish the run as failed.
     def failed(run, code, kind:, response: nil)
       retry_step = next_attempt(kind)
-      settle(run, response:) do |photo, analysis|
+      settle(run) do |photo, analysis|
         analysis.update!(status: "failed", error_code: code, finished_at: Time.current)
         if retry_step
           log("analysis will retry", analysis, error_code: code)
@@ -208,18 +221,17 @@ module FoodAi
       log("analysis failed", analysis, error_code: analysis.error_code)
     end
 
-    # Locks the photo and the run, records the cost of a received answer, and yields only while the
+    # Locks the photo and the run, and yields only while the
     # run is still this job's. Otherwise the result is dropped: the meal was erased or the run was
     # cancelled meanwhile, and nothing is recreated. @settled tells whether the block ran.
-    def settle(run, response: nil)
+    def settle(run)
       @settled = false
       FoodPhoto.transaction do
         photo = FoodPhoto.lock.find_by(id: run.photo_id)
         analysis = AnalysisResult.lock.find_by(id: run.analysis_id)
-        record_usage(run, analysis, response) if response
         if photo.nil? || photo.status != "stored" || analysis.nil? || analysis.status != "running"
-          # The normalized copy may have been written after the meal's object was deleted.
-          @purge << photo if photo&.status == "deleted"
+          # The normalized copy may have been written after the meal's object was deleted (or its row erased).
+          @purge << Purge.new(photo&.id, run.object_key) if photo.nil? || photo.status == "deleted"
           next
         end
 
@@ -228,10 +240,19 @@ module FoodAi
       end
     end
 
-    def record_usage(run, analysis, response)
-      UsageRecord.create!(analysis_id: analysis&.id, user_id: run.user_id, provider: response.provider, model: response.model,
-                          input_tokens: response.input_tokens, output_tokens: response.output_tokens, cost_usd: response.cost_usd,
-                          occurred_at: Time.current)
+    # Its own short transaction. The cost is kept even when the meal, the analysis or the person is gone,
+    # unlinked from whatever no longer exists (the person's id must not outlive their rows).
+    def record_usage(run, response)
+      attributes = { provider: response.provider, model: response.model, input_tokens: response.input_tokens,
+                     output_tokens: response.output_tokens, cost_usd: response.cost_usd, occurred_at: Time.current }
+      begin
+        UsageRecord.transaction do
+          UsageRecord.create!(**attributes, analysis_id: (run.analysis_id if AnalysisResult.exists?(id: run.analysis_id)),
+                                            user_id: (run.user_id if FoodPhoto.exists?(id: run.photo_id)))
+        end
+      rescue ActiveRecord::InvalidForeignKey
+        UsageRecord.create!(**attributes, analysis_id: nil, user_id: nil)
+      end
     end
 
     def new_analysis(photo, prompt, **attributes)
@@ -240,8 +261,10 @@ module FoodAi
                              prompt_version: prompt.version, schema_version: prompt.schema_version, started_at: Time.current, **attributes)
     end
 
-    def consent_gone?(photo)
-      ConsentGate.check(user_id: photo.user_id) == "consent_required"
+    # Any refusal of the consent that must stand at this moment (revoked, outdated version, another operator
+    # or region, health_data gone), or an account deletion in progress, cancels like a revocation.
+    def refused?(photo)
+      ConsentGate.check_for_job(user_id: photo.user_id) || Identity::Api.deletion_requested?(user_id: photo.user_id)
     end
 
     # The analysis is cancelled, the result dropped, the photo deleted.
@@ -255,7 +278,7 @@ module FoodAi
 
     def discard(photo)
       photo.update!(status: "deleted", deleted_at: Time.current)
-      @purge << photo
+      @purge << Purge.new(photo.id, photo.object_key)
     end
 
     def complete(photo, analysis, outcome, error_code: nil)
@@ -283,10 +306,11 @@ module FoodAi
 
     # Outside any transaction. A failure queues the deletion again instead of failing the job.
     def purge_objects
-      @purge.uniq(&:id).each do |photo|
-        FoodAi.storage.delete(key: photo.object_key)
+      @purge.uniq(&:object_key).each do |target|
+        FoodAi.storage.delete(key: target.object_key)
       rescue StandardError
-        PurgeObjectJob.perform_async(photo.id)
+        # With the row gone there is nothing to retry from: the retention sweep of the bucket is the net.
+        PurgeObjectJob.perform_async(target.photo_id) if target.photo_id
       end
       @purge = []
     end

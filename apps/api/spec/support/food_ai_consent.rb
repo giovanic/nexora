@@ -21,6 +21,7 @@ module FoodAiConsent
   end
 
   def grant_food_photo_ai(user_id, version: VERSION)
+    Identity::Api.grant_consent(user_id:, purpose: "health_data", version: Identity::ConsentTexts.current_version("health_data"))
     Identity::Api.grant_consent(user_id:, purpose: "food_photo_ai", version:)
   end
 end

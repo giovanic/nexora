@@ -38,6 +38,23 @@ RSpec.describe "FoodAi recovery and erasure of leftovers", :real_consumers do
       expect(FoodAi::AnalyzeJob).to have_received(:perform_async).with(photo.id)
     end
 
+    it "cancels instead of enqueueing when the consent no longer stands (revoked, outdated, other operator, health_data)" do
+      Identity::Api.revoke_consent(user_id: user.id, purpose: "health_data")
+
+      expect(resume).to eq(:cancelled)
+
+      expect(FoodAi::AnalyzeJob).not_to have_received(:perform_async)
+      expect(photo.reload.status).to eq("deleted")
+      expect(completed_events.sole).to include("outcome" => "cancelled", "error_code" => "consent_revoked", "food_entry_id" => photo.food_entry_id)
+    end
+
+    it "cancels when the operator changed" do
+      configure_food_ai_env("FOOD_AI_OPERATOR" => "another-operator")
+
+      expect(resume).to eq(:cancelled)
+      expect(FoodAi::AnalyzeJob).not_to have_received(:perform_async)
+    end
+
     it "leaves a fresh running analysis alone" do
       analysis_for(photo, status: "running", updated_at: 1.minute.ago)
 
