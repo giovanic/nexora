@@ -24,6 +24,14 @@ RSpec.describe "outbox schedule" do
     expect(schedule.fetch("identity_retention")).to include("class" => "Identity::RetentionJob", "cron" => "45 3 * * *")
   end
 
+  it "schedules the food retention, abandoned upload, spend alert and recovery routines" do
+    expect(schedule.fetch("food_photo_retention")).to include("class" => "FoodAi::PhotoRetentionJob", "cron" => "15 4 * * *")
+    expect(schedule.fetch("food_abandoned_entries")).to include("class" => "Nutrition::AbandonedEntriesJob", "cron" => "5 * * * *")
+    expect(schedule.fetch("food_analysis_retention")).to include("class" => "FoodAi::AnalysisRetentionJob", "cron" => "30 4 * * *")
+    expect(schedule.fetch("food_ai_spend_alert")).to include("class" => "FoodAi::SpendAlertJob", "cron" => "0 6 * * *")
+    expect(schedule.fetch("food_stuck_entries")).to include("class" => "Nutrition::StuckEntriesJob", "cron" => "*/10 * * * *")
+  end
+
   # Fugit is the parser sidekiq-cron uses; building a Sidekiq::Cron::Job would read Valkey.
   it "defines valid jobs" do
     schedule.each do |name, options|

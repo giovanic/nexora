@@ -12,7 +12,11 @@ RSpec.describe "production boot" do
       "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY" => "boot-spec-deterministic-key-0123456789abcdef",
       "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT" => "boot-spec-key-derivation-salt-0123456789abcdef",
       "AUDIT_IP_HMAC_KEY" => "boot-spec-audit-ip-hmac-key-0123456789abcdef",
-      "APP_WEB_URL" => "https://app.example.test"
+      "APP_WEB_URL" => "https://app.example.test",
+      "STORAGE_BUCKET" => "boot-spec-bucket",
+      "STORAGE_REGION" => "us-east-1",
+      "STORAGE_ACCESS_KEY_ID" => "boot-spec-access-key",
+      "STORAGE_SECRET_ACCESS_KEY" => "boot-spec-secret-key"
     }
   end
 
@@ -64,6 +68,10 @@ RSpec.describe "production boot" do
     ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
     AUDIT_IP_HMAC_KEY
     APP_WEB_URL
+    STORAGE_BUCKET
+    STORAGE_REGION
+    STORAGE_ACCESS_KEY_ID
+    STORAGE_SECRET_ACCESS_KEY
   ].each do |name|
     it "refuses to boot without #{name}" do
       output, status = boot(complete.merge(name => nil))
@@ -123,5 +131,28 @@ RSpec.describe "production boot" do
 
     expect(status).to be_success, output
     expect(output.lines.last.strip).to eq("boot-spec-primary-key-0123456789abcdef,boot-spec-deterministic-key-0123456789abcdef,boot-spec-key-derivation-salt-0123456789abcdef")
+  end
+
+  describe "Food AI operator check" do
+    it "boots without FOOD_AI_PROVIDER, since uploads are then refused" do
+      output, status = boot(complete)
+
+      expect(status).to be_success, output
+    end
+
+    it "refuses to boot when the provider's operator does not match the consent in force" do
+      output, status = boot(complete.merge("FOOD_AI_PROVIDER" => "anthropic", "FOOD_AI_OPERATOR" => "Some Operator", "FOOD_AI_REGION" => "US"))
+
+      expect(status).not_to be_success
+      expect(output).to include("FOOD_AI_OPERATOR")
+      expect(output).not_to include("Some Operator")
+    end
+
+    it "refuses to boot with a provider and no operator or region declared" do
+      output, status = boot(complete.merge("FOOD_AI_PROVIDER" => "anthropic"))
+
+      expect(status).not_to be_success
+      expect(output).to include("FOOD_AI_OPERATOR")
+    end
   end
 end

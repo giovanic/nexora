@@ -1,0 +1,57 @@
+# Linguagem proibida no TEXTO LIVRE DO MODELO (nome, preparo, medida caseira de um item).
+# Subconjunto explícito de scripts/language_denylist.txt, mais palavras de julgamento que só fazem sentido aqui.
+# Fica de fora de propósito o que é parte do corpo ou palavra comum de comida ("barriga de porco", "carne
+# seca", "pão integral"): a lista completa continua valendo para os textos estáticos do produto
+# (scripts/check_language.py), e esta só para o que o modelo escreve (FoodAi::LanguageDenylist).
+# Mesmas regras: sem caixa e sem acentos, palavra ou expressão inteira, "*" no fim casa prefixo.
+# Calorias e energia (kcal, caloria, kj, energia) são tratadas por expressão regular no código.
+
+# Julgamento moral da comida
+comida boa
+comida ruim
+comida lixo
+comida limpa
+comida suja
+dieta limpa
+comer limpo
+alimento ruim
+alimento bom
+refeicao lixo
+refeicao ruim
+refeicao boa
+junk food
+lixo
+culpa
+engorda
+engordante
+proibido
+proibida
+trapaca
+
+# Calorias como meta, teto, saldo ou compensação
+calorias restantes
+caloria restante
+acima do limite
+passou do limite
+meta de calorias
+limite de calorias
+teto de calorias
+deficit calorico
+queime o que comeu
+compensar a comida
+comendo demais
+comeu demais
+
+# Medo, urgência e pressão
+voce vai perder
+sem desculpas
+sem dor sem ganho
+
+# Corpo e prescrição
+corpo dos sonhos
+emagrecer
+emagrec*
+voce deveria
+voce nao deveria
+deveria comer menos
+voce precisa comer menos

@@ -36,6 +36,15 @@ Colocar a foto com estimativa e as metas diárias nas mãos de até 10 pessoas r
 ## Dependências
 
 - **Fases 01, 02 e 03 e etapa 05.1** concluídas, com evidências.
+- **Pré-requisitos vindos da Fase 03** (o M1 inclui foto com estimativa, e a Fase 03 entregou o código sem provedor real). Nenhum está cumprido no encerramento da Fase 03:
+  1. chave de provedor de IA, com `FOOD_AI_PROVIDER`, `FOOD_AI_MODEL`, `FOOD_AI_OPERATOR` e `FOOD_AI_REGION` definidos;
+  2. rodada real de avaliação, com relatório em `evaluation/reports/` (calibra o limiar de correspondência e a confiança, e mede custo e latência);
+  3. [ADR 0006](../../architecture/decisions/0006-food-ai-pipeline-and-provider-abstraction.md) aceita, com o provedor escolhido;
+  4. texto v2 do consentimento `food_photo_ai`, que nomeia operador e região, aprovado pelo responsável (sem ele, todo envio de foto é recusado com `consent_operator_mismatch`);
+  5. demonstração real da análise por foto, com provedor, registrada (AC-03-07 e a demonstração exigida pelas regras de teste);
+  6. revisão das composições próprias por nutricionista (`review: pending_nutritionist`, [ADR 0007](../../architecture/decisions/0007-nutrition-data-sources.md)).
+
+  A Fase 07 do roadmap traz a escolha do provedor, as chaves e a rodada real (decisão do responsável de 2026-11-14 e 2026-11-16), e vem depois do M1 pelo roadmap e pela [ADR 0016](../../architecture/decisions/0016-closed-beta-milestone.md). **A ordem entre o M1 e esses itens é decisão do responsável e não foi tomada.**
 - **Ações do responsável:** advogado, contas de hospedagem e lojas, escolha das pessoas convidadas.
 - **Fontes a consultar:** preços e regiões de hospedagem; regras de teste das lojas; ANPD para prazos.
 

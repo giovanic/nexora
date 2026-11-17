@@ -1,0 +1,17 @@
+# Falsos positivos aceitos. Cada linha é a assinatura exata de um achado (commit:arquivo:regra:linha),
+# e não libera nenhum outro commit, arquivo ou linha. Motivo e data em docs/engineering/CI_CD.md.
+#
+# 2026-11-17: senha fictícia de usuário de teste ("senha-forte-123") em specs da Fase 03, depois
+# trocada por IdentityHelpers::PASSWORD. Não é segredo: não dá acesso a nenhum sistema.
+5efcafb117e6e8c943f0f371f0f2eaf6a4b0dba7:apps/api/spec/domains/food_ai/authorize_photo_upload_spec.rb:generic-api-key:7
+5efcafb117e6e8c943f0f371f0f2eaf6a4b0dba7:apps/api/spec/domains/food_ai/authorize_photo_upload_spec.rb:generic-api-key:70
+5efcafb117e6e8c943f0f371f0f2eaf6a4b0dba7:apps/api/spec/domains/nutrition/start_photo_entry_spec.rb:generic-api-key:7
+71b0e0b6c48679097184ea357681a8206c380c3d:apps/api/spec/domains/food_ai/spend_alert_spec.rb:generic-api-key:8
+7dae0a07891e80141c5498b0c623daaba169c3e0:apps/api/spec/domains/food_ai/photo_url_spec.rb:generic-api-key:22
+7dae0a07891e80141c5498b0c623daaba169c3e0:apps/api/spec/domains/food_ai/photo_url_spec.rb:generic-api-key:4
+8cd5e2083bf7d6c54f6a609db62581f484a3d89c:apps/api/spec/domains/food_ai/models_spec.rb:generic-api-key:5
+8cd5e2083bf7d6c54f6a609db62581f484a3d89c:apps/api/spec/domains/food_ai/user_data_spec.rb:generic-api-key:4
+8cd5e2083bf7d6c54f6a609db62581f484a3d89c:apps/api/spec/domains/food_ai/user_data_spec.rb:generic-api-key:5
+994f5093191acba4bc0af46d0140486e49e2a37b:apps/api/spec/domains/food_ai/run_analysis_spec.rb:generic-api-key:545
+9ae4b8aba43734d26735bc5efb3473c898790b95:apps/api/spec/domains/nutrition/concurrency_spec.rb:generic-api-key:8
+c230457ad83c51409ffc04978eec5b152e6413dc:apps/api/spec/support/food_ai_pipeline.rb:generic-api-key:13

@@ -30,6 +30,23 @@ services:
       timeout: 2s
       retries: 30
 
+  # Private object storage for meal photos (ADR 0019). The credentials in
+  # infra/seaweedfs/s3.json are development-only and useless outside this machine.
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.53
+    command: server -dir=/data -s3 -s3.config=/etc/seaweedfs/s3.json
+    ports:
+      - "127.0.0.1:8334:8333"
+    volumes:
+      - seaweedfs_data:/data
+      - ./infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9333/cluster/status || exit 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
 volumes:
+  seaweedfs_data:
   postgres_data:
   valkey_data:

@@ -13,23 +13,23 @@ Modelo de ameaças e controles do produto. Os controles de identidade, sessão e
 
 | Superfície | Ameaça | Controle | Fase |
 |---|---|---|---|
-| Upload de foto | Arquivo malicioso, tamanho excessivo, uso de URL de terceiros | URL assinada restrita a tipo e tamanho e com prazo máximo de 15 minutos; validação do objeto real após o envio; reprocessamento e remoção de EXIF antes da IA | 03 |
+| Upload de foto | Arquivo malicioso, tamanho excessivo, uso de URL de terceiros | URL assinada de PUT com prazo máximo de 15 minutos, que assina o tipo (`Content-Type`) e o tamanho (`Content-Length`) declarados; tipos aceitos JPEG, PNG, WebP, HEIC e HEIF, até 10 MB; no job, o tipo real é lido dos bytes (`marcel`) e deve bater com o declarado, e a imagem acima de 40 megapixels é recusada antes de decodificar; reprocessamento (orientação, remoção de todos os metadados, lado maior em 1.568 px, saída em JPEG) e remoção de EXIF antes da IA. A prova contra o armazenamento real está em `apps/api/spec/integration/object_storage_spec.rb` | 03 |
 | Acesso a fotos | URL vazada, leitura por outra pessoa | Bucket privado; URLs assinadas curtas; nunca em logs; escopo por dono | 03 |
-| Imagem enviada à IA | Instrução maliciosa escrita na foto | Tratar a imagem como dado; validar saída por schema; sem ferramentas nem dados de terceiros no prompt | 03 |
+| Imagem enviada à IA | Instrução maliciosa escrita na foto | Tratar a imagem como dado; validar saída por schema; sem ferramentas nem dados de terceiros no prompt; o texto livre do modelo (nome de item, medida caseira) passa por um filtro que recusa julgamento de comida e menção a calorias (`FoodAi::LanguageDenylist`, lista `scripts/language_denylist_model_text.txt`, mais um padrão de energia) e a análise falha com `invalid_text` | 03 |
 | API | Acesso a dados de outra pessoa (IDOR) | Consultas a partir do usuário autenticado; teste automático por recurso | 02 |
 | Autenticação | Força bruta, sessão roubada | Limite de tentativas (por IP; por e-mail só nas entradas com senha errada, reservado antes da conferência da senha; por conta na reautenticação); hash forte; token por dispositivo com digest no banco e revogação. Limite conhecido: cinco senhas erradas para um e-mail bloqueiam a entrada dessa pessoa por 15 minutos, de qualquer IP | 02 |
 | Clientes | Token roubado do aparelho ou navegador | Armazenamento seguro no mobile; cookie `HttpOnly` e `SameSite` na web | 02 |
 | Webhook do Strava | Evento forjado, excesso de requisições | Conferir `subscription_id`; nunca confiar no conteúdo, sempre buscar na API; limite de requisições | 04 |
 | OAuth do Strava | CSRF, código interceptado | `state` assinado de uso único; troca imediata; segredo só no backend | 04 |
 | Tokens de integração | Vazamento do banco | Cifragem em nível de aplicação com chave fora do banco | 04 |
-| Custo de IA | Abuso, conta falsa em massa | Limite por usuário; alerta de gasto total; limite de contas por origem | 03 |
+| Custo de IA | Abuso, conta falsa em massa | Quota diária por pessoa de fotos autorizadas (`FOOD_AI_DAILY_QUOTA`, padrão 20, devolvida quando a falha é nossa); no máximo 3 pedidos de análise por foto (`analysis_retry_limit`) e a quota conta de novo a cada novo pedido depois de uma falha; limite de 10 pedidos de análise por minuto por pessoa (`429` com `Retry-After: 60`, chave em HMAC); alerta mensal de gasto total (`FOOD_AI_MONTHLY_ALERT_USD`); limite de contas por origem fica para o M1 | 03 |
 | Dependências | Pacote vulnerável ou malicioso | Auditoria no CI; versões travadas; justificativa para dependência nova | 01 |
 | CI e segredos | Segredo no repositório | Varredura no CI; `.gitignore`; regras `deny` do Claude Code | 01 |
 | Agentes de IA de desenvolvimento | Leitura de segredo, comando destrutivo | Regras `deny` em `.claude/settings.json`; revisores sem ferramenta de edição; limite descrito abaixo | 00 |
 | Administração e operação | Acesso indevido por console, banco ou painel de filas | Sem painel administrativo com conteúdo de saúde; operações com auditoria e acesso restrito | 02, M1 |
 | Exportação e exclusão | Sessão roubada leva o histórico ou apaga a conta | Reautenticação recente; arquivo de exportação privado e de vida curta | 02 |
 | Filas | Redis com argumentos de jobs e conjunto de mortos | Jobs só com identificadores; sem dados de saúde em argumentos | 01 |
-| Foto no aparelho | Imagem fica após sair ou excluir a conta | App apaga cópias locais ao concluir o envio, ao sair e ao excluir | 03 |
+| Foto no aparelho | Imagem fica após sair ou excluir a conta | App apaga cópias locais ao concluir o envio, ao sair e ao excluir; a cópia da foto pendente fica em `documentDirectory` (não em `cacheDirectory`, que o sistema pode limpar), com `android.allowBackup: false`. O backup do iOS dessas fotos continua pendente ([PRIVACY_AND_LGPD.md](PRIVACY_AND_LGPD.md), pendência 24) | 03 |
 | Processamento de imagem | Bomba de descompressão | Limite de dimensões e tamanho antes de decodificar | 03 |
 | Restauração de backup | Cópia real em ambiente sem controle; contas excluídas ressuscitadas | Ambiente com os mesmos controles, descartado ao final; lista de exclusões reaplicada | M1 |
 | Notificações | Dado de saúde na tela de bloqueio | Textos genéricos; token do aparelho revogado ao encerrar a sessão | 08 |
@@ -58,7 +58,7 @@ As regras `deny` de `Read` bloqueiam as ferramentas de arquivo, mas a documenta�
 - **Web:** cookie `__Host-session`, assinado, `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`. Nenhum token em `localStorage`. **Mobile:** `Authorization: Bearer`, com o token no SecureStore do sistema.
 - **Origin:** a API não usa a proteção CSRF de formulário do Rails. Requisição que muda estado e usa ou pede o cookie só passa com `Origin` em `ALLOWED_ORIGINS`; senão, `403`. Requisição só com Bearer não depende de Origin.
 - **Respostas** sempre com `Cache-Control: no-store`.
-- **Limites** (`429` com `Retry-After`; chaves em HMAC no cache, sem IP nem e-mail em claro):
+- **Limites** (`429` com `Retry-After`; chaves em HMAC no cache, sem IP nem e-mail em claro). O limite de pedidos de análise da Fase 03 usa o cache do Rails (memória no teste, Redis nos demais ambientes); sem um cache compartilhado, ele vale por processo:
 
 | Rota | Limite |
 |---|---|
@@ -67,6 +67,7 @@ As regras `deny` de `Read` bloqueiam as ferramentas de arquivo, mas a documenta�
 | Renovação | 10 por IP em 3 min |
 | Recuperação de senha | 10 por IP em 3 min; 20 por e-mail em 1 h |
 | Exportação e exclusão | 10 por IP em 3 min; 5 por conta em 15 min |
+| Pedido de análise de foto (`POST /food_entries/{id}/analysis`) | 10 por pessoa por minuto. Além disso, 3 pedidos por foto (`analysis_retry_limit`, `409`) e a quota diária de novas fotos (`analysis_quota_exceeded`, `429`) |
 
 - **Trade-offs conhecidos:** (1) o limite de falhas por e-mail deixa um terceiro bloquear por 15 minutos a entrada de uma pessoa, de qualquer IP; a vaga é reservada de forma atômica antes de conferir a senha, para que requisições paralelas não ganhem tentativas, e é devolvida quando a senha está certa. (2) O limite por conta em exportação e exclusão impede que um token roubado teste senhas trocando de IP, ao custo de travar a própria pessoa por 15 minutos após cinco requisições, com contadores separados para exportação e exclusão (toda requisição conta, certa ou errada). (3) A recuperação sempre responde `202`, então toda requisição conta e o teto é alto. (4) O token de recuperação vai no caminho da rota: os logs da aplicação filtram o caminho, mas log de proxy à frente da API é pendência da Fase 09.
 - **Eventos mortos da outbox** têm procedimento em [RUNBOOK_OUTBOX.md](../operations/RUNBOOK_OUTBOX.md).
@@ -88,7 +89,7 @@ As regras `deny` de `Read` bloqueiam as ferramentas de arquivo, mas a documenta�
 |---|---|---|
 | Brakeman | Análise estática do Rails, no CI. A [licença](../architecture/EXTERNAL_SOURCES.md) trata uso comercial à parte e cita analisar o próprio software como não comercial: enquadramento pendente na revisão jurídica | 01 |
 | `bundler-audit` | Dependências Ruby, no CI | 01 |
-| `npm audit --audit-level=high` | Dependências JavaScript, no CI | 01 |
+| `npm audit`, julgado por `scripts/check_npm_audit.py` | Dependências JavaScript, no CI: reprova alerta alto ou crítico sem exceção vigente. Exceção só por alerta (GHSA), com aval do responsável, motivo e validade de até 90 dias, em `scripts/npm_audit_exceptions.txt`; vencida, o CI volta a reprovar. Em vigor: GHSA-fc5q-39xc-vjpf (`picomatch` até 4.0.7, sem versão corrigida, só em ferramentas de build e teste), até 2026-12-17, com aval de 2026-11-17 | 01, ajustado em 03 |
 | Gitleaks 8.30.1 | Varredura de segredos no histórico, no CI. Só recebe correção de segurança: reavaliar no M1 | 01 |
 | `security-reviewer` | Revisão a cada fase com superfície nova | Todas |
 

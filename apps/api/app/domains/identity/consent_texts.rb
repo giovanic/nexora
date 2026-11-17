@@ -11,6 +11,11 @@ module Identity
       "usage_metrics" => 1
     }.freeze
     PURPOSES = CURRENT_VERSIONS.keys.freeze
+    # The company and country that receive the data under each version of a purpose that
+    # sends it to a provider. v1 of food_photo_ai names none, so no photo may be sent under
+    # it; v2 (Task 14) is written after the provider is chosen. A purpose or version missing
+    # here names no operator.
+    TERMS = { "food_photo_ai" => { 1 => { operator: nil, region: nil } } }.freeze
     DIRECTORY = Rails.root.join("config/consents")
 
     def self.purpose?(purpose)
@@ -19,6 +24,11 @@ module Identity
 
     def self.current_version(purpose)
       CURRENT_VERSIONS.fetch(purpose) { raise ArgumentError, "unknown consent purpose" }
+    end
+
+    # { operator:, region: } of the version in force, both nil when it names none.
+    def self.terms(purpose)
+      TERMS.fetch(purpose, {}).fetch(current_version(purpose), { operator: nil, region: nil })
     end
 
     # Only purposes from the closed list reach the file name.

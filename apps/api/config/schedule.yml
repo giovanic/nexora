@@ -29,3 +29,33 @@ identity_retention:
   class: "Identity::RetentionJob"
   queue: default
   description: "Removes sessions, audit events and consent records past their retention period."
+
+food_photo_retention:
+  cron: "15 4 * * *"
+  class: "FoodAi::PhotoRetentionJob"
+  queue: default
+  description: "Deletes meal photo objects 30 days after analysis, and retries the objects of deleted photos."
+
+food_abandoned_entries:
+  cron: "5 * * * *"
+  class: "Nutrition::AbandonedEntriesJob"
+  queue: default
+  description: "Deletes meals still pending after an hour, with their photo and object."
+
+food_analysis_retention:
+  cron: "30 4 * * *"
+  class: "FoodAi::AnalysisRetentionJob"
+  queue: default
+  description: "Deletes analyses and raw_response after 90 days, and unlinks the person from usage records of that age."
+
+food_ai_spend_alert:
+  cron: "0 6 * * *"
+  class: "FoodAi::SpendAlertJob"
+  queue: default
+  description: "Alerts once per month and limit when the month's AI cost passes FOOD_AI_MONTHLY_ALERT_USD."
+
+food_stuck_entries:
+  cron: "*/10 * * * *"
+  class: "Nutrition::StuckEntriesJob"
+  queue: default
+  description: "Resumes meals stuck in processing for more than 15 minutes, or marks them failed."

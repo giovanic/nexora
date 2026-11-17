@@ -506,6 +506,438 @@ paths:
           $ref: "#/components/responses/Error"
         default:
           $ref: "#/components/responses/Error"
+  /api/v1/foods/search:
+    post:
+      operationId: searchFoods
+      summary: Searches the food catalog by name, ignoring case and accents.
+      description: |
+        Used to correct a meal. The term travels in the body, never in the URL, and is filtered from the
+        logs. The catalog holds USDA FoodData Central ingredients and dishes written by the project
+        (kind composition, shown as "composição própria"). Items are ordered by closeness to the term,
+        dishes first on a tie. per_page is capped at 50 (20 when omitted). A missing or blank term, a term
+        over 100 characters, or a page below 1 or above 1000 answers 422 validation_failed. Needs the health_data consent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FoodSearchRequest"
+      responses:
+        "200":
+          description: A page of catalog items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodSearchPage"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/food_entries/uploads:
+    post:
+      operationId: startFoodEntryUpload
+      summary: Authorizes the upload of a meal photo and starts the pending meal.
+      description: |
+        Checks that food_photo_ai is granted for the version in force and that this version names the
+        operator and region the server really uses (403 consent_required, 403 consent_operator_mismatch),
+        then the daily quota of 20 authorized uploads per local day (429 analysis_quota_exceeded, with
+        Retry-After in seconds until local midnight). content_type is image/jpeg, image/png, image/webp, image/heic or image/heif
+        (HEIC and HEIF are converted to JPEG by the server before analysis; other types, such as image/gif,
+        answer 422 unsupported_media_type) and byte_size is at most
+        10 MB. meal_at needs a UTC offset and falls between 30 days ago and 1 day ahead (422 validation_failed
+        otherwise). Creates a pending meal and returns a signed PUT URL valid for 15 minutes; the PUT must send
+        exactly upload_headers. Repeating a client_request_id returns the same meal with a new URL and
+        counts once (201), as long as the photo still awaits its upload. Once it does not, the repeat
+        answers 200 with the same food_entry_id and the meal status, and no URL (upload_url, upload_headers
+        and expires_at are null). If the upload was abandoned and swept before it went on to the analysis,
+        the repeat answers 409 upload_expired and creates no meal: the app starts over with a new
+        client_request_id. A 422 carries details naming the field (client_request_id, byte_size, meal_at
+        or, for unsupported_media_type, content_type) and a code, so the app can choose its message.
+        The URL is a secret: never log it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FoodEntryUploadRequest"
+      responses:
+        "200":
+          description: The client_request_id was already used and its photo is past the upload. No new URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntryUpload"
+        "201":
+          description: The meal was started and the upload is authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntryUpload"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/food_entries/{id}/analysis:
+    post:
+      operationId: requestFoodEntryAnalysis
+      summary: Asks for the analysis of the photo of a meal, once the photo was uploaded.
+      description: |
+        The meal must be pending or failed (a failed one can be asked again). FoodAi checks the object
+        against what was authorized and that food_photo_ai is still granted, then the work runs in the
+        background: the answer is 202 and the meal is processing. Another person's or an unknown meal
+        answers 404; a meal in any other state answers 409 entry_not_analyzable; 422 not_uploaded when
+        the object was not sent, 422 invalid_photo (details: field photo, code size_mismatch or
+        type_mismatch) when it differs from the authorization; 403 consent_required or
+        consent_operator_mismatch. A refusal leaves the meal as it was. A photo takes the first request and
+        two more after a failure: the next answers 409 analysis_retry_limit (the app offers another photo or
+        a meal written by hand). A new request after a failure counts the photo's unit again in the quota of
+        today: 429 analysis_quota_exceeded, with Retry-After, when the day is used up. One person may ask
+        10 times a minute (429, Retry-After 60).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "202":
+          description: The analysis was queued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntryAnalysisAccepted"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/food_entries/{id}:
+    get:
+      operationId: getFoodEntry
+      summary: A meal with its items, calorie and macro ranges, confidence and photo.
+      description: |
+        Everything the app shows comes from here; the app computes nothing. Calories are always a range
+        (calories_min, calories_likely, calories_max) rounded to the ten, macros a range rounded to the
+        gram, and every number is null while there is nothing to show (processing, no food, no known item).
+        estimate_partial is true when some item is unknown to the catalog: the range then sums only the known
+        items, and an unknown item carries its name and no numbers. confidence is high, medium or low, and
+        null without items. source is the nutrition base of an item (usda_fdc or project); own_composition is
+        true for a dish composed by the project. There is no total of the day, no remaining and no goal.
+        photo_url is a signed URL valid for 15 minutes, only while the photo exists, and a secret: never log
+        it. Another person's or an unknown meal answers 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The meal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntry"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: deleteFoodEntry
+      summary: Deletes a meal, its items, its photo and the analysis result.
+      description: |
+        Works in any state, also while the analysis runs (the job then ends without creating anything). The
+        items go with the meal; the photo and the model's raw result are erased after the meal is gone. Another
+        person's or an unknown meal answers 404. It does not need the health_data consent: erasing a meal stays
+        possible after that consent is revoked.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: The meal is gone.
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/food_entries:
+    get:
+      operationId: listFoodEntries
+      summary: The history of meals, newest day first, by cursor.
+      description: |
+        Meals of the person ordered by local_date, meal_at and id, newest first, 20 per page (per_page up to
+        50; larger values are served as 50). local_date (YYYY-MM-DD) narrows the list to one local day. cursor is
+        the opaque next_cursor of the previous page; a cursor that is not one answers 422 validation_failed.
+        A meal still waiting for its photo (pending) is not listed. Each meal is the same FoodEntry as
+        getFoodEntry, with its own ranges; there is no total of the day, no sum and no comparison. photo_url is
+        always null here (the list shows no photo and signs no URL): getFoodEntry gives the signed URL. The
+        response is never cached.
+      parameters:
+        - name: local_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 200
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: A page of meals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntryPage"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createManualFoodEntry
+      summary: Registers a meal by hand, with no photo, already confirmed.
+      description: |
+        The meal is born confirmed, with source manual, no photo and no use of the daily photo quota. It needs
+        1 to 30 items, each with a catalog_item_id or a free_text_name (up to 80 characters), and grams from 1 to
+        2000. A free-text item is unknown: it has no numbers and makes the estimate partial. Repeating a
+        client_request_id returns the same meal (200); a client_request_id already used for a photo meal answers
+        422 validation_failed. meal_at follows the same rule as the upload (UTC offset required, 30 days back, 1
+        day ahead). Details name the field, such as items.0.grams_likely.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualFoodEntryRequest"
+      responses:
+        "200":
+          description: The client_request_id was already used; the same meal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntry"
+        "201":
+          description: The meal was registered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntry"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/food_entries/{id}/confirmation:
+    post:
+      operationId: confirmFoodEntry
+      summary: Confirms an analyzed meal as it stands.
+      description: |
+        Needs an analyzed meal with at least one item. Confirming a confirmed meal answers 200 again and changes
+        nothing. A meal still processing, pending or failed, or with no item, answers 409 entry_not_confirmable.
+        Another person's or an unknown meal answers 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The confirmed meal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntry"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/food_entries/{id}/items:
+    post:
+      operationId: addFoodEntryItem
+      summary: Adds an item to an analyzed or confirmed meal and recalculates it.
+      description: |
+        Exactly one of catalog_item_id (a catalog food, 422 when unknown) or free_text_name (1 to 80
+        characters). grams_likely is required, from 1 to 2000; grams_min and grams_max default to it and must
+        keep min <= likely <= max, each from 1 to 2000. The item has origin user. A free-text item is unknown: no
+        numbers, and the estimate becomes partial. A meal that is not analyzed or confirmed answers 409
+        entry_not_editable. Answers the whole meal, recalculated.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FoodItemInput"
+      responses:
+        "201":
+          description: The meal with the new item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntry"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/food_entries/{id}/items/{item_id}:
+    patch:
+      operationId: correctFoodEntryItem
+      summary: Corrects the portion or the food of an item and recalculates the meal.
+      description: |
+        Needs grams_likely (1 to 2000, 422 validation_failed otherwise and nothing changes), a catalog_item_id,
+        or both. The correction creates a new item with origin user and keeps the original out of sight (still
+        stored). A new grams_likely derives grams_min and grams_max keeping the proportion of the original; a new
+        catalog_item_id takes the name and the nutrients from the catalog. The item in the response has a new id.
+        An item already corrected or removed answers 404. A meal that is not analyzed or confirmed answers 409
+        entry_not_editable. Answers the whole meal, recalculated.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FoodItemCorrection"
+      responses:
+        "200":
+          description: The meal with the corrected item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntry"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: removeFoodEntryItem
+      summary: Removes an item from the meal and recalculates it.
+      description: |
+        The item leaves the meal and the numbers; its row is kept out of sight, not deleted. A meal that is not
+        analyzed or confirmed answers 409 entry_not_editable; an item already removed or corrected answers 404.
+        Answers the whole meal, recalculated.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The meal without the item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodEntry"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     bearerSession:
@@ -729,6 +1161,299 @@ components:
           maxItems: 6
           items:
             $ref: "#/components/schemas/SportProfile"
+    FoodSearchRequest:
+      type: object
+      additionalProperties: false
+      required: [term]
+      properties:
+        term:
+          type: string
+          minLength: 1
+          maxLength: 100
+        page:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 1
+        per_page:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+          description: Values above 50 are served as 50.
+    FoodEntryUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [client_request_id, content_type, byte_size, meal_at]
+      properties:
+        client_request_id:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Chosen by the client for each meal. Repeating it returns the same meal.
+        content_type:
+          type: string
+          enum: [image/jpeg, image/png, image/webp, image/heic, image/heif]
+        byte_size:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+        meal_at:
+          type: string
+          format: date-time
+          description: |
+            When the meal happened, ISO 8601 with the UTC offset (Z or +hh:mm), never without one. At most 1 day
+            in the future and at most 30 days in the past, counted from the server clock; anything else answers
+            422 validation_failed (field meal_at). The local date comes from the profile time zone.
+    FoodEntryUpload:
+      type: object
+      additionalProperties: false
+      required: [food_entry_id, status, upload_url, upload_headers, expires_at]
+      properties:
+        food_entry_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processing, analyzed, failed, confirmed]
+          description: The status of the meal. pending right after the first request.
+        upload_url:
+          type: [string, "null"]
+          description: Signed PUT URL. A secret; never log it. Null when the photo is past the upload.
+        upload_headers:
+          type: [object, "null"]
+          additionalProperties:
+            type: string
+          description: Content-Type and Content-Length, to send exactly as given. Null with no URL.
+        expires_at:
+          type: [string, "null"]
+          format: date-time
+    FoodEntryAnalysisAccepted:
+      type: object
+      additionalProperties: false
+      required: [food_entry_id, status]
+      properties:
+        food_entry_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [processing]
+    FoodEntry:
+      type: object
+      additionalProperties: false
+      required: [id, status, result_code, source, meal_at, local_date, estimate_partial, unknown_items_count, confidence, photo_url,
+                 calories_min, calories_likely, calories_max, protein_g_min, protein_g_likely, protein_g_max, carbs_g_min, carbs_g_likely,
+                 carbs_g_max, fat_g_min, fat_g_likely, fat_g_max, items]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processing, analyzed, failed, confirmed]
+        result_code:
+          type: [string, "null"]
+          enum: [no_food, unreadable, null]
+        source:
+          type: string
+          enum: [photo, manual]
+        meal_at:
+          type: string
+          format: date-time
+        local_date:
+          type: string
+          format: date
+        estimate_partial:
+          type: boolean
+        unknown_items_count:
+          type: integer
+        confidence:
+          type: [string, "null"]
+          enum: [high, medium, low, null]
+        photo_url:
+          type: [string, "null"]
+        calories_min:
+          type: [integer, "null"]
+        calories_likely:
+          type: [integer, "null"]
+        calories_max:
+          type: [integer, "null"]
+        protein_g_min:
+          type: [integer, "null"]
+        protein_g_likely:
+          type: [integer, "null"]
+        protein_g_max:
+          type: [integer, "null"]
+        carbs_g_min:
+          type: [integer, "null"]
+        carbs_g_likely:
+          type: [integer, "null"]
+        carbs_g_max:
+          type: [integer, "null"]
+        fat_g_min:
+          type: [integer, "null"]
+        fat_g_likely:
+          type: [integer, "null"]
+        fat_g_max:
+          type: [integer, "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FoodEntryItem"
+    FoodEntryItem:
+      type: object
+      additionalProperties: false
+      required: [id, name, origin, unknown, household_measure, source, own_composition, quantity_grams_min, quantity_grams_likely,
+                 quantity_grams_max, calories_min, calories_likely, calories_max, protein_g_min, protein_g_likely, protein_g_max,
+                 carbs_g_min, carbs_g_likely, carbs_g_max, fat_g_min, fat_g_likely, fat_g_max]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        origin:
+          type: string
+          enum: [ai, user]
+        unknown:
+          type: boolean
+        household_measure:
+          type: [string, "null"]
+        source:
+          type: [string, "null"]
+          enum: [usda_fdc, project, null]
+        own_composition:
+          type: boolean
+        quantity_grams_min:
+          type: number
+        quantity_grams_likely:
+          type: number
+        quantity_grams_max:
+          type: number
+        calories_min:
+          type: [integer, "null"]
+        calories_likely:
+          type: [integer, "null"]
+        calories_max:
+          type: [integer, "null"]
+        protein_g_min:
+          type: [integer, "null"]
+        protein_g_likely:
+          type: [integer, "null"]
+        protein_g_max:
+          type: [integer, "null"]
+        carbs_g_min:
+          type: [integer, "null"]
+        carbs_g_likely:
+          type: [integer, "null"]
+        carbs_g_max:
+          type: [integer, "null"]
+        fat_g_min:
+          type: [integer, "null"]
+        fat_g_likely:
+          type: [integer, "null"]
+        fat_g_max:
+          type: [integer, "null"]
+    FoodItemInput:
+      type: object
+      additionalProperties: false
+      required: [grams_likely]
+      properties:
+        catalog_item_id:
+          type: string
+          format: uuid
+        free_text_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: A food the catalog does not know. It is unknown to nutrition, with no numbers. Never logged.
+        grams_likely:
+          type: number
+          minimum: 1
+          maximum: 2000
+        grams_min:
+          type: number
+          minimum: 1
+          maximum: 2000
+        grams_max:
+          type: number
+          minimum: 1
+          maximum: 2000
+    FoodItemCorrection:
+      type: object
+      additionalProperties: false
+      properties:
+        grams_likely:
+          type: number
+          minimum: 1
+          maximum: 2000
+        catalog_item_id:
+          type: string
+          format: uuid
+    ManualFoodEntryRequest:
+      type: object
+      additionalProperties: false
+      required: [client_request_id, meal_at, items]
+      properties:
+        client_request_id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        meal_at:
+          type: string
+          format: date-time
+          description: ISO 8601 with the UTC offset, between 30 days ago and 1 day ahead.
+        items:
+          type: array
+          minItems: 1
+          maxItems: 30
+          items:
+            $ref: "#/components/schemas/FoodItemInput"
+    FoodEntryPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/FoodEntry"
+        next_cursor:
+          type: [string, "null"]
+          description: Opaque. Null on the last page.
+    FoodCatalogItem:
+      type: object
+      additionalProperties: false
+      required: [id, name_pt, kind, source]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name_pt:
+          type: string
+        kind:
+          type: string
+          enum: [ingredient, composition]
+          description: composition is a dish of the project, shown as "composição própria".
+        source:
+          type: string
+          enum: [usda_fdc, project]
+    FoodSearchPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_page]
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/FoodCatalogItem"
+        next_page:
+          type: [integer, "null"]
+          minimum: 2
+          description: The next page number, or null on the last page.
     ConsentPurpose:
       type: string
       enum: [health_data, food_photo_ai, strava_integration, usage_metrics]

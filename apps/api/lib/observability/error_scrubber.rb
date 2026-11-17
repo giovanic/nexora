@@ -8,7 +8,8 @@ module Observability
   module ErrorScrubber
     # The outbox tags hold an event name and a consumer name, both fixed in code.
     # account_deletion is the id of an account_deletions row, never the user's.
-    KEPT_TAGS = %w[correlation_id request_id outbox_event outbox_consumer account_deletion].freeze
+    # food_ai_spend_usd and food_ai_limit_usd are the month's total cost and its limit: numbers, no person.
+    KEPT_TAGS = %w[correlation_id request_id outbox_event outbox_consumer account_deletion food_ai_spend_usd food_ai_limit_usd].freeze
     KEPT_CONTEXTS = %w[runtime sidekiq].freeze
     SIDEKIQ_CONTEXT_KEEP = %w[class jid queue correlation_id].freeze
     UNROUTED = "unrouted".freeze

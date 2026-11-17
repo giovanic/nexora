@@ -9,11 +9,19 @@ export type ConsentText = Schemas["ConsentText"];
 export type DeviceSession = Schemas["DeviceSession"];
 export type Motivation = Schemas["Motivation"];
 export type Profile = Schemas["Profile"];
+export type FoodCatalogItem = Schemas["FoodCatalogItem"];
+export type FoodEntry = Schemas["FoodEntry"];
+export type FoodEntryItem = Schemas["FoodEntryItem"];
+export type FoodEntryPage = Schemas["FoodEntryPage"];
+export type FoodEntryUpload = Schemas["FoodEntryUpload"];
+export type FoodItemInput = Schemas["FoodItemInput"];
+export type FoodSearchPage = Schemas["FoodSearchPage"];
 export type Sport = Schemas["Sport"];
 export type SportLevel = Schemas["SportLevel"];
 export type SportProfile = Schemas["SportProfile"];
 
-export type Failure = { ok: false; status: number; code: string; retryAfter?: number };
+// field: the first field named in the error details (for example byte_size), when there is one.
+export type Failure = { ok: false; status: number; code: string; retryAfter?: number; field?: string };
 export type Result<T> = { ok: true; status: number; data: T } | Failure;
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
@@ -124,8 +132,11 @@ export function createApi(options: ApiOptions) {
 
     if (response.ok) return { ok: true, status: response.status, data: payload as T };
 
-    const code = (payload as { error?: { code?: unknown } } | undefined)?.error?.code;
+    const error = (payload as { error?: { code?: unknown; details?: unknown } } | undefined)?.error;
+    const code = error?.code;
     const result: Failure = failure(response.status, typeof code === "string" ? code : "request_error");
+    const detail = Array.isArray(error?.details) ? (error.details[0] as { field?: unknown } | undefined) : undefined;
+    if (typeof detail?.field === "string") result.field = detail.field;
     const retryAfter = Number(response.headers?.get?.("Retry-After"));
     if (Number.isFinite(retryAfter) && retryAfter > 0) result.retryAfter = retryAfter;
 
@@ -184,6 +195,23 @@ export function createApi(options: ApiOptions) {
     grantConsent: (purpose: ConsentPurpose, version: number) =>
       request<Consent>("POST", "/api/v1/consents", { body: { purpose, version } }),
     revokeConsent: (purpose: ConsentPurpose) => request<undefined>("DELETE", `/api/v1/consents/${purpose}`),
+    startFoodUpload: (input: Schemas["FoodEntryUploadRequest"]) =>
+      request<FoodEntryUpload>("POST", "/api/v1/food_entries/uploads", { body: input }),
+    requestFoodAnalysis: (id: string) =>
+      request<Schemas["FoodEntryAnalysisAccepted"]>("POST", `/api/v1/food_entries/${encodeURIComponent(id)}/analysis`),
+    getFoodEntry: (id: string) => request<FoodEntry>("GET", `/api/v1/food_entries/${encodeURIComponent(id)}`),
+    listFoodEntries: (cursor?: string) =>
+      request<FoodEntryPage>("GET", `/api/v1/food_entries${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
+    createManualFoodEntry: (input: Schemas["ManualFoodEntryRequest"]) => request<FoodEntry>("POST", "/api/v1/food_entries", { body: input }),
+    confirmFoodEntry: (id: string) => request<FoodEntry>("POST", `/api/v1/food_entries/${encodeURIComponent(id)}/confirmation`),
+    correctFoodEntryItem: (id: string, itemId: string, changes: Schemas["FoodItemCorrection"]) =>
+      request<FoodEntry>("PATCH", `/api/v1/food_entries/${encodeURIComponent(id)}/items/${encodeURIComponent(itemId)}`, { body: changes }),
+    deleteFoodEntry: (id: string) => request<undefined>("DELETE", `/api/v1/food_entries/${encodeURIComponent(id)}`),
+    addFoodEntryItem: (id: string, input: FoodItemInput) =>
+      request<FoodEntry>("POST", `/api/v1/food_entries/${encodeURIComponent(id)}/items`, { body: input }),
+    removeFoodEntryItem: (id: string, itemId: string) =>
+      request<FoodEntry>("DELETE", `/api/v1/food_entries/${encodeURIComponent(id)}/items/${encodeURIComponent(itemId)}`),
+    searchFoods: (term: string, page = 1) => request<FoodSearchPage>("POST", "/api/v1/foods/search", { body: { term, page } }),
     getProfile: () => whilePending(() => request<Profile>("GET", "/api/v1/profile")),
     updateProfile: (changes: Schemas["ProfileUpdate"]) =>
       whilePending(() => request<Profile>("PATCH", "/api/v1/profile", { body: changes })),

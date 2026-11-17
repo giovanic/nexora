@@ -20,7 +20,7 @@ Roda em todo pull request e na branch principal. O CI executa verificações rea
 | `api` | Limites | `spec/architecture`, dentro do RSpec | Sim |
 | `api` | Contrato | Respostas reais contra o OpenAPI, e rotas contra `paths`, dentro do RSpec | Sim |
 | `contracts` | Tipos gerados | Falha se os tipos versionados diferem do que o contrato gera | Sim |
-| `web` | Auditoria JS | `npm audit --audit-level=high`, sobre o lockfile do monorepo | Sim, em achado alto |
+| `web` | Auditoria JS | `npm audit --json` sobre o lockfile do monorepo, julgado por `scripts/check_npm_audit.py` com as exceções de `scripts/npm_audit_exceptions.txt` | Sim, em achado alto ou crítico sem exceção vigente |
 | `web` | Tipos, lint, testes, build | `tsc`, ESLint sem nenhum aviso, Vitest, Vite | Sim |
 | `mobile` | Tipos, lint, testes | `tsc`, ESLint sem nenhum aviso, `jest-expo` | Sim |
 
@@ -31,6 +31,8 @@ Roda em todo pull request e na branch principal. O CI executa verificações rea
 **Lint de Markdown:** não adotado. O verificador do harness já impõe o formato que importa, e um linter acrescentaria uma dependência sem proteger nenhum critério.
 
 **Limite do Gitleaks:** como ele varre todas as branches, um segredo em uma branch qualquer reprova `secrets` em todos os pull requests até a branch ser apagada. Isso é intencional em um repositório público, e foi observado na prova da Fase 01.
+
+**Falsos positivos do Gitleaks:** ficam em `.gitleaksignore`, na raiz, só pela assinatura exata de cada achado (`commit:arquivo:regra:linha`), com o motivo e a data em comentário. Não há regra nem caminho liberado de forma ampla, e um segredo real nunca entra ali: ele é revogado, e o histórico é corrigido com autorização do responsável. Em testes, senhas fictícias usam `IdentityHelpers::PASSWORD`, que o Gitleaks não acusa. Entrada de 2026-11-17: 12 achados `generic-api-key` da senha fictícia `"senha-forte-123"` em specs da Fase 03, no PR #20.
 
 ## Prova de que o CI reprova
 

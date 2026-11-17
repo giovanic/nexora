@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contains_food", "image_quality", "items", "note_codes"],
+  "properties": {
+    "contains_food": { "type": "boolean" },
+    "image_quality": { "type": "string", "enum": ["good", "poor", "unreadable"] },
+    "items": {
+      "type": "array",
+      "maxItems": 15,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "preparation", "confidence", "portion", "hidden_ingredients_possible"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "preparation": { "type": "string", "minLength": 1, "maxLength": 60 },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "portion": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["grams_min", "grams_likely", "grams_max", "household_measure"],
+            "properties": {
+              "grams_min": { "type": "number", "minimum": 1, "maximum": 2000 },
+              "grams_likely": { "type": "number", "minimum": 1, "maximum": 2000 },
+              "grams_max": { "type": "number", "minimum": 1, "maximum": 2000 },
+              "household_measure": { "type": "string", "minLength": 1, "maxLength": 60 }
+            }
+          },
+          "hidden_ingredients_possible": { "type": "boolean" }
+        }
+      }
+    },
+    "note_codes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["possible_added_fat", "possible_hidden_ingredients", "partial_view", "low_light"]
+      }
+    }
+  }
+}

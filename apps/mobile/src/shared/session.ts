@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import { clearPendingPhotos } from "./PendingPhotos";
 
 // The session token lives only in the device keystore (SecureStore), never in
 // plain storage, logs or monitoring. Every call is safe to await: a keystore
@@ -33,5 +34,7 @@ export const session: Session = {
     } catch {
       // Nothing more to do: the caller goes to sign in either way.
     }
+    // Meal photos not yet sent stay on the device only while this session lives.
+    await clearPendingPhotos();
   },
 };

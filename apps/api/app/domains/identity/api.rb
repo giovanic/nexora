@@ -20,6 +20,8 @@ module Identity
       def ok? = true
     end
     ConsentText = Data.define(:purpose, :version, :body)
+    # The version in force and who receives the data under it (nil when it names none).
+    ConsentTerms = Data.define(:version, :operator, :region)
 
     class << self
       # Code outside Identity reaches only this module, so it asks instead of reading CLIENTS.
@@ -123,6 +125,14 @@ module Identity
         return unless ConsentTexts.purpose?(purpose)
 
         ConsentText.new(purpose:, version: ConsentTexts.current_version(purpose), body: ConsentTexts.read(purpose))
+      end
+
+      # nil for an unknown purpose.
+      def consent_terms(purpose:)
+        return unless ConsentTexts.purpose?(purpose)
+
+        terms = ConsentTexts.terms(purpose)
+        ConsentTerms.new(version: ConsentTexts.current_version(purpose), operator: terms[:operator], region: terms[:region])
       end
 
       # The person's data from every registered context, built on the spot and

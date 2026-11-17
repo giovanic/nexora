@@ -11,6 +11,8 @@ RSpec.describe "account deletion scan", :real_consumers do
 
   # Where a row points to its owner; every other table uses user_id.
   USER_COLUMN = { "users" => "id", "audit_events" => "user_ref" }.freeze
+  # Tables with no user_id, owned through their parent: the column and the parent table.
+  OWNED_THROUGH = { "food_items" => %w[food_entry_id food_entries] }.freeze
   # Rows the design keeps (4.4), so the scan does not plant content in them:
   # account_deletions is written by the flow itself, and audit_events is
   # checked against the closed list of its only writer, RecordAudit.
@@ -38,7 +40,8 @@ RSpec.describe "account deletion scan", :real_consumers do
   def column_name(column) = connection.quote_column_name(column)
 
   def user_tables
-    (Shared::DataRegistry.user_data_tables(connection) | (Shared::DataRegistry.registered_tables & connection.tables)).sort
+    # food_photos first: the analyses point to it.
+    (Shared::DataRegistry.user_data_tables(connection) | (Shared::DataRegistry.registered_tables & connection.tables)).sort_by { |t| [ t == "food_photos" ? 0 : 1, t ] }
   end
 
   # A different value per row, so unique indexes do not refuse it.
@@ -55,10 +58,25 @@ RSpec.describe "account deletion scan", :real_consumers do
     end
   end
 
+  # Columns the database holds to a closed list or to another row, which a marker or a random
+  # uuid cannot fill. The value is SQL; user_id is the quoted owner.
+  ROW_VALUES = {
+    "ai_usage_records" => { "provider" => "'fake'", "model" => "'fake-1'" },
+    "food_items" => { "food_entry_id" => ->(user_id) { "(SELECT id FROM food_entries WHERE user_id = #{user_id} LIMIT 1)" },
+                      "quantity_grams_min" => "1", "quantity_grams_likely" => "1", "quantity_grams_max" => "1" },
+    "food_analysis_results" => { "photo_id" => ->(user_id) { "(SELECT id FROM food_photos WHERE user_id = #{user_id} LIMIT 1)" } }
+  }.freeze
+
+  # Columns that keep a row's cost after the person is gone and hold only a provider or model
+  # identifier (validated in code, never user text), so the scan plants no marker in them.
+  NOT_MARKED = { "ai_usage_records" => %w[provider model] }.freeze
+
   # For a table the flow left without a row of the person, such as a new one.
   def insert_row(table, user_id, owner)
+    fixed = ROW_VALUES.fetch(table, {})
     values = connection.columns(table).filter_map do |column|
       next [ column.name, quote(user_id) ] if column.name == owner
+      next [ column.name, fixed[column.name].then { |v| v.respond_to?(:call) ? v.call(quote(user_id)) : v } ] if fixed.key?(column.name)
       next if column.null || column.default || column.default_function
 
       [ column.name, marker_expression(column) || filler(column) ]
@@ -76,11 +94,13 @@ RSpec.describe "account deletion scan", :real_consumers do
   # it for holds only closed-list values, so nothing personal fits there.
   def seed(table, user_id)
     owner = USER_COLUMN.fetch(table, "user_id")
-    where = [ "#{column_name(owner)} = #{quote(user_id)}", SEED_SCOPE[table] ].compact.join(" AND ")
+    through = OWNED_THROUGH[table]
+    owned = through ? "#{column_name(through[0])} IN (SELECT id FROM #{table_name(through[1])} WHERE user_id = #{quote(user_id)})" : "#{column_name(owner)} = #{quote(user_id)}"
+    where = [ owned, SEED_SCOPE[table] ].compact.join(" AND ")
     insert_row(table, user_id, owner) unless connection.select_value("SELECT 1 FROM #{table_name(table)} WHERE #{where} LIMIT 1")
 
     connection.columns(table).filter_map do |column|
-      expression = marker_expression(column) unless column.name == owner
+      expression = marker_expression(column) unless column.name == owner || NOT_MARKED.fetch(table, []).include?(column.name)
       next unless expression
 
       connection.transaction(requires_new: true) do

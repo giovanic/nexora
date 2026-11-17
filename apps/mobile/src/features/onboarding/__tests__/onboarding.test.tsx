@@ -1,6 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { consentList, errorResponse, jsonResponse, makeApi } from "../../../shared/testing/fakes";
-import { ComingSoonScreen } from "../ComingSoonScreen";
 import { ConsentStep } from "../ConsentStep";
 import { DoneStep } from "../DoneStep";
 import { MotivationsStep } from "../MotivationsStep";
@@ -217,8 +216,8 @@ describe("SportsStep", () => {
   });
 });
 
-describe("DoneStep and ComingSoonScreen", () => {
-  it("opens the camera step, which is coming soon", async () => {
+describe("DoneStep", () => {
+  it("opens the camera step", async () => {
     const onOpenCamera = jest.fn();
     await render(<DoneStep onOpenCamera={onOpenCamera} />);
 
@@ -226,15 +225,5 @@ describe("DoneStep and ComingSoonScreen", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Abrir a câmera" }));
 
     expect(onOpenCamera).toHaveBeenCalledTimes(1);
-  });
-
-  it("says the camera is coming soon and links to settings", async () => {
-    const onOpenSettings = jest.fn();
-    await render(<ComingSoonScreen onOpenSettings={onOpenSettings} />);
-
-    expect(screen.getByRole("heading", { name: "Em breve" })).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole("button", { name: "Configurações" }));
-
-    expect(onOpenSettings).toHaveBeenCalledTimes(1);
   });
 });

@@ -79,27 +79,32 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 
 - **Responsabilidade:** refeições, itens, confirmação, correção, cálculo em faixa e histórico.
 - **Modelos:** `FoodEntry`, `FoodItem`.
-- **Serviços:** `ConfirmFoodEntry`, `CorrectFoodItem`, `CreateManualFoodEntry`, `DeleteFoodEntry`, `NutritionCalculator`.
-- **Publica:** `food_entry.created`, `food_entry.confirmed`, `food_entry.corrected`, `food_entry.deleted`.
-- **Consome:** `food_analysis.completed`, `food_analysis.failed`.
+- **Serviços:** `StartPhotoEntry`, `RequestEntryAnalysis`, `ApplyAnalysis`, `ConfirmFoodEntry`, `CorrectFoodItem`, `AddFoodItem`, `RemoveFoodItem`, `CreateManualEntry`, `DeleteFoodEntry`, `ListFoodEntries`, `Calculator`, `EntryView`; jobs `AbandonedEntriesJob` e `StuckEntriesJob`.
+- **Publica:** `food_entry.confirmed` (ao confirmar, e ao criar a refeição manual, que já nasce confirmada) e `food_entry.deleted`, ambos pela outbox na mesma transação. `food_entry.created` e `food_entry.corrected` **não são publicados na Fase 03**: nenhum consumidor existe ainda, e passam a ser publicados na fase do primeiro consumidor (Progress & Analytics, Fase 08).
+- **Consome:** `food_analysis.completed` (consumidor `nutrition.apply_analysis`), cujo desfecho vira o estado da refeição.
+- **Registra no registro de dados:** `food_entries` e `food_items`.
 - **Permitido:** API pública de Food AI, de Food Catalog e o fuso de User Profile.
 - **Proibido:** conhecer provedor de IA; expor limite ou meta de calorias.
 
 ### 4. Food AI
 
-- **Responsabilidade:** autorização de envio, visão computacional (itens e porções validados), adaptadores de provedor, prompts versionados, avaliação e custo. Termina ao publicar `food_analysis.completed`.
-- **Modelos:** `FoodAnalysisResult`, `AiUsageRecord`, `PromptVersion`.
-- **Serviços:** `AuthorizeUpload`, `AnalyzeFoodPhoto`, `ProviderAdapter` (interface), `RecordAiUsage`, `CheckAnalysisQuota`.
-- **Publica:** `food_analysis.completed`, `food_analysis.failed`.
-- **Consome:** `consent.revoked`.
-- **Permitido:** Identity & Access (consentimento).
+- **Responsabilidade:** a foto (`FoodPhoto`, o objeto no armazenamento privado e o ciclo de vida de 30 dias), autorização de envio, visão computacional (itens e porções validados), adaptadores de provedor, prompts versionados, avaliação e custo. A análise termina ao publicar `food_analysis.completed`, mas o contexto vai além: `link_photo` liga a foto à refeição, `refund_quota` devolve a quota quando a falha é nossa, `discard_photo` apaga a foto sem análise, e `resume_analysis` retoma a refeição presa em processamento, sempre com no máximo uma chamada ao provedor.
+- **Modelos:** `FoodPhoto`, `AnalysisResult` (tabela `food_analysis_results`), `UsageRecord` (tabela `ai_usage_records`), `PromptVersion`.
+- **Serviços:** `AuthorizePhotoUpload`, `RequestAnalysis`, `RunAnalysis`, `ResumeAnalysis`, `ValidateOutput`, `NormalizePhoto`, `CheckAnalysisQuota`, `ConsentGate`, `CancelOnRevocation`, `EraseOnEntryDeleted`, `PhotoCleanup`, `PersonLock`, `Pricing`, `LanguageDenylist`. Adaptadores em `FoodAi::Adapters`: `ProviderAdapter` (interface), `AnthropicAdapter`, `GeminiAdapter`, `OpenaiAdapter`, `FakeAdapter`, `ObjectStorage` (interface), `S3Storage` e `MemoryStorage`. Jobs: `AnalyzeJob`, `PhotoRetentionJob`, `AnalysisRetentionJob`, `PurgeObjectJob`, `SpendAlertJob`.
+- **API pública (`FoodAi::Api`):** `authorize_photo_upload`, `request_analysis`, `analysis`, `link_photo`, `photo_url`, `photo_urls`, `refund_quota`, `discard_photo`, `erase_for_entry`, `resume_analysis`, `usage`, `verify_operator!`, `export_user_data`, `erase_user_data`.
+- **Publica:** `food_analysis.completed`, com o desfecho (`outcome`: `analyzed`, `no_food`, `unreadable`, `failed` ou `cancelled`) e o `error_code`. **`food_analysis.failed` não existe:** a falha é um desfecho de `food_analysis.completed`.
+- **Consome:** `consent.revoked` (consumidor `food_ai.cancel_on_revocation`) e `food_entry.deleted` (consumidor `food_ai.erase_on_entry_deleted`, apaga a foto, as análises e o objeto da refeição apagada).
+- **Registra no registro de dados:** `food_photos`, `food_analysis_results` e `ai_usage_records`.
+- **Permitido:** Identity & Access (consentimento e pedido de exclusão).
 - **Proibido:** gravar em `food_entries`; calcular nutrição; receber dados do Strava.
+- **Fora da verificação de limites:** `evaluation/` (raiz do repositório) é ferramenta do Food AI, para rodar o dataset de avaliação fora da suíte comum. O teste de limites (`spec/architecture/domains_spec.rb`) varre `app/domains` e as pastas ao redor em `app/` e `lib/`, e não `evaluation/`. A ferramenta usa só APIs públicas (`Nutrition::Api.estimate`, `FoodCatalog::Api`).
 
 ### 5. Food Catalog
 
 - **Responsabilidade:** alimentos, composições próprias, origem, versão e licença. Adaptadores de base nutricional.
-- **Modelos:** `FoodCatalogItem`, `FoodComposition`.
-- **Serviços:** `SearchFoods`, `NutrientsFor`, `ImportSource`.
+- **Modelos:** `CatalogItem` (tabela `food_catalog`) e `CompositionPart` (tabela `food_compositions`).
+- **Serviços:** `SearchFoods`, `MatchFood`, `LoadCatalog` (`bin/rails food_catalog:load`). Adaptadores `Adapters::UsdaFdc` e `Adapters::ProjectCompositions`.
+- **API pública (`FoodCatalog::Api`):** `loaded?`, `search`, `search_errors`, `match`, `nutrients_for`, `item`.
 - **Publica:** nada.
 - **Consome:** nada.
 - **Permitido:** nenhum outro contexto.
@@ -185,11 +190,11 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 | `user.deletion_requested` | Identity & Access | vazio | nenhum hoje (a exclusão usa o registro de dados) |
 | `consent.granted` / `consent.revoked` | Identity & Access | finalidade, versão | User Profile (só `consent.revoked`), Food AI, Strava Integration, Progress & Analytics |
 | `sport_profile.changed` | User Profile | `sport_profile_id`, tipo da mudança (esporte e nível são dado de saúde: o consumidor lê pela `UserProfile::Api`) | Goals, Missions |
-| `food_entry.created` | Nutrition | `food_entry_id`, origem | Progress & Analytics |
-| `food_analysis.completed` / `food_analysis.failed` | Food AI | `analysis_id`, `food_entry_id` (itens e porções ficam na API de Food AI) | Nutrition |
-| `food_entry.confirmed` | Nutrition | `food_entry_id`, data local | Goals, Missions, Gamification, Progress & Analytics |
-| `food_entry.corrected` | Nutrition | `food_entry_id` | Progress & Analytics |
-| `food_entry.deleted` | Nutrition | `food_entry_id` | Goals, Gamification, Progress & Analytics |
+| `food_entry.created` | Nutrition | `food_entry_id`, origem | Progress & Analytics. **Não publicado na Fase 03**, começa na Fase 08 |
+| `food_analysis.completed` | Food AI | `analysis_id`, `food_entry_id`, `outcome` (`analyzed`, `no_food`, `unreadable`, `failed`, `cancelled`), `error_code` (itens e porções ficam na API de Food AI) | Nutrition |
+| `food_entry.confirmed` | Nutrition | `food_entry_id`, data local. Publicado na Fase 03; sem consumidor ainda | Goals, Missions, Gamification, Progress & Analytics (Fases 05, 06 e 08) |
+| `food_entry.corrected` | Nutrition | `food_entry_id` | Progress & Analytics. **Não publicado na Fase 03**, começa na Fase 08 |
+| `food_entry.deleted` | Nutrition | `food_entry_id`, `photo_id`. Publicado na Fase 03 | Food AI (hoje o único), Goals, Gamification, Progress & Analytics |
 | `activity.imported` / `activity.updated` | Activities | `activity_id`, tipo, data local, origem, `backfill` | Goals, Missions, Gamification, Progress & Analytics |
 | `activity.deleted` | Activities | `activity_id` | Goals, Gamification, Progress & Analytics |
 | `integration.connected` / `integration.disconnected` | Strava Integration | provedor | Progress & Analytics |

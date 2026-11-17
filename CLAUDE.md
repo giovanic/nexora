@@ -78,6 +78,8 @@ Leia o que a tarefa pedir, sem carregar tudo.
 ```bash
 bash scripts/verify-harness.sh
 bash scripts/test-verify-harness.sh
+bash scripts/test-check-language.sh
+python3 scripts/check_language.py
 ```
 
 Rode ao mudar a documentação, e sempre no encerramento de fase. Código de saída diferente de zero significa problema real.

@@ -371,6 +371,242 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/foods/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Searches the food catalog by name, ignoring case and accents.
+         * @description Used to correct a meal. The term travels in the body, never in the URL, and is filtered from the
+         *     logs. The catalog holds USDA FoodData Central ingredients and dishes written by the project
+         *     (kind composition, shown as "composição própria"). Items are ordered by closeness to the term,
+         *     dishes first on a tie. per_page is capped at 50 (20 when omitted). A missing or blank term, a term
+         *     over 100 characters, or a page below 1 or above 1000 answers 422 validation_failed. Needs the health_data consent.
+         */
+        post: operations["searchFoods"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/food_entries/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Authorizes the upload of a meal photo and starts the pending meal.
+         * @description Checks that food_photo_ai is granted for the version in force and that this version names the
+         *     operator and region the server really uses (403 consent_required, 403 consent_operator_mismatch),
+         *     then the daily quota of 20 authorized uploads per local day (429 analysis_quota_exceeded, with
+         *     Retry-After in seconds until local midnight). content_type is image/jpeg, image/png, image/webp, image/heic or image/heif
+         *     (HEIC and HEIF are converted to JPEG by the server before analysis; other types, such as image/gif,
+         *     answer 422 unsupported_media_type) and byte_size is at most
+         *     10 MB. meal_at needs a UTC offset and falls between 30 days ago and 1 day ahead (422 validation_failed
+         *     otherwise). Creates a pending meal and returns a signed PUT URL valid for 15 minutes; the PUT must send
+         *     exactly upload_headers. Repeating a client_request_id returns the same meal with a new URL and
+         *     counts once (201), as long as the photo still awaits its upload. Once it does not, the repeat
+         *     answers 200 with the same food_entry_id and the meal status, and no URL (upload_url, upload_headers
+         *     and expires_at are null). If the upload was abandoned and swept before it went on to the analysis,
+         *     the repeat answers 409 upload_expired and creates no meal: the app starts over with a new
+         *     client_request_id. A 422 carries details naming the field (client_request_id, byte_size, meal_at
+         *     or, for unsupported_media_type, content_type) and a code, so the app can choose its message.
+         *     The URL is a secret: never log it.
+         */
+        post: operations["startFoodEntryUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/food_entries/{id}/analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Asks for the analysis of the photo of a meal, once the photo was uploaded.
+         * @description The meal must be pending or failed (a failed one can be asked again). FoodAi checks the object
+         *     against what was authorized and that food_photo_ai is still granted, then the work runs in the
+         *     background: the answer is 202 and the meal is processing. Another person's or an unknown meal
+         *     answers 404; a meal in any other state answers 409 entry_not_analyzable; 422 not_uploaded when
+         *     the object was not sent, 422 invalid_photo (details: field photo, code size_mismatch or
+         *     type_mismatch) when it differs from the authorization; 403 consent_required or
+         *     consent_operator_mismatch. A refusal leaves the meal as it was. A photo takes the first request and
+         *     two more after a failure: the next answers 409 analysis_retry_limit (the app offers another photo or
+         *     a meal written by hand). A new request after a failure counts the photo's unit again in the quota of
+         *     today: 429 analysis_quota_exceeded, with Retry-After, when the day is used up. One person may ask
+         *     10 times a minute (429, Retry-After 60).
+         */
+        post: operations["requestFoodEntryAnalysis"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/food_entries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A meal with its items, calorie and macro ranges, confidence and photo.
+         * @description Everything the app shows comes from here; the app computes nothing. Calories are always a range
+         *     (calories_min, calories_likely, calories_max) rounded to the ten, macros a range rounded to the
+         *     gram, and every number is null while there is nothing to show (processing, no food, no known item).
+         *     estimate_partial is true when some item is unknown to the catalog: the range then sums only the known
+         *     items, and an unknown item carries its name and no numbers. confidence is high, medium or low, and
+         *     null without items. source is the nutrition base of an item (usda_fdc or project); own_composition is
+         *     true for a dish composed by the project. There is no total of the day, no remaining and no goal.
+         *     photo_url is a signed URL valid for 15 minutes, only while the photo exists, and a secret: never log
+         *     it. Another person's or an unknown meal answers 404.
+         */
+        get: operations["getFoodEntry"];
+        put?: never;
+        post?: never;
+        /**
+         * Deletes a meal, its items, its photo and the analysis result.
+         * @description Works in any state, also while the analysis runs (the job then ends without creating anything). The
+         *     items go with the meal; the photo and the model's raw result are erased after the meal is gone. Another
+         *     person's or an unknown meal answers 404. It does not need the health_data consent: erasing a meal stays
+         *     possible after that consent is revoked.
+         */
+        delete: operations["deleteFoodEntry"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/food_entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The history of meals, newest day first, by cursor.
+         * @description Meals of the person ordered by local_date, meal_at and id, newest first, 20 per page (per_page up to
+         *     50; larger values are served as 50). local_date (YYYY-MM-DD) narrows the list to one local day. cursor is
+         *     the opaque next_cursor of the previous page; a cursor that is not one answers 422 validation_failed.
+         *     A meal still waiting for its photo (pending) is not listed. Each meal is the same FoodEntry as
+         *     getFoodEntry, with its own ranges; there is no total of the day, no sum and no comparison. photo_url is
+         *     always null here (the list shows no photo and signs no URL): getFoodEntry gives the signed URL. The
+         *     response is never cached.
+         */
+        get: operations["listFoodEntries"];
+        put?: never;
+        /**
+         * Registers a meal by hand, with no photo, already confirmed.
+         * @description The meal is born confirmed, with source manual, no photo and no use of the daily photo quota. It needs
+         *     1 to 30 items, each with a catalog_item_id or a free_text_name (up to 80 characters), and grams from 1 to
+         *     2000. A free-text item is unknown: it has no numbers and makes the estimate partial. Repeating a
+         *     client_request_id returns the same meal (200); a client_request_id already used for a photo meal answers
+         *     422 validation_failed. meal_at follows the same rule as the upload (UTC offset required, 30 days back, 1
+         *     day ahead). Details name the field, such as items.0.grams_likely.
+         */
+        post: operations["createManualFoodEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/food_entries/{id}/confirmation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirms an analyzed meal as it stands.
+         * @description Needs an analyzed meal with at least one item. Confirming a confirmed meal answers 200 again and changes
+         *     nothing. A meal still processing, pending or failed, or with no item, answers 409 entry_not_confirmable.
+         *     Another person's or an unknown meal answers 404.
+         */
+        post: operations["confirmFoodEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/food_entries/{id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adds an item to an analyzed or confirmed meal and recalculates it.
+         * @description Exactly one of catalog_item_id (a catalog food, 422 when unknown) or free_text_name (1 to 80
+         *     characters). grams_likely is required, from 1 to 2000; grams_min and grams_max default to it and must
+         *     keep min <= likely <= max, each from 1 to 2000. The item has origin user. A free-text item is unknown: no
+         *     numbers, and the estimate becomes partial. A meal that is not analyzed or confirmed answers 409
+         *     entry_not_editable. Answers the whole meal, recalculated.
+         */
+        post: operations["addFoodEntryItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/food_entries/{id}/items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Removes an item from the meal and recalculates it.
+         * @description The item leaves the meal and the numbers; its row is kept out of sight, not deleted. A meal that is not
+         *     analyzed or confirmed answers 409 entry_not_editable; an item already removed or corrected answers 404.
+         *     Answers the whole meal, recalculated.
+         */
+        delete: operations["removeFoodEntryItem"];
+        options?: never;
+        head?: never;
+        /**
+         * Corrects the portion or the food of an item and recalculates the meal.
+         * @description Needs grams_likely (1 to 2000, 422 validation_failed otherwise and nothing changes), a catalog_item_id,
+         *     or both. The correction creates a new item with origin user and keeps the original out of sight (still
+         *     stored). A new grams_likely derives grams_min and grams_max keeping the proportion of the original; a new
+         *     catalog_item_id takes the name and the nutrients from the catalog. The item in the response has a new id.
+         *     An item already corrected or removed answers 404. A meal that is not analyzed or confirmed answers 409
+         *     entry_not_editable. Answers the whole meal, recalculated.
+         */
+        patch: operations["correctFoodEntryItem"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -464,6 +700,157 @@ export interface components {
         };
         SportProfileList: {
             sport_profiles: components["schemas"]["SportProfile"][];
+        };
+        FoodSearchRequest: {
+            term: string;
+            /** @default 1 */
+            page: number;
+            /**
+             * @description Values above 50 are served as 50.
+             * @default 20
+             */
+            per_page: number;
+        };
+        FoodEntryUploadRequest: {
+            /** @description Chosen by the client for each meal. Repeating it returns the same meal. */
+            client_request_id: string;
+            /** @enum {string} */
+            content_type: "image/jpeg" | "image/png" | "image/webp" | "image/heic" | "image/heif";
+            byte_size: number;
+            /**
+             * Format: date-time
+             * @description When the meal happened, ISO 8601 with the UTC offset (Z or +hh:mm), never without one. At most 1 day
+             *     in the future and at most 30 days in the past, counted from the server clock; anything else answers
+             *     422 validation_failed (field meal_at). The local date comes from the profile time zone.
+             */
+            meal_at: string;
+        };
+        FoodEntryUpload: {
+            /** Format: uuid */
+            food_entry_id: string;
+            /**
+             * @description The status of the meal. pending right after the first request.
+             * @enum {string}
+             */
+            status: "pending" | "processing" | "analyzed" | "failed" | "confirmed";
+            /** @description Signed PUT URL. A secret; never log it. Null when the photo is past the upload. */
+            upload_url: string | null;
+            /** @description Content-Type and Content-Length, to send exactly as given. Null with no URL. */
+            upload_headers: {
+                [key: string]: string;
+            } | null;
+            /** Format: date-time */
+            expires_at: string | null;
+        };
+        FoodEntryAnalysisAccepted: {
+            /** Format: uuid */
+            food_entry_id: string;
+            /** @enum {string} */
+            status: "processing";
+        };
+        FoodEntry: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "analyzed" | "failed" | "confirmed";
+            /** @enum {string|null} */
+            result_code: "no_food" | "unreadable" | null;
+            /** @enum {string} */
+            source: "photo" | "manual";
+            /** Format: date-time */
+            meal_at: string;
+            /** Format: date */
+            local_date: string;
+            estimate_partial: boolean;
+            unknown_items_count: number;
+            /** @enum {string|null} */
+            confidence: "high" | "medium" | "low" | null;
+            photo_url: string | null;
+            calories_min: number | null;
+            calories_likely: number | null;
+            calories_max: number | null;
+            protein_g_min: number | null;
+            protein_g_likely: number | null;
+            protein_g_max: number | null;
+            carbs_g_min: number | null;
+            carbs_g_likely: number | null;
+            carbs_g_max: number | null;
+            fat_g_min: number | null;
+            fat_g_likely: number | null;
+            fat_g_max: number | null;
+            items: components["schemas"]["FoodEntryItem"][];
+        };
+        FoodEntryItem: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            origin: "ai" | "user";
+            unknown: boolean;
+            household_measure: string | null;
+            /** @enum {string|null} */
+            source: "usda_fdc" | "project" | null;
+            own_composition: boolean;
+            quantity_grams_min: number;
+            quantity_grams_likely: number;
+            quantity_grams_max: number;
+            calories_min: number | null;
+            calories_likely: number | null;
+            calories_max: number | null;
+            protein_g_min: number | null;
+            protein_g_likely: number | null;
+            protein_g_max: number | null;
+            carbs_g_min: number | null;
+            carbs_g_likely: number | null;
+            carbs_g_max: number | null;
+            fat_g_min: number | null;
+            fat_g_likely: number | null;
+            fat_g_max: number | null;
+        };
+        FoodItemInput: {
+            /** Format: uuid */
+            catalog_item_id?: string;
+            /** @description A food the catalog does not know. It is unknown to nutrition, with no numbers. Never logged. */
+            free_text_name?: string;
+            grams_likely: number;
+            grams_min?: number;
+            grams_max?: number;
+        };
+        FoodItemCorrection: {
+            grams_likely?: number;
+            /** Format: uuid */
+            catalog_item_id?: string;
+        };
+        ManualFoodEntryRequest: {
+            client_request_id: string;
+            /**
+             * Format: date-time
+             * @description ISO 8601 with the UTC offset, between 30 days ago and 1 day ahead.
+             */
+            meal_at: string;
+            items: components["schemas"]["FoodItemInput"][];
+        };
+        FoodEntryPage: {
+            items: components["schemas"]["FoodEntry"][];
+            /** @description Opaque. Null on the last page. */
+            next_cursor: string | null;
+        };
+        FoodCatalogItem: {
+            /** Format: uuid */
+            id: string;
+            name_pt: string;
+            /**
+             * @description composition is a dish of the project, shown as "composição própria".
+             * @enum {string}
+             */
+            kind: "ingredient" | "composition";
+            /** @enum {string} */
+            source: "usda_fdc" | "project";
+        };
+        FoodSearchPage: {
+            items: components["schemas"]["FoodCatalogItem"][];
+            /** @description The next page number, or null on the last page. */
+            next_page: number | null;
         };
         /** @enum {string} */
         ConsentPurpose: "health_data" | "food_photo_ai" | "strava_integration" | "usage_metrics";
@@ -1088,6 +1475,336 @@ export interface operations {
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    searchFoods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description A page of catalog items. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodSearchPage"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    startFoodEntryUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodEntryUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description The client_request_id was already used and its photo is past the upload. No new URL. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntryUpload"];
+                };
+            };
+            /** @description The meal was started and the upload is authorized. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntryUpload"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    requestFoodEntryAnalysis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The analysis was queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntryAnalysisAccepted"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["TooManyRequests"];
+            default: components["responses"]["Error"];
+        };
+    };
+    getFoodEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The meal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteFoodEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The meal is gone. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    listFoodEntries: {
+        parameters: {
+            query?: {
+                local_date?: string;
+                cursor?: string;
+                per_page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of meals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntryPage"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    createManualFoodEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualFoodEntryRequest"];
+            };
+        };
+        responses: {
+            /** @description The client_request_id was already used; the same meal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            /** @description The meal was registered. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    confirmFoodEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The confirmed meal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    addFoodEntryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodItemInput"];
+            };
+        };
+        responses: {
+            /** @description The meal with the new item. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    removeFoodEntryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The meal without the item. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    correctFoodEntryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodItemCorrection"];
+            };
+        };
+        responses: {
+            /** @description The meal with the corrected item. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
             default: components["responses"]["Error"];
         };
     };

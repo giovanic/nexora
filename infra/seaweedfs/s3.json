@@ -1,0 +1,11 @@
+{
+  "identities": [
+    {
+      "name": "app_dev",
+      "credentials": [
+        { "accessKey": "app_dev_access_key", "secretKey": "app_dev_secret_key_0123456789" }
+      ],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

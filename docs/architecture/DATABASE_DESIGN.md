@@ -1,6 +1,6 @@
 # Desenho do banco de dados
 
-> **Nenhuma migration é criada na Fase 00.** Este é o desenho inicial, que a fase dona de cada tabela confirma ao criá-la. Mudanças relevantes passam por ADR.
+> Este é o desenho inicial, que a fase dona de cada tabela confirma ao criá-la. As tabelas de Identity (Fase 02) e de Nutrition, Food AI e Food Catalog (Fase 03) refletem o `apps/api/db/schema.rb`; as demais ainda são desenho. Mudanças relevantes passam por ADR.
 
 PostgreSQL. Versão decidida na [ADR 0002](decisions/0002-technology-baseline.md).
 
@@ -22,10 +22,15 @@ erDiagram
   users ||--o{ sport_profiles : tem
   users ||--o{ consent_records : concede
   users ||--o{ food_entries : registra
+  users ||--o{ food_photos : envia
+  users ||--o{ food_analysis_results : possui
+  users ||--o{ ai_usage_records : custa
   food_entries ||--o{ food_items : contem
-  food_entries ||--o{ food_analysis_results : analisado_por
-  food_catalog ||--o{ food_items : referencia
-  food_analysis_results ||--o{ ai_usage_records : custa
+  food_entries }o..o| food_photos : "photo_id (sem FK)"
+  food_photos ||--o{ food_analysis_results : analisada_por
+  food_catalog }o..o{ food_items : "catalog_item_id (sem FK)"
+  food_catalog ||--o{ food_compositions : compoe
+  food_analysis_results |o--o{ ai_usage_records : custa
   users ||--o{ integrations : conecta
   integrations ||--|| integration_tokens : autentica
   integrations ||--o{ activity_sync_events : recebe
@@ -106,34 +111,44 @@ Nível por esporte.
 
 Uma refeição.
 
-- **Colunas:** `id`, `user_id` (FK), `source` (`photo` ou `manual`), `status` (`pending`, `processing`, `analyzed`, `failed`, `confirmed`), `photo_key`, `meal_at`, `local_date`, `calories_min`, `calories_likely`, `calories_max`, `confirmed_at`, `client_request_id`.
-- **Constraints:** `calories_min <= calories_likely <= calories_max` quando preenchidas; único em `(user_id, client_request_id)`, para evitar registro duplicado em nova tentativa; `status` validado por `CHECK`.
-- **Índices:** `(user_id, local_date DESC)` para o histórico.
-- **Soft delete:** não. Excluir apaga a linha, os itens e a foto.
+- **Colunas:** `id`, `user_id` (FK), `source` (`photo` ou `manual`), `status` (`pending`, `processing`, `analyzed`, `failed`, `confirmed`), `photo_id` (referência a `food_photos`, sem chave estrangeira, e nula só em refeição manual: **o identificador permanece depois do prazo da foto**, e é a ausência de uma foto `stored` que tira a `photo_url` da resposta), `result_code` (`no_food`, `unreadable` ou nulo), `estimate_partial` (booleano), `meal_at`, `local_date`, `calories_min`, `calories_likely`, `calories_max` (`decimal`, sem arredondar), `confirmed_at`, `client_request_id`, `resume_attempts` (inteiro, padrão 0: quantas vezes `StuckEntriesJob` retomou a refeição presa em processamento; no máximo 3 retomadas, e depois a refeição vira `failed`).
+- **Constraints:** `calories_min <= calories_likely <= calories_max` quando preenchidas; único em `(user_id, client_request_id)`, para evitar registro duplicado em nova tentativa; `status`, `source` e `result_code` validados por `CHECK`; `resume_attempts >= 0`.
+- **Índices:** `(user_id, local_date DESC, meal_at DESC, id DESC)` para o histórico paginado; `photo_id`.
+- **Soft delete:** não. Excluir apaga a linha, os itens e a foto. `photo_id` substitui o antigo `photo_key`: a chave do objeto fica só em `food_photos`.
 
 ### `food_items`
 
 Itens de uma refeição.
 
-- **Colunas:** `id`, `food_entry_id` (FK, `ON DELETE CASCADE`), `catalog_item_id` (referência), `display_name`, `quantity_grams_min`, `quantity_grams_likely`, `quantity_grams_max`, `household_measure`, `calories_min`, `calories_likely`, `calories_max`, `protein_g_*`, `carbs_g_*`, `fat_g_*`, `confidence`, `origin` (`ai` ou `user`), `corrected_from_item_id`, `nutrition_source_ref`.
+- **Colunas:** `id`, `food_entry_id` (FK, `ON DELETE CASCADE`), `catalog_item_id` (referência), `display_name`, `quantity_grams_min`, `quantity_grams_likely`, `quantity_grams_max`, `household_measure`, `calories_min`, `calories_likely`, `calories_max`, `protein_g_*`, `carbs_g_*`, `fat_g_*`, `confidence`, `hidden_ingredients_possible`, `origin` (`ai` ou `user`), `corrected_from_item_id`, `nutrition_source_ref` (`{source, version, id}`). Os números são `decimal`, sem arredondamento: ele só acontece ao montar a resposta.
 - **Constraints:** faixas ordenadas; `confidence` entre 0 e 1 quando presente; item corrigido pela pessoa mantém `origin = 'user'`.
 - **Índices:** `food_entry_id`.
 
 ## Food AI
 
+### `food_photos`
+
+Dona da foto da refeição e do ciclo de vida do objeto no armazenamento privado. A cota diária conta as linhas desta tabela (URL emitida), e não as refeições.
+
+- **Colunas:** `id`, `user_id`, `food_entry_id` (referência), `client_request_id`, `object_key` (aleatória, `food-photos/<uuid>`, sem `user_id` nem data), `content_type`, `byte_size`, `status` (`awaiting_upload`, `stored`, `deleted`), `authorized_at`, `analyzed_at`, `deleted_at`, `quota_refunded_at`, `analysis_requests` (inteiro, padrão 0: quantos pedidos de análise a foto já recebeu; no máximo 3, o primeiro mais duas novas tentativas depois de uma falha, o que dá `analysis_retry_limit`; também separa o envio abandonado, com 0, da foto que chegou a ser analisada, para o `upload_expired`).
+- **Constraints:** único em `object_key`; único em `(user_id, client_request_id)`, para que repetir o envio devolva a mesma foto; `status` validado por `CHECK`; `analysis_requests >= 0`.
+- **Índices:** `(user_id, authorized_at)` para a cota; `(status, authorized_at)` para envios abandonados; `(status, analyzed_at)` para o prazo de retenção; `food_entry_id`.
+- **Retenção:** 30 dias após a análise, por rotina diária; a linha da foto apagada fica mais 7 dias. Ver a tabela de retenção e [ADR 0019](decisions/0019-photo-storage-and-image-processing.md).
+
 ### `food_analysis_results`
 
-Cada execução do pipeline. Não é reescrito enquanto a refeição existir, e `raw_response` é **apagado** ao excluir a refeição ou a conta.
+Cada execução do pipeline. A linha, com `raw_response`, é **apagada** ao excluir a refeição ou a conta, ou 90 dias depois de criada, o que vier primeiro.
 
-- **Colunas:** `id`, `food_entry_id` (referência), `user_id`, `provider`, `model`, `prompt_version`, `schema_version`, `status`, `raw_response` (JSONB validado), `error_code`, `started_at`, `finished_at`.
-- **Índices:** `food_entry_id`; `(prompt_version, status)` para avaliação.
+- **Colunas:** `id`, `food_entry_id` (referência), `user_id` (FK), `photo_id` (FK para `food_photos`, `ON DELETE CASCADE`), `provider`, `model`, `prompt_version`, `schema_version`, `status` (`running`, `succeeded`, `no_food`, `unreadable`, `failed`, `cancelled`), `raw_response` (JSONB validado), `error_code` (lista fechada por `CHECK`), `started_at`, `finished_at`.
+- **Constraints:** único parcial em `(photo_id, prompt_version)` onde `status` não é `failed` nem `cancelled`: uma foto tem no máximo uma execução viva por versão do prompt, e a nova tentativa depois de uma falha cria outra.
+- **Índices:** `food_entry_id`; `photo_id`; `(user_id, started_at)`; `(prompt_version, status)` para avaliação.
 - **Retenção:** ver a tabela de retenção.
 
 ### `ai_usage_records`
 
 Custo por chamada.
 
-- **Colunas:** `id`, `analysis_id` (FK), `user_id`, `provider`, `model`, `input_tokens`, `output_tokens`, `cost_usd`, `occurred_at`.
+- **Colunas:** `id`, `analysis_id` (FK anulável, `ON DELETE SET NULL`, para o custo sobreviver à exclusão da refeição sem vínculo), `user_id` (FK anulável, que a retenção e a exclusão de refeição ou de conta zeram), `provider`, `model`, `input_tokens`, `output_tokens`, `cost_usd`, `occurred_at`.
 - **Índices:** `(user_id, occurred_at)` para limite e custo por usuário; `occurred_at` para custo total.
 
 ### `prompt_versions`
@@ -147,9 +162,9 @@ Custo por chamada.
 
 Referência sem dados pessoais.
 
-- **Colunas:** `id`, `source`, `source_version`, `source_item_id`, `license`, `name`, `name_pt`, `kind` (`ingredient` ou `composition`), `nutrients_per_100g` (JSONB), `search_vector`.
+- **Colunas:** `id`, `source`, `source_version`, `source_item_id`, `license`, `name`, `name_pt`, `name_search` (nome normalizado, sem acento e sem caixa, para a busca), `kind` (`ingredient` ou `composition`), `nutrients_per_100g` (JSONB), `review` (`pending_nutritionist` nas composições próprias).
 - **Constraints:** único em `(source, source_version, source_item_id)`; `license NOT NULL`, para que nada entre sem licença registrada.
-- **Índices:** GIN em `search_vector` para busca.
+- **Índices:** GIN com `pg_trgm` em `name_search` para a busca (no lugar do `search_vector` do desenho inicial).
 
 ### `food_compositions`
 
@@ -318,7 +333,7 @@ Métricas de ativação e retenção, somente com o consentimento `usage_metrics
 | Dois eventos iguais simultâneos | Índices únicos em `activity_sync_events` e `consumed_events` |
 | Concessão simultânea de XP | Índice único em `xp_transactions`; atualização de `user_levels` por `lock_version` |
 | Conquista desbloqueada duas vezes | Índice único em `user_achievements` |
-| Reenvio de foto pelo cliente | Índice único em `client_request_id` |
+| Reenvio de foto pelo cliente | Índice único em `(user_id, client_request_id)` em `food_entries` e em `food_photos` |
 
 ## Auditoria
 
@@ -332,10 +347,10 @@ Prazos iniciais, a confirmar com a revisão jurídica ([PRIVACY_AND_LGPD.md](../
 
 | Dado | Retenção | Ao excluir a conta |
 |---|---|---|
-| Fotos | Até a exclusão da refeição ou da conta; prazo máximo decidido na Fase 03. Sem comida detectada: apagadas automaticamente | Apagadas |
+| Fotos (`food_photos`) | O objeto sai 30 dias após a análise (`PhotoRetentionJob`, diário), ou na exclusão da refeição ou da conta, o que vier primeiro. Sem comida detectada ou ilegível: apagado na hora. Envio abandonado (autorizado e não concluído): apagado em 1 hora. Foto armazenada e nunca analisada: apagada em 24 horas. A linha fica marcada `deleted` por 7 dias de carência e depois sai, se o objeto foi de fato apagado | Apagadas |
 | Refeições e itens | Enquanto a conta existir | Apagados |
-| `food_analysis_results` | 90 dias; depois, só agregados sem texto livre | Apagados, incluindo `raw_response` |
-| `ai_usage_records` | 90 dias com vínculo ao usuário; depois, agregados sem vínculo | Vínculo removido; só contagem e custo |
+| `food_analysis_results` (inclui `raw_response`) | **O que vier primeiro** entre o fim da vida da refeição (a análise é apagada junto, com a foto) e 90 dias após a criação. Depois disso não sobra nada da análise: o custo fica em `ai_usage_records` | Apagados, incluindo `raw_response` |
+| `ai_usage_records` | Vínculo com a pessoa e com a análise por 90 dias, ou até apagar a refeição, o que vier primeiro; depois, só provedor, modelo, tokens e custo | Vínculo removido; só contagem e custo |
 | Atividades | Enquanto a conta existir e, no caso do Strava, enquanto a integração durar | Apagadas |
 | Tokens | Até a desconexão | Apagados |
 | `activity_sync_events` | 30 dias | Apagados |

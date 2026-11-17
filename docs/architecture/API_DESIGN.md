@@ -1,6 +1,6 @@
 # Desenho da API
 
-Contrato entre o backend e os clientes. As rotas de Identity & Access e de User Profile estão implementadas desde a Fase 02 e seguem o contrato OpenAPI (`packages/contracts/openapi.yaml`). O restante é o desenho inicial; cada fase confirma o seu trecho no contrato.
+Contrato entre o backend e os clientes. As rotas de Identity & Access e de User Profile (Fase 02) e as de Nutrition, Food AI e do catálogo de alimentos (Fase 03) estão implementadas e seguem o contrato OpenAPI (`packages/contracts/openapi.yaml`), que é a fonte. O restante é o desenho inicial; cada fase confirma o seu trecho no contrato.
 
 ## Princípios
 
@@ -112,17 +112,36 @@ Os valores acima são apenas ilustrativos.
 
 ### Nutrition e Food AI (Fase 03)
 
-| Método e rota | Função |
+Todas exigem `health_data` (`403 consent_required` sem ele). O contrato `packages/contracts/openapi.yaml` é a fonte; esta tabela só resume. Resposta de refeição nunca é guardada em cache, porque pode trazer a URL assinada da foto.
+
+| Método e rota | Função | Respostas de erro |
+|---|---|---|
+| `POST /api/v1/food_entries/uploads` | Verificar o consentimento `food_photo_ai` e a quota, criar a refeição pendente e devolver a URL assinada de PUT. `201` na primeira vez; `200` ao repetir o mesmo `client_request_id` (sem URL, se a foto já passou do envio) | `403 consent_required`, `403 consent_operator_mismatch`, `422 unsupported_media_type`, `422 validation_failed` (com `details`), `409 upload_expired`, `429 analysis_quota_exceeded` |
+| `POST /api/v1/food_entries/{id}/analysis` | Pedir a análise da foto já enviada; responde `202` e a refeição passa a `processing` | `404`, `409 entry_not_analyzable`, `409 analysis_retry_limit`, `422 not_uploaded`, `422 invalid_photo`, `403 consent_required`, `403 consent_operator_mismatch`, `429 analysis_quota_exceeded`, `429` por limite de requisições |
+| `GET /api/v1/food_entries/{id}` | Estado e resultado: itens, faixas, confiança e, enquanto a foto existe, `photo_url` | `404` |
+| `POST /api/v1/food_entries` | Registro manual, já confirmado, sem foto e sem quota | `422 validation_failed` |
+| `POST /api/v1/food_entries/{id}/confirmation` | Confirmar a refeição analisada | `404`, `409 entry_not_confirmable` |
+| `POST /api/v1/food_entries/{id}/items`, `PATCH`/`DELETE /api/v1/food_entries/{id}/items/{item_id}` | Acrescentar, corrigir porção ou alimento, e remover item; a refeição é recalculada | `404`, `409 entry_not_editable`, `422 validation_failed` |
+| `GET /api/v1/food_entries?local_date=&cursor=&per_page=` | Histórico por cursor (`per_page` padrão 20, máximo 50). Nele `photo_url` é sempre nulo | `422 validation_failed` |
+| `DELETE /api/v1/food_entries/{id}` | Apagar a refeição, os itens, a foto e as análises (`204`) | `404` |
+| `POST /api/v1/foods/search` | Busca no catálogo, com o termo no corpo, para que o que a pessoa comeu não vá para logs de URL. `page` de 1 a 1000 | `422 validation_failed` |
+
+**Códigos novos da Fase 03** (campo `error.code`):
+
+| Status e código | Quando |
 |---|---|
-| `POST /api/v1/food_entries/uploads` | Verificar consentimento e limite; devolver URL assinada |
-| `POST /api/v1/food_entries/:id/analysis` | Confirmar envio e enfileirar análise |
-| `GET /api/v1/food_entries/:id` | Estado e resultado |
-| `POST /api/v1/food_entries` | Registro manual |
-| `POST /api/v1/food_entries/:id/confirmation` | Confirmar |
-| `PATCH`/`POST`/`DELETE /api/v1/food_entries/:id/items` | Corrigir itens e porções |
-| `GET /api/v1/food_entries?local_date=` | Histórico |
-| `DELETE /api/v1/food_entries/:id` | Apagar refeição e foto |
-| `POST /api/v1/foods/search` | Busca no catálogo, com o termo no corpo, para que o que a pessoa comeu não vá para logs de URL |
+| `403 consent_required` | Falta `health_data` ou, no envio e na análise, `food_photo_ai` |
+| `403 consent_operator_mismatch` | O consentimento `food_photo_ai` vigente não cobre o operador e a região em uso, ou é de uma versão anterior. Enquanto não existir a v2 do texto, todo envio real de foto responde isto |
+| `429 analysis_quota_exceeded` | Quota diária de fotos esgotada; com `Retry-After` até o fim do dia da pessoa. Também no novo pedido de análise depois de uma falha, que conta de novo |
+| `409 analysis_retry_limit` | A foto já recebeu 3 pedidos de análise. A refeição fica `failed`; o app oferece outra foto ou o registro manual |
+| `409 upload_expired` | O mesmo `client_request_id` de um envio que foi descartado por abandono. Nenhuma refeição é criada, e o app recomeça com outro `client_request_id` |
+| `422 unsupported_media_type` | Tipo fora de JPEG, PNG, WebP, HEIC e HEIF. Traz `details` com `content_type` |
+| `422 not_uploaded` | O objeto da foto ainda não está no armazenamento |
+| `422 invalid_photo` | O objeto no armazenamento não tem o tamanho nem o tipo autorizados (`details`: `photo` com `size_mismatch` ou `type_mismatch`). A recusa do conteúdo (tipo real pelos bytes, 40 megapixels, ilegível) acontece depois, no job, e a refeição vira `failed` |
+| `409 entry_not_analyzable` | A refeição não está `pending` ou `failed` |
+| `409 entry_not_confirmable` | A refeição não está analisada, ou não tem item |
+| `409 entry_not_editable` | A refeição ainda não foi analisada |
+| `429` (`too_many_requests`) | Mais de 10 pedidos de análise por minuto por pessoa, com `Retry-After: 60` |
 
 ### Goals (Fase 05)
 
@@ -179,13 +198,13 @@ O calendário das Fases 07 e 08 é composto pelos clientes a partir de refeiçõ
 1. O app chama `POST /food_entries/uploads`. O backend verifica consentimento e limite de análises.
 2. A resposta traz uma URL assinada de prazo curto, restrita a tipo e tamanho.
 3. O app envia a foto direto ao armazenamento privado.
-4. O app confirma, e o backend verifica a existência, o tipo e o tamanho reais do objeto, remove EXIF substituindo o objeto, e só então enfileira.
+4. O app pede a análise (`POST /food_entries/{id}/analysis`). O backend confere que o objeto foi enviado e enfileira o job; é o job que verifica o tipo e o tamanho reais do objeto e remove o EXIF, substituindo o objeto, antes de chamar a IA.
 
 O servidor nunca recebe a foto pela API, o que reduz custo e superfície de ataque. Tipos e tamanho máximo levam em conta os limites dos provedores ([fontes](EXTERNAL_SOURCES.md)).
 
 ## Limites de uso
 
-Limite de tentativas em autenticação, de requisições por usuário e de análises por período. Na Fase 02: cadastro, entrada, renovação, recuperação de senha, exportação e exclusão têm limite por IP; cadastro, entrada e recuperação, também por e-mail; exportação e exclusão, também por conta (valores e trade-offs em [SECURITY.md](../security/SECURITY.md)). Excedido, responde `429` com `Retry-After` e, no caso de análises, com o código `analysis_quota_exceeded`.
+Limite de tentativas em autenticação, de requisições por usuário e de análises por período. Na Fase 02: cadastro, entrada, renovação, recuperação de senha, exportação e exclusão têm limite por IP; cadastro, entrada e recuperação, também por e-mail; exportação e exclusão, também por conta (valores e trade-offs em [SECURITY.md](../security/SECURITY.md)). Excedido, responde `429` com `Retry-After` e, no caso de análises, com o código `analysis_quota_exceeded`. Na Fase 03, o pedido de análise tem ainda o limite de 10 por minuto por pessoa e o de 3 pedidos por foto (`analysis_retry_limit`).
 
 ## Compatibilidade entre clientes
 

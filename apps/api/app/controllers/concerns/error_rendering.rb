@@ -8,6 +8,16 @@ module ErrorRendering
     "invalid_token" => "Este link de redefinição não vale mais. Peça um novo.",
     "profile_pending" => "Estamos preparando o seu perfil. Tente de novo em instantes.",
     "consent_required" => "Esta parte do app depende de um consentimento que você ainda não deu.",
+    "consent_operator_mismatch" => "O consentimento que você deu não cobre o serviço que analisaria a foto. Leia o texto atual antes de enviar.",
+    "unsupported_media_type" => "Este formato de foto não é aceito. Use JPEG, PNG, WebP, HEIC ou HEIF.",
+    "upload_expired" => "Esta foto não foi enviada a tempo e o envio foi descartado. Tire a foto de novo.",
+    "analysis_retry_limit" => "Esta foto já foi enviada para análise mais de uma vez sem sucesso. Tire outra foto ou registre a refeição à mão.",
+    "entry_not_analyzable" => "Esta refeição não pode ser analisada agora.",
+    "not_uploaded" => "A foto desta refeição ainda não foi enviada.",
+    "invalid_photo" => "A foto enviada não confere com o que foi autorizado. Tire outra foto.",
+    "entry_not_confirmable" => "Esta refeição ainda não pode ser confirmada. Espere a análise terminar ou adicione um item.",
+    "entry_not_editable" => "Esta refeição ainda não pode ser alterada. Espere a análise terminar.",
+    "analysis_quota_exceeded" => "Você chegou ao limite de fotos analisadas hoje. Tente de novo amanhã.",
     "outdated_version" => "O texto deste consentimento foi atualizado. Leia a versão atual antes de aceitar."
   }.freeze
 
