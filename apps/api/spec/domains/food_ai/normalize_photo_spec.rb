@@ -116,7 +116,7 @@ RSpec.describe FoodAi::NormalizePhoto do
     end
 
     it "returns a rotated HEIC upright, with no metadata left" do
-      bytes = ImageFixtures.heic_rotated(width: 200, height: 100)
+      bytes = ImageFixtures.heic_rotated
       source = vips(bytes)
       expect(source.get_fields).to include("exif-data")
       expect([ source.width, source.height ]).to eq([ 100, 200 ])

@@ -58,11 +58,15 @@ module ImageFixtures
     solid(8200, 5000).heifsave_buffer(Q: 30, compression: :av1).b.tap { |b| b[8, 4] = "heic" }
   end
 
-  # heifsave turns the "orientation" field into a rotation (irot) of the container, so the
-  # loader reports the upright size (height x width) and the file still carries EXIF.
-  def heic_rotated(width: 200, height: 100)
-    gradient(width, height).mutate { |m| m.set_type! GObject::GINT_TYPE, "orientation", 6 }
-                           .heifsave_buffer(Q: 60, compression: :av1).b.tap { |b| b[8, 4] = "heic" }
+  # A 200 x 100 gradient with a rotation (irot) in the container and EXIF orientation 6, as an
+  # iPhone writes it, so the loader reports the upright size (100 x 200). It is a fixed file
+  # because heifsave writes irot from "orientation" in libvips 8.12 but not in 8.15 (CI), so
+  # building it at test time depends on the encoder. Made once on 2026-11-17 with
+  # gradient(200, 100), orientation 6 and heifsave_buffer(Q: 60, compression: :av1).
+  ROTATED_HEIC = File.expand_path("../fixtures/files/heic_rotated_200x100.heic", __dir__)
+
+  def heic_rotated
+    File.binread(ROTATED_HEIC)
   end
 
   def truncated_jpeg
