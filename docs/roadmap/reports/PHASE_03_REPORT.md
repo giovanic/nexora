@@ -62,7 +62,7 @@ Executado pelo controlador em 2026-11-16, no commit `a056bf8`.
 | `bash scripts/test-verify-harness.sh` | 0 | 93 testes |
 | `ruby evaluation/fetch.rb` | 0 | 60 de 60 imagens com sha256 conferido (2026-11-14) |
 | `bin/rails runner ../../evaluation/run.rb` sem chave | 1 | Recusa clara, sem rede (comportamento esperado) |
-| CI do GitHub | — | Não executado: sem push autorizado. Os passos novos do CI (SeaweedFS por `docker run`, `libvips42t64` e `libheif-plugin-libde265`) não rodaram em runner |
+| CI do GitHub, [PR #20](https://github.com/giovanic/nexora/pull/20) | — | Primeira execução (2026-11-17, depois da aprovação) reprovou `secrets`, `api` e `web`, ver "Defeitos de CI depois da aprovação" na seção 6. Depois das correções, [CI 44193601077](https://github.com/giovanic/nexora/actions/runs/44193601077) com 6 de 6 jobs verdes, incluindo SeaweedFS e libvips no runner |
 
 **Repetido em 2026-11-17, no commit `44e8269` e com o worktree limpo, antes da aprovação:** `bundle exec rspec` (1.221 exemplos, 0 falhas), rubocop (312 arquivos, sem ofensas), brakeman (sem avisos), `npm run check -w @app/contracts`, mobile (typecheck, lint e 186 testes), web (typecheck, lint e 67 testes), `check_language.py`, `test-check-language.sh` (69 testes), `verify-harness.sh` e `test-verify-harness.sh` (93 testes), todos com código 0.
 
@@ -156,6 +156,12 @@ Também foi corrigido no encerramento: apagar uma refeição exigia o consentime
 
    Sem a v2, todo envio de foto é recusado, e o app mostra "A análise por foto ainda não está disponível". Os pré-requisitos estão em `MILESTONE_M1_CLOSED_BETA.md`. A escolha é sua: trazer a chave para antes do M1, ou mudar a ordem por ADR (a 0016 está aceita).
 4. **Confirmar que, quando a sessão expira, o app apaga as fotos ainda não enviadas.** Interpretei o seu "pode fazer" de 2026-11-14 como "manter assim".
+
+**Defeitos de CI depois da aprovação** (2026-11-17, todos só no runner; correção autorizada pelo responsável):
+- `secrets`: 12 achados `generic-api-key` da senha fictícia de teste em specs. Os specs passaram a usar `IdentityHelpers::PASSWORD`, e os 12 achados exatos estão em `.gitleaksignore` (`37c6d8e`).
+- `api`, 13 falhas: o `db:prepare` do CI semeava o catálogo no banco de teste novo. Os seeds não carregam o catálogo em teste, com spec de regressão (`9ac2fd2`).
+- `api`, 8 falhas: sem codificador HEIF no Ubuntu 24.04. O CI instala os plugins (`bb9ca72`), e o HEIC girado virou arquivo fixo, porque a libvips 8.15 não grava `irot` a partir da orientação (`135640c`). Conferido em contêiner `ubuntu:24.04`: o produto abre o HEIC girado em pé e o normaliza sem EXIF.
+- `web`: alerta GHSA-fc5q-39xc-vjpf do `picomatch` até 4.0.7, sem versão corrigida, também na `main`. A auditoria passou a ser julgada por alerta, com exceção datada (`edaff92`). **A exceção vence em 2026-12-17:** antes disso, atualizar o `picomatch` se houver correção, ou levar ao responsável a renovação.
 
 **Pendências técnicas para o próximo trabalho com provedor (Fase 07 ou antes do M1):**
 - spec próprio do `HttpTransport`;
