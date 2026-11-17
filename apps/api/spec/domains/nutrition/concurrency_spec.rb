@@ -1,11 +1,12 @@
 require "rails_helper"
+require "support/identity_helpers"
 
 # Two requests at once on the same meal, each on its own connection. The meal is locked for each change,
 # so the final state is one of the two orders and never a mix.
 RSpec.describe "Nutrition concurrency" do
   self.use_transactional_tests = false
 
-  let(:user) { Identity::User.create!(email: "cc-#{SecureRandom.hex(4)}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current) }
+  let(:user) { Identity::User.create!(email: "cc-#{SecureRandom.hex(4)}@example.test", password: IdentityHelpers::PASSWORD, adult_confirmed_at: Time.current) }
   let!(:rice) do
     FoodCatalog::CatalogItem.create!(source: "usda_fdc", source_version: "v1", source_item_id: SecureRandom.hex(3), license: "CC0-1.0", name: "Arroz",
                                      name_pt: "Arroz", kind: "ingredient",

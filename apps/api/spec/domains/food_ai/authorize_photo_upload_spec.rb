@@ -1,10 +1,11 @@
 require "rails_helper"
+require "support/identity_helpers"
 require "support/food_ai_consent"
 
 RSpec.describe "FoodAi::Api.authorize_photo_upload" do
   include ActiveSupport::Testing::TimeHelpers
 
-  let(:user) { Identity::User.create!(email: "up-#{SecureRandom.hex(4)}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current) }
+  let(:user) { Identity::User.create!(email: "up-#{SecureRandom.hex(4)}@example.test", password: IdentityHelpers::PASSWORD, adult_confirmed_at: Time.current) }
   let(:day_start) { Time.utc(2026, 11, 13) }
   let(:day_end) { Time.utc(2026, 11, 14) }
 
@@ -77,7 +78,7 @@ RSpec.describe "FoodAi::Api.authorize_photo_upload" do
     end
 
     it "keeps one client_request_id per person" do
-      other = Identity::User.create!(email: "o-#{SecureRandom.hex(4)}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current)
+      other = Identity::User.create!(email: "o-#{SecureRandom.hex(4)}@example.test", password: IdentityHelpers::PASSWORD, adult_confirmed_at: Time.current)
       grant_food_photo_ai(other.id)
 
       a = authorize(client_request_id: "same")

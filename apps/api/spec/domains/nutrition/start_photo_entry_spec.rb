@@ -1,4 +1,5 @@
 require "rails_helper"
+require "support/identity_helpers"
 require "support/food_ai_consent"
 
 RSpec.describe "Nutrition::Api.start_photo_entry" do
@@ -6,7 +7,7 @@ RSpec.describe "Nutrition::Api.start_photo_entry" do
 
   self.use_transactional_tests = false
 
-  let(:user) { Identity::User.create!(email: "nu-#{SecureRandom.hex(4)}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current) }
+  let(:user) { Identity::User.create!(email: "nu-#{SecureRandom.hex(4)}@example.test", password: IdentityHelpers::PASSWORD, adult_confirmed_at: Time.current) }
 
   before do
     use_operator_consent_version

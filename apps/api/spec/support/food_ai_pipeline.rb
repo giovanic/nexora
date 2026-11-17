@@ -1,3 +1,4 @@
+require "support/identity_helpers"
 require "support/food_ai_consent"
 require "support/food_ai_adapter"
 require "support/image_fixtures"
@@ -10,7 +11,7 @@ module FoodAiPipeline
   end
 
   def create_user(tag = SecureRandom.hex(4))
-    Identity::User.create!(email: "pipe-#{tag}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current)
+    Identity::User.create!(email: "pipe-#{tag}@example.test", password: IdentityHelpers::PASSWORD, adult_confirmed_at: Time.current)
   end
 
   def create_photo(user:, status: "stored", bytes: ImageFixtures.jpeg_with_gps, content_type: "image/jpeg", store: true)

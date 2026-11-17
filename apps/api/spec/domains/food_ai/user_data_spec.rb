@@ -1,8 +1,9 @@
 require "rails_helper"
+require "support/identity_helpers"
 
 RSpec.describe FoodAi::UserData do
-  let(:user) { Identity::User.create!(email: "ud-#{SecureRandom.hex(4)}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current) }
-  let(:other) { Identity::User.create!(email: "ud-#{SecureRandom.hex(4)}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current) }
+  let(:user) { Identity::User.create!(email: "ud-#{SecureRandom.hex(4)}@example.test", password: IdentityHelpers::PASSWORD, adult_confirmed_at: Time.current) }
+  let(:other) { Identity::User.create!(email: "ud-#{SecureRandom.hex(4)}@example.test", password: IdentityHelpers::PASSWORD, adult_confirmed_at: Time.current) }
 
   def seed_for(person)
     photo = FoodAi::FoodPhoto.create!(user_id: person.id, client_request_id: SecureRandom.uuid, object_key: "food-photos/#{SecureRandom.uuid}",

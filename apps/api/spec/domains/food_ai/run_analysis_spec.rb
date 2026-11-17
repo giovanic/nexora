@@ -1,4 +1,5 @@
 require "rails_helper"
+require "support/identity_helpers"
 require "support/outbox_helpers"
 require "support/food_ai_pipeline"
 
@@ -545,7 +546,7 @@ RSpec.describe "FoodAi analysis pipeline" do
 
     it "cancels when the account deletion was requested, before any provider call" do
       adapter = scripted(FoodAiAdapter::RICE)
-      Identity::Api.request_deletion(user_id: user.id, password: "senha-forte-123")
+      Identity::Api.request_deletion(user_id: user.id, password: IdentityHelpers::PASSWORD)
 
       run_job(photo)
 

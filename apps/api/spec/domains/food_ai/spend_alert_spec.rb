@@ -1,11 +1,12 @@
 require "rails_helper"
+require "support/identity_helpers"
 require "support/outbox_helpers"
 
 RSpec.describe FoodAi::SpendAlertJob do
   include OutboxHelpers
   include SentryCapture
 
-  let(:user) { Identity::User.create!(email: "spend-#{SecureRandom.hex(4)}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current) }
+  let(:user) { Identity::User.create!(email: "spend-#{SecureRandom.hex(4)}@example.test", password: IdentityHelpers::PASSWORD, adult_confirmed_at: Time.current) }
 
   before { Rails.cache.clear }
   after { Rails.cache.clear }

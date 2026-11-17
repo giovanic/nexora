@@ -1,8 +1,9 @@
 require "rails_helper"
+require "support/identity_helpers"
 
 RSpec.describe "FoodAi tables" do
   let(:user) do
-    Identity::User.create!(email: "ai-#{SecureRandom.hex(4)}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current)
+    Identity::User.create!(email: "ai-#{SecureRandom.hex(4)}@example.test", password: IdentityHelpers::PASSWORD, adult_confirmed_at: Time.current)
   end
 
   def photo(attrs = {})

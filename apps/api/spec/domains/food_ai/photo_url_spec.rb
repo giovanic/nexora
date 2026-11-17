@@ -1,7 +1,8 @@
 require "rails_helper"
+require "support/identity_helpers"
 
 RSpec.describe "FoodAi::Api.photo_url" do
-  let(:user) { Identity::User.create!(email: "pu-#{SecureRandom.hex(4)}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current) }
+  let(:user) { Identity::User.create!(email: "pu-#{SecureRandom.hex(4)}@example.test", password: IdentityHelpers::PASSWORD, adult_confirmed_at: Time.current) }
 
   def photo(status: "stored", user_id: user.id)
     FoodAi::FoodPhoto.create!(user_id:, client_request_id: SecureRandom.uuid, object_key: "food-photos/#{SecureRandom.uuid}", content_type: "image/jpeg",
@@ -19,7 +20,7 @@ RSpec.describe "FoodAi::Api.photo_url" do
   end
 
   it "is nil for a deleted, awaiting, absent or another person's photo, and for no photo" do
-    other = Identity::User.create!(email: "pu2-#{SecureRandom.hex(4)}@example.test", password: "senha-forte-123", adult_confirmed_at: Time.current)
+    other = Identity::User.create!(email: "pu2-#{SecureRandom.hex(4)}@example.test", password: IdentityHelpers::PASSWORD, adult_confirmed_at: Time.current)
 
     expect(FoodAi::Api.photo_url(user_id: user.id, photo_id: photo(status: "deleted").id)).to be_nil
     expect(FoodAi::Api.photo_url(user_id: user.id, photo_id: photo(status: "awaiting_upload").id)).to be_nil
