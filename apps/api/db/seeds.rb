@@ -8,5 +8,6 @@
 #     MovieGenre.find_or_create_by!(name: genre_name)
 #   end
 
-# Reference food catalog: idempotent, refuses anything without a license.
-FoodCatalog::LoadCatalog.call
+# Reference food catalog: idempotent, refuses anything without a license. Not in the test database:
+# db:prepare seeds a new database on every CI run, and catalog specs create their own items.
+FoodCatalog::LoadCatalog.call unless Rails.env.test?
