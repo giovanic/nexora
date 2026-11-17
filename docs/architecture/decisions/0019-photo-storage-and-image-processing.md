@@ -63,6 +63,6 @@ Os seis pontos da Tarefa 1 estão em `apps/api/spec/integration/object_storage_s
 
 ## Estado da decisão
 
-Proposta
+Aceita
 
-**Pronta para aceite:** evidência acima, decisão de HEIC e HEIF de 2026-11-14, e a pendência jurídica da LGPL-2.1 ainda aberta. Falta o aceite formal do responsável, depois de ler o relatório da fase. Até lá, `Proposta` não é decisão final.
+**Aceita em 2026-11-17** pelo responsável, depois de ler o relatório da Fase 03 ("aprovo", em resposta à proposta de aprovar a fase e aceitar as ADRs 0007 e 0019). Com a evidência acima e a decisão de HEIC e HEIF de 2026-11-14. A pendência jurídica da LGPL-2.1 da libvips num SaaS continua aberta em `PRIVACY_AND_LGPD.md`. O armazenamento de produção é escolhido no M1 (ADR 0015).

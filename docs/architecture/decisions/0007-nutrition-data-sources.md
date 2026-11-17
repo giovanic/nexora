@@ -43,7 +43,7 @@ De quais bases o produto pode usar dados legalmente e com qualidade suficiente p
 - `FoodCatalog::LoadCatalog` (`apps/api/app/domains/food_catalog/services/load_catalog.rb`) só carrega fontes em `ALLOWED_SOURCES = %w[usda_fdc project]`, recusa arquivo sem licença (`MissingLicense`), fonte fora da lista (`UnknownSource`) e prato cujas partes não somam 100 g (`InvalidComposition`). É idempotente.
 - `apps/api/spec/domains/food_catalog/load_catalog_spec.rb` cobre essas recusas, a carga repetida sem duplicar, "no TACO or TBCA source exists in the data files", licença, citação e versão em todo registro USDA, e a carga dos arquivos reais.
 
-**A Fase 03 não pode ser concluída** sem esta ADR passar a `Aceita`. Ela está pronta para o aceite do responsável.
+**A Fase 03 não pode ser concluída** sem esta ADR passar a `Aceita`. Aceita em 2026-11-17 (ver "Estado da decisão").
 
 ## Justificativa
 
@@ -58,6 +58,6 @@ Usar a TBCA sem autorização expõe o produto a risco jurídico. Composições 
 
 ## Estado da decisão
 
-Proposta
+Aceita
 
-**Pronta para aceite:** decisão do responsável de 2026-11-13, com a evidência acima. Falta o aceite formal do responsável, depois de ler o relatório da fase. Até lá, `Proposta` não é decisão final.
+**Aceita em 2026-11-17** pelo responsável, depois de ler o relatório da Fase 03 ("aprovo", em resposta à proposta de aprovar a fase e aceitar as ADRs 0007 e 0019). Vale a decisão de 2026-11-13: USDA FoodData Central e composições próprias; TACO aguardando a resposta do NEPA, por nova revisão desta ADR; TBCA bloqueada.

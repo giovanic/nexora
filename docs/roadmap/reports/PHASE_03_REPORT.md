@@ -1,7 +1,7 @@
 # Relatório da Fase 03 — Food AI
 
 - **Data:** 2026-11-16
-- **Estado:** `Em revisão`. O código está pronto e verificado. A prova real com provedor de IA está pendente, porque as chaves foram adiadas pelo responsável para a Fase 07.
+- **Estado:** `Concluída` em 2026-11-17, aprovada pelo responsável ("aprovo", em resposta à frase da seção 8) com a lacuna aceita dos AC-03-02, 04, 06, 07, 08, 09, 10, 12, 13, 14, 15 e 16: a prova real com provedor de IA fica para antes do M1, porque as chaves foram adiadas para a Fase 07. ADRs 0007 e 0019 aceitas.
 - **Branch:** `phase/03-food-ai`, 41 commits sobre `main` `5357167`, sem push.
 - **Plano:** [2026-11-13-food-ai.md](../../superpowers/plans/2026-11-13-food-ai.md). **Design:** [2026-11-13-food-ai-design.md](../../superpowers/specs/2026-11-13-food-ai-design.md).
 
@@ -64,6 +64,8 @@ Executado pelo controlador em 2026-11-16, no commit `a056bf8`.
 | `bin/rails runner ../../evaluation/run.rb` sem chave | 1 | Recusa clara, sem rede (comportamento esperado) |
 | CI do GitHub | — | Não executado: sem push autorizado. Os passos novos do CI (SeaweedFS por `docker run`, `libvips42t64` e `libheif-plugin-libde265`) não rodaram em runner |
 
+**Repetido em 2026-11-17, no commit `44e8269` e com o worktree limpo, antes da aprovação:** `bundle exec rspec` (1.221 exemplos, 0 falhas), rubocop (312 arquivos, sem ofensas), brakeman (sem avisos), `npm run check -w @app/contracts`, mobile (typecheck, lint e 186 testes), web (typecheck, lint e 67 testes), `check_language.py`, `test-check-language.sh` (69 testes), `verify-harness.sh` e `test-verify-harness.sh` (93 testes), todos com código 0.
+
 **Demonstrações reais:** nenhuma. Todas dependem do provedor ou do consentimento v2, ver a seção 6.
 
 ## 3. Critérios
@@ -85,7 +87,7 @@ Executado pelo controlador em 2026-11-16, no commit `a056bf8`.
 | `AC-03-13` | `no_calorie_goal_spec.rb`; `check_language.py` no CI; filtro do texto do modelo; revisão das telas pelo revisor mobile | **Parcial.** O dataset com instrução na imagem não rodou |
 | `AC-03-14` | Medição de p95 implementada e testada | **Sem evidência.** Nenhuma medição |
 | `AC-03-15` | Testes de componente: permissão negada, rede, os estados, `429`, laço de consentimento | **Parcial.** Sem demonstração no app |
-| `AC-03-16` | ADR 0007 pronta para aceite; ADR 0006 `Proposta`, adiada para a Fase 07 | **Parcial** |
+| `AC-03-16` | ADRs 0007 e 0019 aceitas em 2026-11-17; ADR 0006 `Proposta`, adiada para a Fase 07 | **Parcial** (lacuna aceita: falta a 0006) |
 | `AC-03-17` | 30 dias decididos e aplicados (`photo_retention_job`, `retention_spec.rb`); o app apaga as cópias ao concluir, ao sair, no 401 e ao excluir a conta (`localCopy.test.ts`, `sessionCleanup.test.ts`); prazo em `DATABASE_DESIGN.md` | Comprovado |
 
 Resumo: 5 comprovados, 11 parciais e 1 sem evidência. Quase todas as lacunas têm a mesma causa: a ausência de chave de provedor.
@@ -139,9 +141,11 @@ Também foi corrigido no encerramento: apagar uma refeição exigia o consentime
 
 ## 6. Pendências
 
+**Lacuna aceita em 2026-11-17:** AC-03-02, 04, 06, 07, 08, 09, 10, 12, 13, 14, 15 e 16, sem prova real com provedor, a fazer antes do M1. Os itens 1 e 2 abaixo foram decididos pelo "aprovo" do responsável. **Os itens 3 e 4 continuam em aberto.**
+
 **Para você decidir agora:**
-1. **Aprovar a fase com as lacunas da seção 3,** todas ligadas à falta de chave: AC-03-02, 04, 06, 07, 08, 09, 10, 12, 13, 14, 15 e 16. O Definition of Done da fase exige "prova real com o provedor", então isso é uma lacuna aceita, como o AC-02-08 na Fase 02.
-2. **Aceitar as ADRs 0007** (bases nutricionais) **e 0019** (armazenamento e processamento de imagem). As duas estão prontas.
+1. *(Decidido em 2026-11-17: aprovado.)* **Aprovar a fase com as lacunas da seção 3,** todas ligadas à falta de chave: AC-03-02, 04, 06, 07, 08, 09, 10, 12, 13, 14, 15 e 16. O Definition of Done da fase exige "prova real com o provedor", então isso é uma lacuna aceita, como o AC-02-08 na Fase 02.
+2. *(Decidido em 2026-11-17: aceitas.)* **Aceitar as ADRs 0007** (bases nutricionais) **e 0019** (armazenamento e processamento de imagem). As duas estão prontas.
 3. **Ordem do M1.** O M1 (beta com foto) vem antes da Fase 07, mas depende de:
    - uma chave de provedor;
    - a rodada real de avaliação;
