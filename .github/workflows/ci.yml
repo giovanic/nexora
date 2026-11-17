@@ -79,9 +79,13 @@ jobs:
       # ruby-vips loads the native library at runtime. On ubuntu-24.04 the package is libvips42t64.
       # libvips42t64 depends on libheif1, which on amd64 pulls only the AV1 decoders. iPhone HEIC is
       # HEVC, so the libde265 plugin is installed explicitly (docs/architecture/EXTERNAL_SOURCES.md).
+      # The x265 and aomenc encoders exist only so the specs can build HEIC and HEIF test images
+      # (spec/support/image_fixtures.rb); production only decodes. Checked in ubuntu:24.04 on 2026-11-17.
       - name: Install libvips
         working-directory: .
-        run: sudo apt-get update && sudo apt-get install -y libvips42t64 libheif-plugin-libde265
+        run: >-
+          sudo apt-get update && sudo apt-get install -y libvips42t64 libheif-plugin-libde265
+          libheif-plugin-dav1d libheif-plugin-x265 libheif-plugin-aomenc
       - name: Lint
         run: bundle exec rubocop
       - name: Static security analysis
