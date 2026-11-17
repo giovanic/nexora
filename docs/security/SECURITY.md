@@ -89,7 +89,7 @@ As regras `deny` de `Read` bloqueiam as ferramentas de arquivo, mas a documenta�
 |---|---|---|
 | Brakeman | Análise estática do Rails, no CI. A [licença](../architecture/EXTERNAL_SOURCES.md) trata uso comercial à parte e cita analisar o próprio software como não comercial: enquadramento pendente na revisão jurídica | 01 |
 | `bundler-audit` | Dependências Ruby, no CI | 01 |
-| `npm audit --audit-level=high` | Dependências JavaScript, no CI | 01 |
+| `npm audit`, julgado por `scripts/check_npm_audit.py` | Dependências JavaScript, no CI: reprova alerta alto ou crítico sem exceção vigente. Exceção só por alerta (GHSA), com aval do responsável, motivo e validade de até 90 dias, em `scripts/npm_audit_exceptions.txt`; vencida, o CI volta a reprovar. Em vigor: GHSA-fc5q-39xc-vjpf (`picomatch` até 4.0.7, sem versão corrigida, só em ferramentas de build e teste), até 2026-12-17, com aval de 2026-11-17 | 01, ajustado em 03 |
 | Gitleaks 8.30.1 | Varredura de segredos no histórico, no CI. Só recebe correção de segurança: reavaliar no M1 | 01 |
 | `security-reviewer` | Revisão a cada fase com superfície nova | Todas |
 

@@ -20,7 +20,7 @@ Roda em todo pull request e na branch principal. O CI executa verificações rea
 | `api` | Limites | `spec/architecture`, dentro do RSpec | Sim |
 | `api` | Contrato | Respostas reais contra o OpenAPI, e rotas contra `paths`, dentro do RSpec | Sim |
 | `contracts` | Tipos gerados | Falha se os tipos versionados diferem do que o contrato gera | Sim |
-| `web` | Auditoria JS | `npm audit --audit-level=high`, sobre o lockfile do monorepo | Sim, em achado alto |
+| `web` | Auditoria JS | `npm audit --json` sobre o lockfile do monorepo, julgado por `scripts/check_npm_audit.py` com as exceções de `scripts/npm_audit_exceptions.txt` | Sim, em achado alto ou crítico sem exceção vigente |
 | `web` | Tipos, lint, testes, build | `tsc`, ESLint sem nenhum aviso, Vitest, Vite | Sim |
 | `mobile` | Tipos, lint, testes | `tsc`, ESLint sem nenhum aviso, `jest-expo` | Sim |
 

@@ -1,0 +1,9 @@
+# Exceções da auditoria do npm no CI (scripts/check_npm_audit.py). Uma por linha:
+#   GHSA-xxxx-xxxx-xxxx AAAA-MM-DD motivo
+# A data é a validade, de no máximo 90 dias. Vencida, o CI volta a reprovar. Cada exceção
+# precisa de aval do responsável e de registro em docs/security/SECURITY.md.
+
+# 2026-11-17, aval do responsável no PR #20. picomatch até 4.0.7 (ReDoS com extglob, CVE-2026-112366),
+# sem versão corrigida. Só roda em ferramentas de build e teste (Jest, Metro, Expo, Vite), com
+# padrões vindos de configuração, nunca de quem usa o app.
+GHSA-fc5q-39xc-vjpf 2026-12-17 picomatch sem versão corrigida; só em ferramentas de build e teste

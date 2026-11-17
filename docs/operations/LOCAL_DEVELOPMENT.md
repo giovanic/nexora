@@ -130,7 +130,8 @@ npm run typecheck -w apps/web && npm run lint -w apps/web && npm test -w apps/we
 npm run typecheck -w apps/mobile && npm run lint -w apps/mobile && npm test -w apps/mobile
 npm run check -w @app/contracts
 python3 scripts/check_language.py && bash scripts/test-check-language.sh
-npm audit --audit-level=high
+npm audit --json > /tmp/npm-audit.json; python3 scripts/check_npm_audit.py --report /tmp/npm-audit.json --exceptions scripts/npm_audit_exceptions.txt
+bash scripts/test-check-npm-audit.sh
 ```
 
 **Ao mudar o contrato:** edite `packages/contracts/openapi.yaml`, rode `npm run generate -w @app/contracts`, e versione o arquivo gerado.
