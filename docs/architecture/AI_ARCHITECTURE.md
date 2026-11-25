@@ -52,7 +52,7 @@ O passo 4 acontece **no job, antes da IA** (`FoodAi::NormalizePhoto`, chamado po
 
 ## Interface do provedor
 
-Contrato do adaptador (`FoodAi::Adapters::ProviderAdapter`, em `apps/api/app/domains/food_ai/adapters/`). Implementações: `AnthropicAdapter`, `GeminiAdapter`, `OpenaiAdapter` e `FakeAdapter` (dublê da suíte). Na Fase 03 os três adaptadores reais só foram testados com dublê de transporte: nenhum rodou contra o provedor, porque as chaves ficam para a Fase 07.
+Contrato do adaptador (`FoodAi::Adapters::ProviderAdapter`, em `apps/api/app/domains/food_ai/adapters/`). Implementações: `AnthropicAdapter`, `GeminiAdapter`, `OpenaiAdapter`, `GroqAdapter` (acrescentado em 2026-11-25) e `FakeAdapter` (dublê da suíte). Na Fase 03 os três adaptadores reais só foram testados com dublê de transporte: nenhum rodou contra o provedor, porque as chaves ficam para a Fase 07.
 
 ```ruby
 module FoodAi
@@ -167,6 +167,8 @@ O job é idempotente por foto e `prompt_version` (índice único parcial em `foo
 ## Comparação de provedores
 
 **A comparação e a escolha foram adiadas para a Fase 07** (decisão do responsável de 2026-11-14 e 2026-11-16): as chaves de Anthropic, Gemini e OpenAI e a rodada real de avaliação ficam para lá, e a [ADR 0006](decisions/0006-food-ai-pipeline-and-provider-abstraction.md) segue `Proposta`. Antes disso, o consentimento `food_photo_ai` continua na v1 (sem operador), e todo envio real de foto é recusado com `consent_operator_mismatch`. A tabela abaixo é a situação lida em 2026-11-05 e não foi atualizada nesta fase; os fatos de 2026-11-13 estão no [registro de fontes](EXTERNAL_SOURCES.md).
+
+**Groq, acrescentada em 2026-11-25** na reabertura da Fase 03, a pedido do responsável e no plano gratuito: modelo `qwen/qwen3.8-27b`. O contrato proíbe treino com as entradas, inclusive no plano gratuito, e o modelo aceita imagem e JSON Schema estrito. Mas está em prévia ("só para avaliação"), tem limites baixos de uso e processa nos EUA. Serve para medir, ainda não para o beta. Detalhes no [registro de fontes](EXTERNAL_SOURCES.md).
 
 | Critério | Anthropic | Google Gemini | OpenAI |
 |---|---|---|---|

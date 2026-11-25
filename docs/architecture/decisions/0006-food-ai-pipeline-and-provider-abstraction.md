@@ -25,11 +25,17 @@ Como estruturar a análise para que a escolha de modelo não contamine o domíni
 - Google Gemini: preços verificados; nível gratuito proibido por usar conteúdo.
 - OpenAI: preços e política de dados não verificados.
 
+**Acréscimo de 2026-11-25** (decisão do responsável: "sim pode reabrir e implementar", com a condição de ser grátis):
+
+- Groq, plano gratuito, modelo `qwen/qwen3.8-27b`: contrato proíbe treinar com entradas e saídas, sem exceção para o plano gratuito; aceita imagem e JSON Schema estrito. Riscos registrados: o modelo está em **prévia**, que a Groq diz servir só para avaliação e poder sair do ar com pouco aviso; limites baixos de uso; sem região fora dos EUA. O `openai/gpt-oss-120b`, pedido primeiro, só lê texto e não serve para foto ([fontes](../EXTERNAL_SOURCES.md), linhas da Groq).
+
 ## Decisão
 
 **Já vale:** alternativa 2, com interface `FoodAi::Adapters::ProviderAdapter`, prompts versionados, saída com schema validado na aplicação, registro de custo e histórico, conforme [AI_ARCHITECTURE.md](../AI_ARCHITECTURE.md). Só provedores com política documentada de não treinar com as entradas.
 
 **Fica para a Fase 07** (decisão do responsável de 2026-11-14 e 2026-11-16, que antes estava prevista para a Fase 03): o provedor e o modelo, comparando ao menos dois candidatos com o dataset de avaliação quanto a qualidade, custo e latência, além da política de dados e da base legal de transferência. As chaves de Anthropic, Gemini e OpenAI, e a rodada real de avaliação, também ficam para a Fase 07. A Fase 03 entregou os três adaptadores só testados com dublê, o dataset e a ferramenta de avaliação (`evaluation/` na raiz do repositório, com specs em `apps/api/spec/evaluation/`), sem rodada real.
+
+**Reabertura de 2026-11-25:** a Fase 03 ganhou o quarto adaptador, `groq`, testado com dublê, e a avaliação aceita `PACE` para respeitar os limites do plano gratuito. A rodada real com a chave da Groq, fornecida pelo responsável, pode acontecer antes da Fase 07. Ela mede um candidato, mas não decide o provedor de produção: um modelo em prévia não atende o beta, e a comparação com ao menos dois candidatos continua exigida.
 
 **Dependência do M1:** o [M1](../../roadmap/phases/MILESTONE_M1_CLOSED_BETA.md) (beta com foto) vem antes da Fase 07 pelo roadmap e pela [ADR 0016](0016-closed-beta-milestone.md), mas depende desta ADR aceita e da rodada real. A ordem entre eles é decisão do responsável e continua em aberto. Sem provedor, todo envio real de foto é recusado (`consent_operator_mismatch`, consentimento `food_photo_ai` na v1 sem operador).
 

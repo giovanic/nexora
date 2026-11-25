@@ -36,11 +36,11 @@ Baixa o que falta, confere o sha256 de cada original e de cada derivada, e sai c
 ```bash
 cd apps/api
 bin/rails food_catalog:load                                 # catálogo carregado
-bin/rails runner ../../evaluation/run.rb PROVIDERS=anthropic:<modelo>,gemini:<modelo>,openai:<modelo> [ROUND=r1]
+bin/rails runner ../../evaluation/run.rb PROVIDERS=anthropic:<modelo>,gemini:<modelo>,openai:<modelo>,groq:<modelo> [ROUND=r1] [PACE=30]
 bin/rails runner ../../evaluation/run.rb CATALOG_ONLY=1     # sem provedor e sem rede: só a correspondência com o catálogo
 ```
 
-As chaves vêm de `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` e `OPENAI_API_KEY`. Sem a chave de um provedor listado, o script sai com código 1 e uma mensagem clara, antes de ler imagem ou chamar qualquer coisa. Modelo sem preço em `FoodAi::Pricing` também é recusado. O relatório vai para `evaluation/reports/AAAA-MM-DD-<rodada>.md`.
+As chaves vêm de `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` e `GROQ_API_KEY`. `PACE` espera esse número inteiro de segundos (0 a 120) entre uma foto e a seguinte, para caber no limite por minuto de um plano gratuito, como o da Groq (`groq:qwen/qwen3.8-27b`). Sem a chave de um provedor listado, o script sai com código 1 e uma mensagem clara, antes de ler imagem ou chamar qualquer coisa. Modelo sem preço em `FoodAi::Pricing` também é recusado. O relatório vai para `evaluation/reports/AAAA-MM-DD-<rodada>.md`.
 
 Cada foto passa pelas peças reais do pipeline, sem gravar refeição, foto ou análise: `FoodAi::NormalizePhoto`, o adaptador (`FoodAi.adapter_for`), `FoodAi::ValidateOutput`, `FoodCatalog::Api.match` e `Nutrition::Api.estimate`. Erro transitório (timeout, 429, 5xx) tem até 3 tentativas; saída inválida **não** é repetida, para a taxa aparecer.
 
