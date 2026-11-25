@@ -291,6 +291,66 @@ RSpec.describe "FoodAi HTTP adapters" do
     end
   end
 
+  describe FoodAi::Adapters::GroqAdapter do
+    let(:model) { "qwen/qwen3.8-27b" }
+    let(:ok_reply) do
+      reply(200, { choices: [ { message: { role: "assistant", content: JSON.generate(payload) }, finish_reason: "stop" } ],
+                   usage: { prompt_tokens: 2600, completion_tokens: 380 } })
+    end
+    let(:refusal_reply) do
+      reply(200, { choices: [ { message: { role: "assistant", content: nil, refusal: "I cannot help" }, finish_reason: "stop" } ],
+                   usage: { prompt_tokens: 10, completion_tokens: 2 } })
+    end
+    let(:non_json_reply) { reply(200, { choices: [ { message: { content: "hi" } } ], usage: { prompt_tokens: 10, completion_tokens: 2 } }) }
+    let(:missing_usage_replies) do
+      choices = [ { message: { content: JSON.generate(payload) } } ]
+      [ reply(200, { choices: choices }),
+        reply(200, { choices: choices, usage: "x" }),
+        reply(200, { choices: choices, usage: { prompt_tokens: "12", completion_tokens: 3 } }),
+        reply(200, { choices: choices, usage: { completion_tokens: 3 } }) ]
+    end
+    let(:odd_envelopes) { [ { choices: "x" }, { choices: [ "x", 1, nil ] }, { choices: [ { message: "x" } ], usage: [] } ] }
+
+    it_behaves_like "an http adapter", provider: "groq", model: "qwen/qwen3.8-27b", input_tokens: 2600, output_tokens: 380
+
+    it "posts to the OpenAI-compatible chat completions with a bearer key, a data URL image and a strict schema" do
+      described_class.new(api_key: api_key, model: model, transport: transport).tap { |_| transport.queue(ok_reply) }
+                     .analyze(image: image, content_type: "image/jpeg", prompt: prompt, schema: schema)
+      call = transport.calls.first
+      body = call[:body]
+      content = body[:messages].first[:content]
+      format = body[:response_format]
+
+      expect(call[:url]).to eq("https://api.groq.com/openai/v1/chat/completions")
+      expect(call[:headers]).to include("authorization" => "Bearer #{api_key}")
+      expect(body).to include(model: model, max_completion_tokens: FoodAi::Adapters::HttpAdapter::MAX_OUTPUT_TOKENS)
+      expect(content.first).to eq({ type: "text", text: prompt.body })
+      expect(content.last[:image_url][:url]).to start_with("data:image/jpeg;base64,")
+      expect(format[:type]).to eq("json_schema")
+      expect(format[:json_schema]).to include(name: "food_analysis", strict: true)
+      expect(JSON.generate(format[:json_schema][:schema])).not_to match(/"(minimum|maximum|minLength|maxLength|minItems|maxItems)"/)
+    end
+
+    it "every object in the strict schema requires all its properties and forbids extras" do
+      described_class.new(api_key: api_key, model: model, transport: transport).tap { |_| transport.queue(ok_reply) }
+                     .analyze(image: image, content_type: "image/jpeg", prompt: prompt, schema: schema)
+      objects = []
+      collect = lambda do |node|
+        case node
+        when Hash then (objects << node if node["properties"]) && node.each_value(&collect)
+        when Array then node.each(&collect)
+        end
+      end
+      collect.call(transport.calls.first[:body][:response_format][:json_schema][:schema])
+
+      expect(objects).not_to be_empty
+      objects.each do |object|
+        expect(object["required"]).to match_array(object["properties"].keys)
+        expect(object["additionalProperties"]).to be(false)
+      end
+    end
+  end
+
   describe "SchemaTransform" do
     it "does not mutate the full schema and keeps property names that look like keywords" do
       original = { "type" => "object", "properties" => { "minimum" => { "type" => "number", "minimum" => 0 } } }
@@ -311,6 +371,13 @@ RSpec.describe "FoodAi HTTP adapters" do
         .to be_a(FoodAi::Adapters::GeminiAdapter)
       expect(FoodAi.adapter_for(provider: "openai", model: "gpt-6-luna", env: { "OPENAI_API_KEY" => "k" }))
         .to be_a(FoodAi::Adapters::OpenaiAdapter)
+      expect(FoodAi.adapter_for(provider: "groq", model: "qwen/qwen3.8-27b", env: { "GROQ_API_KEY" => "k" }))
+        .to be_a(FoodAi::Adapters::GroqAdapter)
+    end
+
+    it "does not offer Groq's text-only model, which cannot read the photo" do
+      expect { FoodAi.adapter_for(provider: "groq", model: "openai/gpt-oss-120b", env: { "GROQ_API_KEY" => "k" }) }
+        .to raise_error(FoodAi::PermanentProviderError, "unsupported_model")
     end
 
     it "a missing key raises a coded error that never carries a key" do

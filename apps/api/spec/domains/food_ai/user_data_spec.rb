@@ -54,6 +54,14 @@ RSpec.describe FoodAi::UserData do
     expect(row.errors.attribute_names).to include(:provider, :model)
   end
 
+  it "takes a model id with one namespace, as Groq names them, and nothing looser" do
+    build = ->(provider, model) { FoodAi::UsageRecord.new(provider:, model:, input_tokens: 0, output_tokens: 0, cost_usd: 0, occurred_at: Time.current) }
+
+    expect(build.call("groq", "qwen/qwen3.8-27b")).to be_valid
+    %w[a//b /x x/ a/b/c Qwen/x].each { |model| expect(build.call("groq", model)).not_to be_valid, model }
+    expect(build.call("groq/x", "qwen/qwen3.8-27b")).not_to be_valid
+  end
+
   it "allows every priced model in usage records" do
     FoodAi::Pricing::TABLE.each_key do |provider, model|
       expect do

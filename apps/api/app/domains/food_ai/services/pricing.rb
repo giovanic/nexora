@@ -30,7 +30,10 @@ module FoodAi
       ],
       %w[gemini gemini-3.5-flash-lite] => [ [ {}, price("0.30", "2.50") ] ],
       %w[openai gpt-6-luna] => [ [ {}, price("0.10", "0.50") ] ],
-      %w[openai gpt-6.1-terra] => [ [ {}, price("1", "5") ] ]
+      %w[openai gpt-6.1-terra] => [ [ {}, price("1", "5") ] ],
+      # Groq list price on paid plans, from the sources of 2026-11-25 (the others are of SOURCE_DATE). The free plan
+      # charges nothing, so on it the recorded cost is an upper bound. Groq lists the model as a preview.
+      %w[groq qwen/qwen3.8-27b] => [ [ {}, price("0.80", "4.00") ] ]
     }.freeze
 
     # BigDecimal, exact: fractions of a cent are kept.

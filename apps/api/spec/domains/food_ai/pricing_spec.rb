@@ -17,7 +17,10 @@ RSpec.describe FoodAi::Pricing do
       %w[gemini gemini-3.8-flash] => %w[0.75 3.75],
       %w[gemini gemini-3.5-flash-lite] => %w[0.30 2.50],
       %w[openai gpt-6-luna] => %w[0.10 0.50],
-      %w[openai gpt-6.1-terra] => %w[1 5]
+      %w[openai gpt-6.1-terra] => %w[1 5],
+      # Groq list price (paid plans), registered on 2026-11-25. The free plan charges nothing, so the cost recorded
+      # for it is an upper bound.
+      %w[groq qwen/qwen3.8-27b] => %w[0.80 4.00]
     }
 
     expectations.each do |(provider, model), (input_price, output_price)|

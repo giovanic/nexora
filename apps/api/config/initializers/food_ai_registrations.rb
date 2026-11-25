@@ -10,7 +10,8 @@ Rails.application.config.to_prepare do
   adapters = {
     "anthropic" => [ FoodAi::Adapters::AnthropicAdapter, "ANTHROPIC_API_KEY" ],
     "gemini" => [ FoodAi::Adapters::GeminiAdapter, "GEMINI_API_KEY" ],
-    "openai" => [ FoodAi::Adapters::OpenaiAdapter, "OPENAI_API_KEY" ]
+    "openai" => [ FoodAi::Adapters::OpenaiAdapter, "OPENAI_API_KEY" ],
+    "groq" => [ FoodAi::Adapters::GroqAdapter, "GROQ_API_KEY" ]
   }.freeze
 
   FoodAi.define_singleton_method(:adapter_for) do |provider:, model:, env: ENV, transport: FoodAi::Adapters::HttpTransport.new|

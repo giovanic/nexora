@@ -3,7 +3,7 @@ require Rails.root.join("../../evaluation/cli").to_s
 
 RSpec.describe Evaluation::Run do
   describe ".refusal" do
-    let(:keys) { { "ANTHROPIC_API_KEY" => "k1", "GEMINI_API_KEY" => "k2", "OPENAI_API_KEY" => "k3" } }
+    let(:keys) { { "ANTHROPIC_API_KEY" => "k1", "GEMINI_API_KEY" => "k2", "OPENAI_API_KEY" => "k3", "GROQ_API_KEY" => "k4" } }
 
     it "refuses an empty provider list, naming the way to use it" do
       expect(described_class.refusal([], env: keys)).to match(/PROVIDERS/)
@@ -23,9 +23,14 @@ RSpec.describe Evaluation::Run do
     end
 
     it "accepts priced models with their keys" do
-      pairs = [ %w[anthropic claude-haiku-5-5], %w[gemini gemini-3.5-flash-lite], %w[openai gpt-6-luna] ]
+      pairs = [ %w[anthropic claude-haiku-5-5], %w[gemini gemini-3.5-flash-lite], %w[openai gpt-6-luna], %w[groq qwen/qwen3.8-27b] ]
 
       expect(described_class.refusal(pairs, env: keys)).to be_nil
+    end
+
+    it "refuses Groq without GROQ_API_KEY, and its text-only model for lack of a price" do
+      expect(described_class.refusal([ %w[groq qwen/qwen3.8-27b] ], env: keys.except("GROQ_API_KEY"))).to include("GROQ_API_KEY")
+      expect(described_class.refusal([ %w[groq openai/gpt-oss-120b] ], env: keys)).to match(/preço/)
     end
   end
 
@@ -109,6 +114,35 @@ RSpec.describe Evaluation::Run do
       expect(described_class.main([ "PROVIDERS=anthropic:claude-haiku-5-5", "ROUND=t" ], env:, out:, err:, root:)).to eq(0)
       expect(working.calls).to eq(2)
       expect(Dir.glob(File.join(root, "reports", "*-t.md")).size).to eq(1)
+    end
+
+    it "waits PACE seconds between photos, never before the first, to stay under a free plan's rate limit" do
+      answer = { "contains_food" => false, "image_quality" => "good", "note_codes" => [], "items" => [] }
+      allow(FoodAi).to receive(:adapter_for).and_return(FoodAiAdapter::ScriptedAdapter.new(steps: [ answer ]))
+      waits = []
+
+      status = described_class.main([ "PROVIDERS=anthropic:claude-haiku-5-5", "PACE=30" ], env:, out:, err:, root:, sleeper: ->(s) { waits << s })
+
+      expect(status).to eq(0)
+      expect(waits).to eq([ 30 ])
+    end
+
+    it "does not wait without PACE" do
+      answer = { "contains_food" => false, "image_quality" => "good", "note_codes" => [], "items" => [] }
+      allow(FoodAi).to receive(:adapter_for).and_return(FoodAiAdapter::ScriptedAdapter.new(steps: [ answer ]))
+      waits = []
+
+      expect(described_class.main([ "PROVIDERS=anthropic:claude-haiku-5-5" ], env:, out:, err:, root:, sleeper: ->(s) { waits << s })).to eq(0)
+      expect(waits).to be_empty
+    end
+
+    it "refuses a PACE that is not a whole number of seconds from 0 to 120, before any call" do
+      expect(FoodAi).not_to receive(:adapter_for)
+
+      %w[abc -1 121 1.5].each do |pace|
+        expect(described_class.main([ "PROVIDERS=anthropic:claude-haiku-5-5", "PACE=#{pace}" ], env:, out:, err:, root:)).to eq(1)
+      end
+      expect(err.string).to include("PACE")
     end
 
     it "does not touch the catalog table from the CLI: it asks FoodCatalog::Api" do
