@@ -4,6 +4,7 @@
 #   cd apps/api && bin/rails runner ../../evaluation/run.rb CATALOG_ONLY=1      (no provider, no network: the match rate only)
 #
 # PACE: whole seconds (0 to 120) to wait between photos, for a plan with a low rate limit (Groq's free plan).
+# ONLY: comma-separated image ids from manifest.yml, to run a subset (photos a daily quota left out); the report says so.
 # Keys come from ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY and GROQ_API_KEY. Without the key of a listed provider the run
 # stops before reading any image or calling anything, with status 1. Images come from EVALUATION_IMAGES_DIR (default
 # ~/.cache/nexora-evaluation), rebuilt by evaluation/fetch.rb. The report goes to evaluation/reports/AAAA-MM-DD-<round>.md.
@@ -45,10 +46,20 @@ module Evaluation
       nil
     end
 
-    def dataset_summary(manifest)
+    def dataset_summary(manifest, subset_of: nil)
       images = manifest.fetch("images")
       categories = images.group_by { _1["category"] }.transform_values(&:size)
-      { version: manifest.fetch("dataset_version"), total: images.size, categories: }
+      { version: manifest.fetch("dataset_version"), total: images.size, categories:, subset_of: }.compact
+    end
+
+    # The manifest reduced to the ids in ONLY (all of it without ONLY), or the ids that do not exist.
+    def select_images(manifest, only)
+      ids = only.to_s.split(",").map(&:strip).reject(&:empty?)
+      return [ manifest, [] ] if ids.empty?
+
+      known = manifest.fetch("images").map { _1["id"] }
+      unknown = ids - known
+      [ manifest.merge("images" => manifest.fetch("images").select { ids.include?(_1["id"]) }), unknown ]
     end
 
     # Seconds to wait between photos: 0 without PACE, nil when PACE is not a whole number from 0 to MAX_PACE.
@@ -71,7 +82,11 @@ module Evaluation
       end
       return fail_with(err, "O catálogo está vazio. Rode `bin/rails food_catalog:load`.") if !FoodCatalog::Api.loaded?
 
-      manifest = YAML.safe_load_file(File.join(root, "manifest.yml"))
+      full = YAML.safe_load_file(File.join(root, "manifest.yml"))
+      manifest, unknown = select_images(full, options["ONLY"])
+      return fail_with(err, "ONLY cita imagens que não estão no manifest: #{unknown.join(', ')}.") unless unknown.empty?
+
+      subset_of = full.fetch("images").size if manifest.fetch("images").size < full.fetch("images").size
       annotations = YAML.safe_load_file(File.join(root, "annotations.yml"))
       dir = Fetch.images_dir(env)
       runner = Runner.new(manifest:, annotations:, dir:)
@@ -110,7 +125,7 @@ module Evaluation
         end
       end
       FileUtils.mkdir_p(reports)
-      File.write(path, Report.render(date:, round:, prompt_version: FoodAi::PromptCatalog.current.version, dataset: dataset_summary(manifest), providers: results, catalog:))
+      File.write(path, Report.render(date:, round:, prompt_version: FoodAi::PromptCatalog.current.version, dataset: dataset_summary(manifest, subset_of:), providers: results, catalog:))
       out.puts "report: #{path}"
       0
     end

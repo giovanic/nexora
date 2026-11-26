@@ -2,6 +2,7 @@
 
 - **Data:** 2026-11-16
 - **Estado:** `Concluída` em 2026-11-17, aprovada pelo responsável ("aprovo", em resposta à frase da seção 8) com a lacuna aceita dos AC-03-02, 04, 06, 07, 08, 09, 10, 12, 13, 14, 15 e 16: a prova real com provedor de IA fica para antes do M1, porque as chaves foram adiadas para a Fase 07. ADRs 0007 e 0019 aceitas.
+- **Reabertura de 2026-11-25:** Groq como quarto provedor candidato, a pedido do responsável. Ver a [seção 9](#9-reabertura-de-2026-11-25-groq-como-candidata). `Concluída` de novo em 2026-11-25: "Aprovo a reabertura da Fase 03 (Groq), aceitando os AC-03-07, 08 e 14 como parciais."
 - **Branch:** `phase/03-food-ai`, 41 commits sobre `main` `5357167`, sem push.
 - **Plano:** [2026-11-13-food-ai.md](../../superpowers/plans/2026-11-13-food-ai.md). **Design:** [2026-11-13-food-ai-design.md](../../superpowers/specs/2026-11-13-food-ai-design.md).
 
@@ -78,14 +79,14 @@ Executado pelo controlador em 2026-11-16, no commit `a056bf8`.
 | `AC-03-04` | `food_entry_management_spec.rb`, `concurrency_spec.rb`, testes do app `result.test.tsx` e `resultActions` | **Parcial.** Sem demonstração no app |
 | `AC-03-05` | Contagem de consultas igual para 5 e 15 refeições; exclusão apaga itens, foto e análises, inclusive por evento `food_entry.deleted` | Comprovado |
 | `AC-03-06` | `no_food` e `unreadable` sem números e com a foto apagada (`run_analysis_spec.rb`); registro manual (`food_entry_management_spec.rb`) | **Parcial.** A parte "e dataset" não rodou contra provedor |
-| `AC-03-07` | Três adaptadores com dublê (`http_adapters_spec.rb`); provedor por configuração; Nutrition não conhece o provedor (verificação de limites); prompt, modelo, resposta e custo gravados por análise | **Parcial.** Faltam dois adaptadores reais e a comparação |
-| `AC-03-08` | Dataset reprodutível e métricas testadas (`evaluation/`, `spec/evaluation`) | **Parcial.** Sem primeira medição e sem metas de qualidade |
+| `AC-03-07` | Três adaptadores com dublê (`http_adapters_spec.rb`); provedor por configuração; Nutrition não conhece o provedor (verificação de limites); prompt, modelo, resposta e custo gravados por análise | **Parcial.** Faltam dois adaptadores reais e a comparação. Em 2026-11-25: um adaptador real (Groq), ainda sem comparação (seção 9) |
+| `AC-03-08` | Dataset reprodutível e métricas testadas (`evaluation/`, `spec/evaluation`) | **Parcial.** Sem primeira medição e sem metas de qualidade. Em 2026-11-25: primeira medição (Groq, 43 de 60 fotos); metas ainda não definidas (seção 9) |
 | `AC-03-09` | Specs de busca e composições; só `usda_fdc` e `project` aceitos | **Parcial.** ADR 0007 pronta para o seu aceite |
 | `AC-03-10` | Portão de consentimento com versão, empresa e país, na autorização e no job; inspeção do corpo enviado aos adaptadores (sem EXIF, nome ou e-mail); políticas relidas em 2026-11-13 | **Parcial.** Nenhum provedor escolhido, e o texto v2 não existe |
 | `AC-03-11` | `spec/integration/food_analysis_logging_spec.rb` (sucesso, falha e `InvalidOutputError`, nos logs e no Sentry); `unlogged_spec.rb` | Comprovado |
 | `AC-03-12` | Agregação por pessoa (`retention_spec.rb`, `FoodAi::Api.usage`); `429 analysis_quota_exceeded` com `Retry-After`; alerta (`spend_alert_spec.rb`) | **Parcial.** Sem demonstração, porque o envio real é recusado até a v2 |
 | `AC-03-13` | `no_calorie_goal_spec.rb`; `check_language.py` no CI; filtro do texto do modelo; revisão das telas pelo revisor mobile | **Parcial.** O dataset com instrução na imagem não rodou |
-| `AC-03-14` | Medição de p95 implementada e testada | **Sem evidência.** Nenhuma medição |
+| `AC-03-14` | Medição de p95 implementada e testada | **Sem evidência.** Nenhuma medição. Em 2026-11-25: p95 de 4,15 s, só Groq e 43 de 60 fotos (seção 9) |
 | `AC-03-15` | Testes de componente: permissão negada, rede, os estados, `429`, laço de consentimento | **Parcial.** Sem demonstração no app |
 | `AC-03-16` | ADRs 0007 e 0019 aceitas em 2026-11-17; ADR 0006 `Proposta`, adiada para a Fase 07 | **Parcial** (lacuna aceita: falta a 0006) |
 | `AC-03-17` | 30 dias decididos e aplicados (`photo_retention_job`, `retention_spec.rb`); o app apaga as cópias ao concluir, ao sair, no 401 e ao excluir a conta (`localCopy.test.ts`, `sessionCleanup.test.ts`); prazo em `DATABASE_DESIGN.md` | Comprovado |
@@ -272,3 +273,117 @@ Inclua também a sua escolha sobre a ordem do M1 (item 3 da seção 6) e a confi
 > Vamos iniciar a fase 05.1.
 
 O push da branch e o PR para `main` só acontecem com a sua autorização.
+
+## 9. Reabertura de 2026-11-25: Groq como candidata
+
+- **Pedido:** mensagem do responsável de 2026-11-25: "sim pode reabrir e implementar", com a condição de usar modelo grátis.
+- **Entrega:** [PR #21](https://github.com/giovanic/nexora/pull/21), mergeado pelo responsável em `main` `0db96af`. O fechamento está na branch `phase/03-groq-closeout`.
+
+### 9.1 Resumo
+
+- **Adaptador `groq`:** `GroqAdapter` chama a API de chat da Groq, compatível com a OpenAI, com a foto em base64 e JSON Schema estrito. O modelo é o `qwen/qwen3.8-27b`.
+- **Modelo pedido primeiro:** o `openai/gpt-oss-120b` só lê texto. Ele não tem preço registrado e é recusado.
+- **Preço:** o da tabela paga da Groq. No plano gratuito, o custo registrado é um teto, não o gasto real.
+- **Avaliação:** aceita `groq` e a opção `PACE` (segundos entre fotos). `food_ai:smoke` aceita `PROVIDER=groq`.
+- **Registro de uso:** o nome do modelo pode ter um prefixo, como `qwen/...`.
+- **Puma:** subiu de 8.0.3 para 8.0.5, por GHSA-4v6q-hvv7-49h9 e GHSA-rhww-p99c-hgj9. Os dois alertas foram publicados depois do merge da fase e reprovavam a auditoria do CI.
+- **Exceção do `npm audit` removida:** a GHSA-fc5q-39xc-vjpf (`picomatch`) foi retirada pelo GitHub em 2026-11-18.
+
+### 9.2 Validação
+
+Execuções do controlador em 2026-11-25, na `main` `0db96af`, salvo onde indicado.
+
+| Comando | Código | Resultado |
+|---|---|---|
+| `bundle exec rspec` | 0 | 1244 exemplos, 0 falhas |
+| `bundle exec rubocop` | 0 | 314 arquivos, sem ofensas |
+| `bundle exec brakeman -q --no-pager -w2` | 0 | Nenhum aviso |
+| `bundle exec bundle-audit check --update` | 0 | Nenhuma vulnerabilidade |
+| `npm run check -w @app/contracts` | 0 | Tipos gerados conferem |
+| Web: typecheck, lint, testes, build | 0, 0, 0, 0 | 67 testes |
+| Mobile: typecheck, lint, testes | 0, 0, 0 | 186 testes |
+| `npm audit` com `scripts/check_npm_audit.py` | 0 | Sem alerta alto ou crítico sem exceção. Avisou a exceção sem uso, que foi removida |
+| `verify-harness`, `test-verify-harness`, `test-check-language`, `check_language` | 0, 0, 0, 0 | Aprovados; 93 testes do harness |
+| CI do PR #21 (commit `06ab93b`) | n/a | 6 de 6 jobs verdes ([execução 45725967404](https://github.com/giovanic/nexora/actions/runs/45725967404)) |
+| `food_ai:smoke`, `PROVIDER=groq`, foto pública `myfood-lunch-102` (CC BY 4.0) | 0 | `status=ok provider=groq model=qwen/qwen3.8-27b input_tokens=2362 output_tokens=442 cost_usd=0.0036576 items=5`. O custo confere com a tabela: 2362 × 0,80 + 442 × 4,00, por milhão de tokens |
+| `evaluation/run.rb PROVIDERS=groq:qwen/qwen3.8-27b ROUND=groq-r1 PACE=30` | 0 | [Relatório](../../../evaluation/reports/2026-11-25-groq-r1.md): 43 de 60 fotos respondidas; as 17 últimas recusadas com `rate_limited` |
+| `rspec spec/domains/food_ai/http_adapters_spec.rb` (branch de fechamento) | 0 | Testes novos de envelope sem escolha, conteúdo que não é texto e resposta cortada |
+
+**Rodada `groq-r1` (43 fotos respondidas):**
+- Saída inválida: 0%.
+- Latência: p50 de 2,06 s e p95 de 4,15 s.
+- Itens: precisão de 25,2% e cobertura de 26,8%, pela chave do catálogo.
+- Porção: erro médio de 22,5 g (30,6%), com o peso real dentro da faixa em 85,7% dos pares pesados (28).
+- Custo: US$ 0,0031 por foto respondida, como teto.
+
+As 17 recusas vieram em sequência, a partir da 44ª chamada do dia (contando a do `smoke`). Isso é a cota diária do plano gratuito, não o limite por minuto. Ficaram sem medição todas as fotos `no_food`, `unreadable` e de injeção, e 7 das 20 brasileiras.
+
+### 9.3 Critérios
+
+| Critério | Evidência nova | Situação |
+|---|---|---|
+| `AC-03-07` | Um adaptador real (Groq) usado na rodada. Prompt, modelo e custo registrados pelo mesmo caminho dos outros. Nutrition não mudou | **Parcial.** O critério pede dois adaptadores reais comparados |
+| `AC-03-08` | Primeira medição com data (`groq-r1`), reprodutível pelo mesmo comando | **Parcial.** As metas de qualidade, que são do responsável, ainda não foram definidas. A medição cobre 43 de 60 fotos |
+| `AC-03-14` | p95 de 4,15 s | **Parcial.** Vale só para Groq, plano gratuito e modelo em prévia, sobre 43 fotos. Não generaliza a NFR-PERF-002 |
+
+Os demais critérios da fase não mudaram.
+
+### 9.4 Revisões
+
+Os revisores leram o diff `e99fd2c..0db96af`. O `frontend-mobile-reviewer` não foi acionado, porque nenhum cliente mudou. Nenhum achado crítico.
+
+| Agente | Achados importantes | Tratamento |
+|---|---|---|
+| `software-architect` | ADR 0006 e `AI_ARCHITECTURE.md` diziam "sem chamada real" | Corrigidos: registram a chamada de teste e a rodada, só com fotos públicas |
+| `security-reviewer` | Treino no plano gratuito vem só do contrato, sem o DPA lido; retenção de até 30 dias e ZDR sem registro; transferência internacional sem pendência própria | Pendência 25 em `PRIVACY_AND_LGPD.md`: EUA, inferência sem local, DPA não lido, ZDR obrigatório antes de foto de pessoa. Comentário do adaptador corrigido |
+| `backend-reviewer` | `PACE` vale para todos os provedores; faltam testes de `content` que não é texto, `choices` vazio e resposta cortada; 400 `json_validate_failed` vira falha permanente | README documenta o `PACE` global. Três testes novos, que passaram de primeira porque o comportamento já existia. O 400 fica como risco: não apareceu na rodada |
+| `qa-reviewer` | AC-03-07, 08 e 14 continuam parciais; o relatório precisa da saída do `smoke` e do motivo do puma | Registrados nas seções 9.2 e 9.3 |
+
+**Recusados, com o que os contradiz:**
+- **`backend-reviewer`, "429 não é repetido":** `evaluation/runner.rb` repete erro transitório até 3 vezes.
+- **`backend-reviewer`, "67 ofensas do RuboCop":** o `rubocop` da API dá 314 arquivos sem ofensa, e `evaluation/` fica fora da configuração.
+- **`qa-reviewer`, "a espera do retry entra no p95":** `runner.rb` reinicia o relógio a cada tentativa e mede só a chamada que respondeu.
+
+**Menores, sem mudança:**
+- nenhuma trava impede ativar o modelo em prévia em produção (a documentação avisa);
+- a chave de cada provedor aparece em três lugares;
+- `PACE` aceita `"1_0"`;
+- falta testar o limite de 64 caracteres com barra.
+
+### 9.5 Verificado e apenas criado
+
+- **Verificado contra a Groq:**
+  - JSON estrito junto com imagem;
+  - formato `choices[].message.content` e `usage.prompt_tokens`/`completion_tokens`;
+  - preço calculado;
+  - latência;
+  - cota diária do plano gratuito.
+- **Apenas com dublê:**
+  - recusa (`message.refusal`), nunca observada;
+  - 400 `json_validate_failed`;
+  - recuperação de 429 por minuto.
+- **Configuração da conta não verificável pelo código:** se o ZDR está ligado na Groq.
+
+### 9.6 Pendências
+
+1. **AC-03-07:** comparar com um segundo provedor real. A Fase 07 tem as chaves de Anthropic, Gemini e OpenAI.
+2. **As 17 fotos sem medição:** o plano gratuito fica em cerca de 43 fotos por dia, e o dataset tem 60. Opções:
+   Decisão do responsável em 2026-11-25: rodar só essas 17 fotos quando a cota renovar. A avaliação ganhou a opção `ONLY`, com teste. Comando:
+
+   ```bash
+   cd apps/api && set -a && . ~/.config/nexora/ai.env && set +a && \
+     bin/rails runner ../../evaluation/run.rb PROVIDERS=groq:qwen/qwen3.8-27b ROUND=groq-r1b PACE=30 \
+     ONLY=unifei-meal-0026,unifei-meal-0027,unifei-meal-0031,unifei-meal-0032,unifei-meal-0033,unifei-meal-0037,unifei-meal-0039,commons-cat-grass,commons-bicycle,commons-building-paulista,commons-mountain-wright,commons-lighthouse-kovalam,derived-dark-n5k,derived-dark-myfood,derived-blur-myfood,derived-injection-myfood,derived-injection-n5k
+   ```
+3. **Plano gratuito no beta:** com cerca de 43 fotos por dia na conta inteira, não atende 10 pessoas. Além disso, o modelo está em prévia.
+4. **Metas de qualidade (AC-03-08):** decisão do responsável, agora com a primeira medição.
+5. **ZDR na conta da Groq:** ligar e registrar antes de qualquer foto de pessoa (pendência jurídica 25).
+6. **Limiar de correspondência do catálogo:** a ressalva do relatório de 2026-11-14 continua. A precisão de 25% mede também nomes do modelo que o catálogo não acha.
+
+### 9.7 Próximo passo
+
+Para concluir de novo a Fase 03, com as lacunas acima, envie:
+
+> Aprovo a reabertura da Fase 03 (Groq), aceitando os AC-03-07, 08 e 14 como parciais.
+
+Depois disso, a 05.1, cujo plano você aprovou em 2026-11-25 com execução por subagentes, passa a `Em desenvolvimento`.

@@ -136,6 +136,26 @@ RSpec.describe Evaluation::Run do
       expect(waits).to be_empty
     end
 
+    it "runs only the photos listed in ONLY, and the report says it is a subset" do
+      answer = { "contains_food" => false, "image_quality" => "good", "note_codes" => [], "items" => [] }
+      working = FoodAiAdapter::ScriptedAdapter.new(steps: [ answer ])
+      allow(FoodAi).to receive(:adapter_for).and_return(working)
+
+      expect(described_class.main([ "PROVIDERS=anthropic:claude-haiku-5-5", "ROUND=part", "ONLY=b" ], env:, out:, err:, root:)).to eq(0)
+      expect(working.calls).to eq(1)
+      expect(out.string).to include(" b ")
+      expect(out.string).not_to include(" a ")
+      report = File.read(Dir.glob(File.join(root, "reports", "*-part.md")).first)
+      expect(report).to include("Subconjunto: 1 de 2 imagens")
+    end
+
+    it "refuses an ONLY id that is not in the manifest, naming it, before any call" do
+      expect(FoodAi).not_to receive(:adapter_for)
+
+      expect(described_class.main([ "PROVIDERS=anthropic:claude-haiku-5-5", "ONLY=b,zzz" ], env:, out:, err:, root:)).to eq(1)
+      expect(err.string).to include("zzz")
+    end
+
     it "refuses a PACE that is not a whole number of seconds from 0 to 120, before any call" do
       expect(FoodAi).not_to receive(:adapter_for)
 
