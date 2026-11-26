@@ -52,7 +52,7 @@ O passo 4 acontece **no job, antes da IA** (`FoodAi::NormalizePhoto`, chamado po
 
 ## Interface do provedor
 
-Contrato do adaptador (`FoodAi::Adapters::ProviderAdapter`, em `apps/api/app/domains/food_ai/adapters/`). Implementações: `AnthropicAdapter`, `GeminiAdapter`, `OpenaiAdapter`, `GroqAdapter` (acrescentado em 2026-11-25) e `FakeAdapter` (dublê da suíte). Na Fase 03 os três adaptadores reais só foram testados com dublê de transporte: nenhum rodou contra o provedor, porque as chaves ficam para a Fase 07.
+Contrato do adaptador (`FoodAi::Adapters::ProviderAdapter`, em `apps/api/app/domains/food_ai/adapters/`). Implementações: `AnthropicAdapter`, `GeminiAdapter`, `OpenaiAdapter`, `GroqAdapter` (acrescentado em 2026-11-25) e `FakeAdapter` (dublê da suíte). Na Fase 03 os três primeiros adaptadores reais só foram testados com dublê de transporte: nenhum rodou contra o provedor, porque as chaves ficam para a Fase 07. O `GroqAdapter` rodou contra a Groq em 2026-11-25, com a chave do responsável e só com fotos públicas do dataset licenciado: uma chamada de teste (`food_ai:smoke`) e a rodada de avaliação `groq-r1`.
 
 ```ruby
 module FoodAi
