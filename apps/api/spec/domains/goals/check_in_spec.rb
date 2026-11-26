@@ -148,6 +148,17 @@ RSpec.describe "Goals: manual check-in" do
                                                                        details: [ { field: "local_date", code: "outside_window" } ])
   end
 
+  it "follows the local day, not UTC, when they disagree" do
+    zone("America/Sao_Paulo")
+    Goals::Goal.find(goal.id).update!(starts_on: Date.new(2026, 11, 10))
+
+    travel_to(Time.utc(2026, 11, 18, 2, 5)) # 23:05 on the 17th in Sao Paulo: local window 16..17, UTC window 17..18
+
+    expect(check_in(goal, Date.new(2026, 11, 16))).to have_attributes(done: true)
+    expect(check_in(goal, Date.new(2026, 11, 18))).to have_attributes(code: "validation_failed",
+                                                                       details: [ { field: "local_date", code: "outside_window" } ])
+  end
+
   it "the person changing time zone between check-ins" do
     Goals::Goal.find(goal.id).update!(starts_on: Date.new(2026, 11, 10))
     travel_to(Time.utc(2026, 11, 17, 22, 0))
@@ -163,18 +174,18 @@ RSpec.describe "Goals: manual check-in" do
 
   it "re-evaluating a person's recorded days gives the same results" do
     Goals::Goal.find(goal.id).update!(starts_on: yesterday)
-    meal = Goals::GoalCheckIn.create!(goal_id: goal.id, user_id:, local_date: yesterday, source: "food_entry", source_ref: SecureRandom.uuid,
-                                      checked_at: Time.current)
-    steps = [ [ :check_in, today ], [ :check_in, yesterday ], [ :uncheck, today ], [ :uncheck, yesterday ], [ :check_in, today ], [ :check_in, today ] ]
-    recorded = {}
-    steps.each { |action, date| recorded[date] = Goals::Api.public_send(action, user_id:, goal_id: goal.id, local_date: date).done }
+    steps = [ [ :check_in, today ], [ :check_in, yesterday ], [ :uncheck, today ], [ :check_in, today ], [ :check_in, today ], [ :uncheck, yesterday ],
+              [ :uncheck, today ], [ :check_in, yesterday ] ]
+    finals = {}
 
-    rows = Goals::GoalCheckIn.where(goal_id: goal.id).to_a
-    expect(meal).to be_persisted
-    recorded.each do |date, done|
+    steps.each do |action, date|
+      done = Goals::Api.public_send(action, user_id:, goal_id: goal.id, local_date: date).done
+      rows = Goals::GoalCheckIn.where(goal_id: goal.id).to_a
       expect(Goals::EvaluateDay.call(rule_version: Goals::Rules::CURRENT, local_date: date, check_ins: rows)).to eq(done)
+      finals[date] = done
     end
-    expect(recorded).to eq(today => true, yesterday => true)
+
+    expect(finals).to eq(today => false, yesterday => true)
   end
 
   it "events carry only identifiers and tokens" do

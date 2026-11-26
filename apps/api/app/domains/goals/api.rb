@@ -13,7 +13,7 @@ module Goals
       def ok? = false
     end
 
-    # sources: the check-in sources of the day, ordered and without repeats (manual, food_entry).
+    # sources: the check-in sources of the day, in alphabetical order and without repeats (food_entry, manual).
     DayInfo = Data.define(:goal_id, :local_date, :done, :sources) do
       def ok? = true
     end

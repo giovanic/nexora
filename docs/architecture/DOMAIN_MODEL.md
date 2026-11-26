@@ -133,8 +133,8 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 ### 8. Goals
 
 - **Responsabilidade:** metas de hábito, check-ins, regras de conclusão, planejamento semanal e recuperação.
-- **Modelos:** `Goal`, `GoalCheckIn`, `WeeklyPlan`.
-- **Serviços:** `CreateGoal`, `CheckIn`, `EvaluateGoal`, `PlanWeek`.
+- **Modelos:** `Goal`, `GoalCheckIn`, `WeeklyPlan` (`WeeklyPlan` na Fase 05.2).
+- **Serviços:** `CreateGoal`, `ChangeStatus`, `DeleteGoal`, `CheckIn`, `Uncheck`, `RecordDay`, `EvaluateDay` e `PlanWeek` (`PlanWeek` na Fase 05.2).
 - **Publica:** `goal.created`, `goal.progressed`, `goal.completed`, `goal.uncompleted`, `goal.deleted`, `recovery_day.planned`, `recovery_day.logged`.
 - **Consome:** `food_entry.confirmed`, `food_entry.deleted`, `activity.imported`, `activity.deleted`, `sport_profile.changed`.
 - **Permitido:** API pública de User Profile para sugestão de metas.
@@ -194,7 +194,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 | `food_analysis.completed` | Food AI | `analysis_id`, `food_entry_id`, `outcome` (`analyzed`, `no_food`, `unreadable`, `failed`, `cancelled`), `error_code` (itens e porções ficam na API de Food AI) | Nutrition |
 | `food_entry.confirmed` | Nutrition | `food_entry_id`, data local. Publicado na Fase 03; Goals passa a consumir na Fase 05.1 | Goals, Missions, Gamification, Progress & Analytics (Fases 05, 06 e 08) |
 | `food_entry.corrected` | Nutrition | `food_entry_id` | Progress & Analytics. **Não publicado na Fase 03**, começa na Fase 08 |
-| `food_entry.deleted` | Nutrition | `food_entry_id`, `photo_id`. Publicado na Fase 03 | Food AI (hoje o único), Goals, Gamification, Progress & Analytics |
+| `food_entry.deleted` | Nutrition | `food_entry_id`, `photo_id`. Publicado na Fase 03 | Food AI (consumidor registrado), Goals (consumidor na Fase 05.1), Gamification, Progress & Analytics |
 | `activity.imported` / `activity.updated` | Activities | `activity_id`, tipo, data local, origem, `backfill` | Goals, Missions, Gamification, Progress & Analytics |
 | `activity.deleted` | Activities | `activity_id` | Goals, Gamification, Progress & Analytics |
 | `integration.connected` / `integration.disconnected` | Strava Integration | provedor | Progress & Analytics |

@@ -11,43 +11,47 @@ RSpec.describe "Goals check-in concurrency" do
 
   after { ActiveRecord::Base.connection.execute("TRUNCATE users, goals, goal_check_ins, outbox_events, audit_events CASCADE") }
 
-  def together(*blocks)
-    gate = Queue.new
-    threads = blocks.map do |block|
-      Thread.new do
-        ActiveRecord::Base.connection_pool.with_connection do
-          gate.pop
-          block.call
+  def completed = Shared::Outbox::Event.where(name: "goal.completed").count
+
+  # The first call holds its transaction open inside RecordDay until the second has started and had time to block.
+  # Without the goal lock the second one runs meanwhile, both see "not done" and two goal.completed are published.
+  def overlapping(first, second)
+    started = Queue.new
+    release = Queue.new
+    a = Thread.new { ActiveRecord::Base.connection_pool.with_connection { first.call(started, release) } }
+    started.pop
+    b = Thread.new { ActiveRecord::Base.connection_pool.with_connection { second.call } }
+    sleep 0.5
+    release << true
+    [ a.value, b.value ]
+  end
+
+  def holding(date, check_in_attrs)
+    lambda do |started, release|
+      Goals::Goal.transaction do
+        record = Goals::Goal.find(goal.id)
+        Goals::RecordDay.call(goal: record, local_date: date) do
+          started << true
+          release.pop
+          Goals::GoalCheckIn.insert_all([ { goal_id: record.id, user_id: record.user_id, local_date: date, checked_at: Time.current }.merge(check_in_attrs) ])
         end
       end
     end
-    blocks.size.times { gate << true }
-    threads.map(&:value)
   end
 
-  def completed = Shared::Outbox::Event.where(name: "goal.completed").count
-
   it "two check-ins on the same day give one check-in and one goal.completed" do
-    results = together(*Array.new(2) { -> { Goals::Api.check_in(user_id: user.id, goal_id: goal.id, local_date: today) } })
+    date = today
+    results = overlapping(holding(date, source: "manual"), -> { Goals::Api.check_in(user_id: user.id, goal_id: goal.id, local_date: date) })
 
-    expect(results).to all(be_ok)
-    expect(results.map(&:done)).to all(be(true))
+    expect(results.last).to be_ok
+    expect(results.last.done).to be(true)
     expect(Goals::GoalCheckIn.where(goal_id: goal.id, source: "manual").count).to eq(1)
     expect(completed).to eq(1)
   end
 
   it "a check-in together with a meal check-in gives one goal.completed" do
-    meal = lambda do
-      Goals::Goal.transaction do
-        record = Goals::Goal.find(goal.id)
-        Goals::RecordDay.call(goal: record, local_date: today) do
-          Goals::GoalCheckIn.create!(goal_id: record.id, user_id: record.user_id, local_date: today, source: "food_entry",
-                                     source_ref: SecureRandom.uuid, checked_at: Time.current)
-        end
-      end
-    end
-
-    together(-> { Goals::Api.check_in(user_id: user.id, goal_id: goal.id, local_date: today) }, meal)
+    date = today
+    overlapping(holding(date, source: "food_entry", source_ref: SecureRandom.uuid), -> { Goals::Api.check_in(user_id: user.id, goal_id: goal.id, local_date: date) })
 
     expect(Goals::GoalCheckIn.where(goal_id: goal.id).pluck(:source).sort).to eq(%w[food_entry manual])
     expect(completed).to eq(1)
