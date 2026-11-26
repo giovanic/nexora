@@ -1,9 +1,10 @@
 # Evaluation of the Food AI pipeline on the licensed dataset. Costs money with real providers: never run by the suite.
 #
-#   cd apps/api && bin/rails runner ../../evaluation/run.rb PROVIDERS=anthropic:<model>,gemini:<model>,openai:<model> [ROUND=r1]
+#   cd apps/api && bin/rails runner ../../evaluation/run.rb PROVIDERS=anthropic:<model>,gemini:<model>,openai:<model>,groq:<model> [ROUND=r1] [PACE=30]
 #   cd apps/api && bin/rails runner ../../evaluation/run.rb CATALOG_ONLY=1      (no provider, no network: the match rate only)
 #
-# Keys come from ANTHROPIC_API_KEY, GEMINI_API_KEY and OPENAI_API_KEY. Without the key of a listed provider the run
+# PACE: whole seconds (0 to 120) to wait between photos, for a plan with a low rate limit (Groq's free plan).
+# Keys come from ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY and GROQ_API_KEY. Without the key of a listed provider the run
 # stops before reading any image or calling anything, with status 1. Images come from EVALUATION_IMAGES_DIR (default
 # ~/.cache/nexora-evaluation), rebuilt by evaluation/fetch.rb. The report goes to evaluation/reports/AAAA-MM-DD-<round>.md.
 require "date"
@@ -17,7 +18,8 @@ require_relative "catalog_check"
 module Evaluation
   module Run
     ROOT = __dir__
-        EXPECTED_ENV = { "anthropic" => "ANTHROPIC_API_KEY", "gemini" => "GEMINI_API_KEY", "openai" => "OPENAI_API_KEY" }.freeze
+    EXPECTED_ENV = { "anthropic" => "ANTHROPIC_API_KEY", "gemini" => "GEMINI_API_KEY", "openai" => "OPENAI_API_KEY", "groq" => "GROQ_API_KEY" }.freeze
+    MAX_PACE = 120
 
     module_function
 
@@ -32,10 +34,10 @@ module Evaluation
 
     # nil when all is well, else the message (no key value, ever).
     def refusal(pairs, env: ENV)
-      return "PROVIDERS vazio. Uso: PROVIDERS=anthropic:<modelo>,gemini:<modelo>,openai:<modelo> (ou CATALOG_ONLY=1 para a etapa sem provedor)." if pairs.empty?
+      return "PROVIDERS vazio. Uso: PROVIDERS=anthropic:<modelo>,gemini:<modelo>,openai:<modelo>,groq:<modelo> (ou CATALOG_ONLY=1 para a etapa sem provedor)." if pairs.empty?
 
       pairs.each do |provider, model|
-        return "Provedor desconhecido: #{provider}. Use anthropic, gemini ou openai." unless EXPECTED_ENV.key?(provider)
+        return "Provedor desconhecido: #{provider}. Use anthropic, gemini, openai ou groq." unless EXPECTED_ENV.key?(provider)
         return "Falta o modelo de #{provider}. Formato: #{provider}:<modelo>." if model.to_s.empty?
         return "Falta a variável #{EXPECTED_ENV.fetch(provider)}: nenhuma chamada foi feita." if env[EXPECTED_ENV.fetch(provider)].to_s.strip.empty?
         return "Modelo sem preço registrado em FoodAi::Pricing: #{provider}:#{model}." unless FoodAi::Pricing::TABLE.key?([ provider, model ])
@@ -49,13 +51,23 @@ module Evaluation
       { version: manifest.fetch("dataset_version"), total: images.size, categories: }
     end
 
-    def main(argv, env: ENV, out: $stdout, err: $stderr, root: ROOT)
+    # Seconds to wait between photos: 0 without PACE, nil when PACE is not a whole number from 0 to MAX_PACE.
+    def pace_from(text)
+      return 0 if text.nil?
+
+      seconds = Integer(text, 10, exception: false)
+      seconds if seconds && seconds.between?(0, MAX_PACE)
+    end
+
+    def main(argv, env: ENV, out: $stdout, err: $stderr, root: ROOT, sleeper: Kernel.method(:sleep))
       options = parse(argv)
       catalog_only = options["CATALOG_ONLY"].to_s == "1"
       pairs = providers_from(options["PROVIDERS"])
+      pace = pace_from(options["PACE"])
       unless catalog_only
         message = refusal(pairs, env:)
         return fail_with(err, message) if message
+        return fail_with(err, "PACE deve ser um número inteiro de segundos, de 0 a #{MAX_PACE}.") unless pace
       end
       return fail_with(err, "O catálogo está vazio. Rode `bin/rails food_catalog:load`.") if !FoodCatalog::Api.loaded?
 
@@ -88,7 +100,8 @@ module Evaluation
         rescue FoodAi::PermanentProviderError => error
           return abort_round(err, label, error.code)
         end
-        results[label] = runner.images.map do |entry|
+        results[label] = runner.images.each_with_index.map do |entry, index|
+          sleeper.call(pace) if pace.positive? && index.positive?
           record = runner.evaluate(entry, adapter:)
           out.puts "#{label} #{record[:image]} #{record[:status]} #{record[:error]}".strip
           return abort_round(err, label, record[:error]) if record[:error] == "unauthorized"
