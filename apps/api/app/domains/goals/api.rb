@@ -3,7 +3,35 @@ module Goals
   module Api
     USER_DATA_TABLES = %w[goals goal_check_ins].freeze
 
+    # created: only from create_goal, false when the person already had a live goal of the type.
+    GoalInfo = Data.define(:id, :goal_type, :status, :starts_on, :ends_on, :done_today, :done_yesterday, :created) do
+      def initialize(id:, goal_type:, status:, starts_on:, ends_on:, done_today:, done_yesterday:, created: false) = super
+      def ok? = true
+    end
+    # code: validation_failed (details name the field and code) or goal_not_active.
+    Errors = Data.define(:code, :details) do
+      def ok? = false
+    end
+
     class << self
+      def goal_types = GoalType::ALL
+
+      # GoalInfo (created says whether it is new) or Errors validation_failed.
+      def create_goal(user_id:, goal_type:)
+        CreateGoal.call(user_id:, goal_type:)
+      end
+
+      # status: active, paused or ended. GoalInfo, :not_found (also another person's goal or a malformed id) or
+      # Errors: validation_failed, goal_not_active (an ended goal is final).
+      def change_status(user_id:, goal_id:, status:)
+        ChangeStatus.call(user_id:, goal_id:, status:)
+      end
+
+      # :deleted (the check-ins go with it) or :not_found.
+      def delete_goal(user_id:, goal_id:)
+        DeleteGoal.call(user_id:, goal_id:)
+      end
+
       def export_user_data(user_id)
         UserData.export(user_id)
       end
