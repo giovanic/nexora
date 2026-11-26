@@ -135,7 +135,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Responsabilidade:** metas de hábito, check-ins, regras de conclusão, planejamento semanal e recuperação.
 - **Modelos:** `Goal`, `GoalCheckIn`, `WeeklyPlan`.
 - **Serviços:** `CreateGoal`, `CheckIn`, `EvaluateGoal`, `PlanWeek`.
-- **Publica:** `goal.created`, `goal.progressed`, `goal.completed`, `goal.uncompleted`, `recovery_day.planned`, `recovery_day.logged`.
+- **Publica:** `goal.created`, `goal.progressed`, `goal.completed`, `goal.uncompleted`, `goal.deleted`, `recovery_day.planned`, `recovery_day.logged`.
 - **Consome:** `food_entry.confirmed`, `food_entry.deleted`, `activity.imported`, `activity.deleted`, `sport_profile.changed`.
 - **Permitido:** API pública de User Profile para sugestão de metas.
 - **Proibido:** tipos de meta baseados em calorias, déficit, peso ou compensação.
@@ -192,15 +192,17 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 | `sport_profile.changed` | User Profile | `sport_profile_id`, tipo da mudança (esporte e nível são dado de saúde: o consumidor lê pela `UserProfile::Api`) | Goals, Missions |
 | `food_entry.created` | Nutrition | `food_entry_id`, origem | Progress & Analytics. **Não publicado na Fase 03**, começa na Fase 08 |
 | `food_analysis.completed` | Food AI | `analysis_id`, `food_entry_id`, `outcome` (`analyzed`, `no_food`, `unreadable`, `failed`, `cancelled`), `error_code` (itens e porções ficam na API de Food AI) | Nutrition |
-| `food_entry.confirmed` | Nutrition | `food_entry_id`, data local. Publicado na Fase 03; sem consumidor ainda | Goals, Missions, Gamification, Progress & Analytics (Fases 05, 06 e 08) |
+| `food_entry.confirmed` | Nutrition | `food_entry_id`, data local. Publicado na Fase 03; Goals passa a consumir na Fase 05.1 | Goals, Missions, Gamification, Progress & Analytics (Fases 05, 06 e 08) |
 | `food_entry.corrected` | Nutrition | `food_entry_id` | Progress & Analytics. **Não publicado na Fase 03**, começa na Fase 08 |
 | `food_entry.deleted` | Nutrition | `food_entry_id`, `photo_id`. Publicado na Fase 03 | Food AI (hoje o único), Goals, Gamification, Progress & Analytics |
 | `activity.imported` / `activity.updated` | Activities | `activity_id`, tipo, data local, origem, `backfill` | Goals, Missions, Gamification, Progress & Analytics |
 | `activity.deleted` | Activities | `activity_id` | Goals, Gamification, Progress & Analytics |
 | `integration.connected` / `integration.disconnected` | Strava Integration | provedor | Progress & Analytics |
-| `goal.created` / `goal.progressed` | Goals | `goal_id`, tipo | Progress & Analytics |
-| `goal.completed` | Goals | `goal_id`, tipo, data local, `period_key` | Missions, Gamification, Progress & Analytics |
-| `goal.uncompleted` | Goals | `goal_id`, `period_key` | Gamification, Progress & Analytics |
+| `goal.created` | Goals | `goal_id`, `goal_type`. Publicado ao criar a meta, na mesma transação | Progress & Analytics |
+| `goal.progressed` | Goals | `goal_id`, tipo. Ainda não publicado | Progress & Analytics |
+| `goal.completed` | Goals | `goal_id`, `goal_type`, `local_date`, `period_key` (a data local em ISO), `rule_version`. Publicado só na passagem de dia não cumprido para cumprido | Missions, Gamification, Progress & Analytics |
+| `goal.uncompleted` | Goals | `goal_id`, `period_key`. Publicado só na passagem de cumprido para não cumprido (um check-in de refeição que resta mantém o dia cumprido, sem evento) | Gamification, Progress & Analytics |
+| `goal.deleted` | Goals | `goal_id`. Publicado ao apagar a meta, na mesma transação | Progress & Analytics |
 | `recovery_day.planned` | Goals | data local | Gamification |
 | `recovery_day.logged` | Goals | data local | Missions, Gamification, Progress & Analytics |
 | `mission.assigned` | Missions | `mission_id`, código da recompensa | Notifications |

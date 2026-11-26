@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Goals::EvaluateDay do
-  CheckIn = Data.define(:local_date, :source)
+  let(:check_in_class) { Data.define(:local_date, :source) }
 
   let(:day) { Date.new(2026, 11, 17) }
 
@@ -16,7 +16,7 @@ RSpec.describe Goals::EvaluateDay do
     "two food_entry on the day" => [ [ [ 0, "food_entry" ], [ 0, "food_entry" ] ], true ]
   }.each do |name, (rows, expected)|
     it "returns #{expected} for #{name}" do
-      check_ins = rows.map { |offset, source| CheckIn.new(local_date: day + offset, source:) }
+      check_ins = rows.map { |offset, source| check_in_class.new(local_date: day + offset, source:) }
       expect(evaluate(check_ins)).to be(expected)
     end
   end
@@ -24,7 +24,7 @@ RSpec.describe Goals::EvaluateDay do
   it "is deterministic" do
     rng = Random.new(2026)
     200.times do
-      list = Array.new(rng.rand(0..5)) { CheckIn.new(local_date: day + rng.rand(-2..2), source: "manual") }
+      list = Array.new(rng.rand(0..5)) { check_in_class.new(local_date: day + rng.rand(-2..2), source: "manual") }
       expected = list.any? { _1.local_date == day }
       expect(evaluate(list)).to be(expected)
       expect(evaluate(list)).to be(expected)

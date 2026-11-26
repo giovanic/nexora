@@ -13,6 +13,11 @@ module Goals
       def ok? = false
     end
 
+    # sources: the check-in sources of the day, ordered and without repeats (manual, food_entry).
+    DayInfo = Data.define(:goal_id, :local_date, :done, :sources) do
+      def ok? = true
+    end
+
     class << self
       def goal_types = GoalType::ALL
 
@@ -30,6 +35,17 @@ module Goals
       # :deleted (the check-ins go with it) or :not_found.
       def delete_goal(user_id:, goal_id:)
         DeleteGoal.call(user_id:, goal_id:)
+      end
+
+      # Marks the day done by hand, for today or yesterday (a String YYYY-MM-DD or a Date). DayInfo, :not_found or Errors:
+      # validation_failed (local_date: invalid, outside_window) or goal_not_active. Repeating it changes nothing.
+      def check_in(user_id:, goal_id:, local_date:)
+        CheckIn.call(user_id:, goal_id:, local_date:)
+      end
+
+      # Removes the manual check-in; one from a meal stays. Same results as check_in.
+      def uncheck(user_id:, goal_id:, local_date:)
+        Uncheck.call(user_id:, goal_id:, local_date:)
       end
 
       def export_user_data(user_id)
