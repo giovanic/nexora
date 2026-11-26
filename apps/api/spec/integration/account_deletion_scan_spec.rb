@@ -40,8 +40,8 @@ RSpec.describe "account deletion scan", :real_consumers do
   def column_name(column) = connection.quote_column_name(column)
 
   def user_tables
-    # food_photos first: the analyses point to it.
-    (Shared::DataRegistry.user_data_tables(connection) | (Shared::DataRegistry.registered_tables & connection.tables)).sort_by { |t| [ t == "food_photos" ? 0 : 1, t ] }
+    # food_photos and goals first: the analyses and the check-ins point to them.
+    (Shared::DataRegistry.user_data_tables(connection) | (Shared::DataRegistry.registered_tables & connection.tables)).sort_by { |t| [ %w[food_photos goals].include?(t) ? 0 : 1, t ] }
   end
 
   # A different value per row, so unique indexes do not refuse it.
@@ -64,6 +64,9 @@ RSpec.describe "account deletion scan", :real_consumers do
     "ai_usage_records" => { "provider" => "'fake'", "model" => "'fake-1'" },
     "food_items" => { "food_entry_id" => ->(user_id) { "(SELECT id FROM food_entries WHERE user_id = #{user_id} LIMIT 1)" },
                       "quantity_grams_min" => "1", "quantity_grams_likely" => "1", "quantity_grams_max" => "1" },
+    "goals" => { "goal_type" => "'log_meals'" },
+    "goal_check_ins" => { "goal_id" => ->(user_id) { "(SELECT id FROM goals WHERE user_id = #{user_id} LIMIT 1)" },
+                          "source" => "'food_entry'", "source_ref" => "gen_random_uuid()" },
     "food_analysis_results" => { "photo_id" => ->(user_id) { "(SELECT id FROM food_photos WHERE user_id = #{user_id} LIMIT 1)" } }
   }.freeze
 

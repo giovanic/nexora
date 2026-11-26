@@ -21,7 +21,7 @@ RSpec.describe "domain layout" do
       expect(status).to be_success, output
     ensure
       FileUtils.rm_f(file)
-      FileUtils.rmdir(directory) if directory
+      FileUtils.rmdir(directory) if directory && Dir.empty?(directory)
     end
   end
 end

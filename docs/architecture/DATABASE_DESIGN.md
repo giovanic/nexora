@@ -210,15 +210,24 @@ Registro bruto dos eventos recebidos e estado do processamento.
 
 ### `goals`
 
-- **Colunas:** `id`, `user_id` (FK), `goal_type`, `cadence` (`daily` ou `weekly`), `target`, `rule_version`, `status`, `starts_on`, `ends_on`.
-- **Constraints:** `goal_type` em lista fechada, que **não** contém calorias, déficit, peso ou compensação. `CHECK` garante isso no próprio banco.
-- **Índices:** `(user_id, status)`.
+Meta diária de hábito (etapa 05.1). `weekly` e `activity` entram na 05.2, com nova migração.
+
+- **Colunas:** `id`, `user_id` (FK para `users`), `goal_type`, `cadence` (padrão `daily`), `target` (inteiro, padrão 1), `rule_version` (`NOT NULL`, inicial `daily_any_v1`), `status` (`active`, `paused` ou `ended`; padrão `active`), `starts_on` (data local da criação), `ends_on` (nulo até encerrar), `paused_at` (nulo), `created_at`, `updated_at`.
+- **Constraints (`CHECK`, no próprio banco):**
+  - `goals_goal_type_allowed`: `goal_type` na lista fechada `log_meals`, `include_fruits_vegetables`, `drink_water`, `sleep_routine`, `planned_workout`, que **não** contém calorias, déficit, peso, jejum ou compensação;
+  - `goals_cadence_daily` (`cadence = 'daily'`) e `goals_target_one` (`target = 1`);
+  - `goals_status_known`;
+  - `goals_ended_has_end`: `status <> 'ended' OR ends_on IS NOT NULL`.
+- **Índices:** único parcial em `(user_id, goal_type)` com `status IN ('active','paused')` (uma meta viva por tipo; depois de encerrada, a pessoa pode criar de novo); `(user_id, status)` para listar as metas da pessoa.
 
 ### `goal_check_ins`
 
-- **Colunas:** `id`, `goal_id` (FK), `user_id`, `local_date`, `source` (`manual`, `activity`, `food_entry`), `source_ref`, `checked_at`.
-- **Constraints:** único em `(goal_id, local_date, source, source_ref)`; check-in manual é único por `(goal_id, local_date)`.
-- **Índices:** `(user_id, local_date DESC)`.
+Um dia marcado numa meta. Sem tabela de "dias cumpridos": o estado do dia é calculado.
+
+- **Colunas:** `id`, `goal_id` (FK, `ON DELETE CASCADE`), `user_id` (FK para `users`), `local_date`, `source` (`manual` ou `food_entry`), `source_ref` (UUID nulo; é o `food_entry_id` quando a fonte é `food_entry`, sem chave estrangeira, porque domínios não se ligam por tabela), `checked_at`, `created_at`, `updated_at`.
+- **Constraints:** `goal_check_ins_source_known`; `goal_check_ins_ref_matches_source`: `(source = 'manual') = (source_ref IS NULL)`.
+- **Índices:** único parcial em `(goal_id, local_date)` com `source = 'manual'` (um check-in manual por meta e dia); único parcial em `(goal_id, source, source_ref)` com `source_ref IS NOT NULL` (uma refeição gera no máximo um check-in por meta, mesmo em reprocessamento); `(user_id, local_date DESC)` e `(goal_id, local_date DESC)` para o histórico.
+- **Dados da pessoa:** `goals` e `goal_check_ins` entram na exportação e na exclusão de conta (contexto `goals` no `Shared::DataRegistry`). A exportação não traz `source_ref`, por ser referência interna a outro contexto. Apagar a meta apaga os check-ins em cascata.
 
 ### `weekly_plans`
 

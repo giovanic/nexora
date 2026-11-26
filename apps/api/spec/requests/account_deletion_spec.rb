@@ -49,6 +49,23 @@ RSpec.describe "account deletion", :identity, :real_consumers do
       expect(response).to have_http_status(:unauthorized)
     end
 
+    it "account deletion removes goals and check-ins" do
+      mobile_token(email: "bia@example.test")
+      other_id = Identity::User.find_by!(email: "bia@example.test").id
+      [ user_id, other_id ].each do |id|
+        goal = Goals::Goal.create!(user_id: id, goal_type: "log_meals", rule_version: "daily_any_v1", starts_on: Date.current)
+        Goals::GoalCheckIn.create!(goal:, user_id: id, local_date: Date.current, source: "manual", checked_at: Time.current)
+      end
+
+      delete_account
+      Identity::EraseAccountJob.new.perform(Identity::AccountDeletion.find_by!(user_id:).id)
+
+      expect(Goals::Goal.where(user_id:)).to be_empty
+      expect(Goals::GoalCheckIn.where(user_id:)).to be_empty
+      expect(Goals::Goal.where(user_id: other_id).count).to eq(1)
+      expect(Goals::GoalCheckIn.where(user_id: other_id).count).to eq(1)
+    end
+
     it "with the web cookie, forgets it" do
       sign_up(email: "bia@example.test", client: "web")
 

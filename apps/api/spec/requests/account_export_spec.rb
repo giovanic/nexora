@@ -64,6 +64,19 @@ RSpec.describe "account export", :identity, :real_consumers do
       expect_response_to_match_contract
     end
 
+    it "export includes goals" do
+      goal = Goals::Goal.create!(user_id:, goal_type: "drink_water", rule_version: "daily_any_v1", starts_on: Date.current)
+      Goals::GoalCheckIn.create!(goal:, user_id:, local_date: Date.current, source: "manual", checked_at: Time.current)
+
+      export
+
+      expect(response).to have_http_status(:ok)
+      exported = response.parsed_body.dig("goals", "goals")
+      expect(exported.map { |g| g["goal_type"] }).to eq([ "drink_water" ])
+      expect(exported.first["check_ins"].size).to eq(1)
+      expect(response.body).not_to include("source_ref")
+    end
+
     it "records an audit event without content" do
       export
 
