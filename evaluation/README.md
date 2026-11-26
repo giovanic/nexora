@@ -40,7 +40,9 @@ bin/rails runner ../../evaluation/run.rb PROVIDERS=anthropic:<modelo>,gemini:<mo
 bin/rails runner ../../evaluation/run.rb CATALOG_ONLY=1     # sem provedor e sem rede: só a correspondência com o catálogo
 ```
 
-As chaves vêm de `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` e `GROQ_API_KEY`. `PACE` espera esse número inteiro de segundos (0 a 120) entre uma foto e a seguinte, para caber no limite por minuto de um plano gratuito, como o da Groq (`groq:qwen/qwen3.8-27b`). Sem a chave de um provedor listado, o script sai com código 1 e uma mensagem clara, antes de ler imagem ou chamar qualquer coisa. Modelo sem preço em `FoodAi::Pricing` também é recusado. O relatório vai para `evaluation/reports/AAAA-MM-DD-<rodada>.md`.
+As chaves vêm de `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` e `GROQ_API_KEY`. `PACE` espera esse número inteiro de segundos (0 a 120) entre uma foto e a seguinte, para todos os provedores da rodada (rode a Groq em separado se os outros não precisarem da pausa), para caber no limite por minuto de um plano gratuito, como o da Groq (`groq:qwen/qwen3.8-27b`). Sem a chave de um provedor listado, o script sai com código 1 e uma mensagem clara, antes de ler imagem ou chamar qualquer coisa. Modelo sem preço em `FoodAi::Pricing` também é recusado. O relatório vai para `evaluation/reports/AAAA-MM-DD-<rodada>.md`.
+
+`ONLY=id1,id2` roda só essas imagens do `manifest.yml`, por exemplo as que a cota diária de um plano gratuito deixou de fora. Um id desconhecido para a rodada antes de qualquer chamada, e o relatório avisa que as métricas valem só para o subconjunto.
 
 Cada foto passa pelas peças reais do pipeline, sem gravar refeição, foto ou análise: `FoodAi::NormalizePhoto`, o adaptador (`FoodAi.adapter_for`), `FoodAi::ValidateOutput`, `FoodCatalog::Api.match` e `Nutrition::Api.estimate`. Erro transitório (timeout, 429, 5xx) tem até 3 tentativas; saída inválida **não** é repetida, para a taxa aparecer.
 

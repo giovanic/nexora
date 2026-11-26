@@ -1,8 +1,10 @@
 module FoodAi
   module Adapters
     # Groq's OpenAI-compatible Chat Completions with a strict json_schema (constrained decoding), image as a base64
-    # data URL. Groq does not train on inputs or outputs and, by default, does not retain them, except abuse or
-    # troubleshooting logs of up to 30 days (docs/architecture/EXTERNAL_SOURCES.md, "Provedores de IA", Groq).
+    # data URL. Groq's services agreement forbids training on inputs or outputs, free plan included. It does not
+    # retain inference data by default, but may log inputs and outputs for up to 30 days for troubleshooting or
+    # abuse unless the account opts out or turns on Zero Data Retention in Data Controls, an account setting this
+    # code cannot check (docs/architecture/EXTERNAL_SOURCES.md, "Provedores de IA", Groq).
     # Only vision models apply: Groq's openai/gpt-oss-120b reads text only, so it has no price and is refused.
     class GroqAdapter < HttpAdapter
       PROVIDER = "groq".freeze

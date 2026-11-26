@@ -16,6 +16,7 @@ module Evaluation
       [
         "# Avaliação do Food AI: #{date} (#{round})", "",
         "Prompt `#{prompt_version}`. Dataset v#{dataset[:version]}: #{dataset[:total]} imagens (#{dataset[:categories].map { |name, count| "#{name}: #{count}" }.join(', ')}).",
+        *(dataset[:subset_of] ? [ "Subconjunto: #{dataset[:total]} de #{dataset[:subset_of]} imagens (opção ONLY); as métricas valem só para estas fotos." ] : []),
         "Nenhuma imagem e nenhum texto escrito pelo modelo entra neste relatório: só códigos, contagens, gramas, segundos e dólares.", "",
         summary_section(summaries), latency_section(summaries), invalid_section(summaries, providers), images_section(providers),
         (catalog_section(catalog) if catalog), method_section

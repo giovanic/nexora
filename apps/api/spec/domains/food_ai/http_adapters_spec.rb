@@ -313,6 +313,28 @@ RSpec.describe "FoodAi HTTP adapters" do
 
     it_behaves_like "an http adapter", provider: "groq", model: "qwen/qwen3.8-27b", input_tokens: 2600, output_tokens: 380
 
+    it "no choice, or content that is not a string, is an invalid answer and never a crash" do
+      adapter = described_class.new(api_key: api_key, model: model, transport: transport)
+      usage = { prompt_tokens: 10, completion_tokens: 2 }
+      [ { choices: [], usage: usage },
+        { choices: [ { message: { content: [ { type: "text", text: JSON.generate(payload) } ] } } ], usage: usage },
+        { choices: [ { message: { content: { "contains_food" => true } } } ], usage: usage },
+        { choices: [ { message: { content: 42 } } ], usage: usage } ].each do |envelope|
+        transport.queue(reply(200, envelope))
+        expect { adapter.analyze(image: image, content_type: "image/jpeg", prompt: prompt, schema: schema) }
+          .to raise_error(FoodAi::InvalidOutputError) { |e| expect(e.code).to eq("not_an_object") }
+      end
+    end
+
+    it "an answer cut by the token limit is an invalid answer" do
+      adapter = described_class.new(api_key: api_key, model: model, transport: transport)
+      transport.queue(reply(200, { choices: [ { message: { content: JSON.generate(payload)[0, 40] }, finish_reason: "length" } ],
+                                   usage: { prompt_tokens: 2600, completion_tokens: 4096 } }))
+
+      expect { adapter.analyze(image: image, content_type: "image/jpeg", prompt: prompt, schema: schema) }
+        .to raise_error(FoodAi::InvalidOutputError) { |e| expect(e.code).to eq("not_an_object") }
+    end
+
     it "posts to the OpenAI-compatible chat completions with a bearer key, a data URL image and a strict schema" do
       described_class.new(api_key: api_key, model: model, transport: transport).tap { |_| transport.queue(ok_reply) }
                      .analyze(image: image, content_type: "image/jpeg", prompt: prompt, schema: schema)
