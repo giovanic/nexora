@@ -33,7 +33,7 @@ Executado em 2026-11-27 sobre o código final (`4c3732a`; o commit deste relató
 | `bundle exec brakeman -q --no-pager -w2` | 0 | Sem avisos |
 | `bundle exec bundle-audit check --update` | 0 | Sem vulnerabilidades |
 | `npm run check -w @app/contracts` | 0 | Contrato e tipos gerados em dia |
-| `npm audit --json` julgado por `scripts/check_npm_audit.py` | 0 | Só a exceção vigente GHSA-fc5q-39xc-vjpf (até 2026-12-17) |
+| `npm audit --json` julgado por `scripts/check_npm_audit.py` | 0 | Nenhum alerta alto ou crítico (31 moderados) e nenhuma exceção vigente: a do GHSA-fc5q-39xc-vjpf saiu no PR #22 |
 | `bash scripts/test-check-npm-audit.sh` | 0 | Verificador da auditoria testado |
 | Web: `typecheck`, `lint`, `test`, `build` | 0 | 67 testes |
 | Mobile: `typecheck`, `lint`, `test` | 0 | 28 suítes, 231 testes |
