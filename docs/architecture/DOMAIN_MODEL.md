@@ -189,7 +189,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 | `user.registered` | Identity & Access | `time_zone` | User Profile, Progress & Analytics |
 | `user.deletion_requested` | Identity & Access | vazio | nenhum hoje (a exclusão usa o registro de dados) |
 | `consent.granted` / `consent.revoked` | Identity & Access | finalidade, versão | User Profile (só `consent.revoked`), Food AI, Strava Integration, Progress & Analytics |
-| `sport_profile.changed` | User Profile | `sport_profile_id`, tipo da mudança (esporte e nível são dado de saúde: o consumidor lê pela `UserProfile::Api`) | Goals, Missions |
+| `sport_profile.changed` | User Profile | `sport_profile_id`, tipo da mudança (esporte e nível são dado de saúde: o consumidor lê pela `UserProfile::Api`) | Goals (a partir da 05.2), Missions |
 | `food_entry.created` | Nutrition | `food_entry_id`, origem | Progress & Analytics. **Não publicado na Fase 03**, começa na Fase 08 |
 | `food_analysis.completed` | Food AI | `analysis_id`, `food_entry_id`, `outcome` (`analyzed`, `no_food`, `unreadable`, `failed`, `cancelled`), `error_code` (itens e porções ficam na API de Food AI) | Nutrition |
 | `food_entry.confirmed` | Nutrition | `food_entry_id`, data local. Publicado na Fase 03; Goals passa a consumir na Fase 05.1 | Goals, Missions, Gamification, Progress & Analytics (Fases 05, 06 e 08) |
