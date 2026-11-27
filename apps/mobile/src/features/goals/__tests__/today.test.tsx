@@ -6,7 +6,7 @@ import { GoalsTodayScreen } from "../GoalsTodayScreen";
 const LIST = "GET /api/v1/goals";
 const CHECK = `POST /api/v1/goals/${MEALS_ID}/check_ins`;
 const UNCHECK = (date: string) => `DELETE /api/v1/goals/${MEALS_ID}/check_ins/${date}`;
-const handlers = () => ({ onNew: jest.fn(), onOpen: jest.fn() });
+const handlers = () => ({ onNew: jest.fn(), onOpen: jest.fn(), onHistory: jest.fn() });
 
 describe("GoalsTodayScreen", () => {
   it("shows today's goals and marks one done", async () => {
@@ -173,5 +173,14 @@ describe("GoalsTodayScreen", () => {
 
     await fireEvent.press(await screen.findByRole("link", { name: "Ver meta: Registrar as refeições do dia" }));
     expect(props.onOpen).toHaveBeenCalledWith(MEALS_ID);
+  });
+
+  it("opens the history", async () => {
+    const ctx = makeApi({ [LIST]: jsonResponse(200, goalList([goal()])) });
+    const props = handlers();
+    await render(<GoalsTodayScreen api={ctx.api} {...props} />);
+
+    await fireEvent.press(await screen.findByRole("link", { name: "Histórico" }));
+    expect(props.onHistory).toHaveBeenCalled();
   });
 });

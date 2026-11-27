@@ -93,4 +93,22 @@ describe("GoalDetailScreen", () => {
 
     expect(await screen.findByRole("button", { name: "Tentar de novo" })).toBeOnTheScreen();
   });
+
+  it("after ending, the history stays visible with only delete", async () => {
+    const ctx = makeApi({
+      [LIST]: jsonResponse(200, goalList([goal()])),
+      [HISTORY]: page([day(TODAY)]),
+      [PATCH]: jsonResponse(200, goal({ status: "ended", ends_on: TODAY })),
+    });
+    await render(<GoalDetailScreen api={ctx.api} {...props()} />);
+
+    await fireEvent.press(await screen.findByRole("button", { name: "Encerrar" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Sim, encerrar" }));
+
+    expect(await screen.findByText("Meta encerrada.")).toBeOnTheScreen();
+    expect(screen.getByText("26/11/2026")).toBeOnTheScreen();
+    expect(screen.queryByText(/Não encontramos esta meta/)).toBeNull();
+    for (const name of ["Pausar", "Retomar", "Encerrar"]) expect(screen.queryByRole("button", { name })).toBeNull();
+    expect(screen.getByRole("button", { name: "Apagar" })).toBeOnTheScreen();
+  });
 });

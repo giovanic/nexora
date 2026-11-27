@@ -18,6 +18,7 @@ export const goalTexts = {
   empty: "Escolha um hábito para acompanhar.",
   paused: "Pausada. Retome quando quiser.",
   ended: "Meta encerrada.",
+  endedMarker: "Encerrada",
   completedByMeal: "Cumprida pela refeição registrada.",
   confirmEnd: "Encerrar esta meta? O histórico continua disponível.",
   confirmDelete: "Apagar esta meta e o histórico dela? Isso não pode ser desfeito.",

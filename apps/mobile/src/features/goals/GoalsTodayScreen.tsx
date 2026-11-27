@@ -4,7 +4,7 @@ import type { Api, Failure, Goal, GoalList } from "../../shared/api";
 import { Body, Button, Choice, EmptyView, ErrorView, InfoText, LinkButton, LoadingView, Screen, Title } from "../../shared/ui";
 import { GOAL_TYPE_LABELS, goalErrorMessage, goalTexts, isGoalType } from "./goalMessages";
 
-type Props = { api: Api; onNew: () => void; onOpen: (goalId: string) => void };
+type Props = { api: Api; onNew: () => void; onOpen: (goalId: string) => void; onHistory: () => void };
 
 type State = { status: "loading" } | { status: "error"; error: Failure } | { status: "ready"; list: GoalList };
 type Day = "today" | "yesterday";
@@ -12,7 +12,7 @@ type Notice = { text: string; retry: (() => void) | null };
 
 // Everything shown comes from the API: the two dates, what is done and where it came from.
 // A tap changes nothing on screen until the answer arrives.
-export function GoalsTodayScreen({ api, onNew, onOpen }: Props) {
+export function GoalsTodayScreen({ api, onNew, onOpen, onHistory }: Props) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [day, setDay] = useState<Day>("today");
   const [busy, setBusy] = useState<string | null>(null);
@@ -116,6 +116,7 @@ export function GoalsTodayScreen({ api, onNew, onOpen }: Props) {
         </>
       )}
       <LinkButton label="Nova meta" onPress={onNew} />
+      <LinkButton label="Histórico" onPress={onHistory} />
     </Screen>
   );
 }
