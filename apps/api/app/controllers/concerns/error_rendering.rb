@@ -18,7 +18,8 @@ module ErrorRendering
     "entry_not_confirmable" => "Esta refeição ainda não pode ser confirmada. Espere a análise terminar ou adicione um item.",
     "entry_not_editable" => "Esta refeição ainda não pode ser alterada. Espere a análise terminar.",
     "analysis_quota_exceeded" => "Você chegou ao limite de fotos analisadas hoje. Tente de novo amanhã.",
-    "outdated_version" => "O texto deste consentimento foi atualizado. Leia a versão atual antes de aceitar."
+    "outdated_version" => "O texto deste consentimento foi atualizado. Leia a versão atual antes de aceitar.",
+    "goal_not_active" => "Esta meta não está ativa. Retome a meta para marcar o dia."
   }.freeze
 
   private

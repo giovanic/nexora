@@ -5,6 +5,6 @@ Rails.application.config.filter_parameters += [
   :code, :state, :authorization, :cookie, :session, :key, :url, :upload_url, :upload_headers,
   :name, :phone, :birth, :ip, :label,
   :photo, :image, :food, :term, :meal, :item, :nutrition, :calorie, :kcal, :portion, :grams, :carbs, :protein, :fat, :fiber, :sodium,
-  :weight, :sport, :sleep, :water, :goal, :activity, :strava, :athlete, :raw_response, :prompt,
+  :weight, :sport, :sleep, :water, :goal, :local_date, :cursor, :activity, :strava, :athlete, :raw_response, :prompt,
   :photo_key, :object_key, :upload_url, :"X-Amz-Signature", :"X-Amz-Credential", :"X-Amz-Security-Token"
 ]

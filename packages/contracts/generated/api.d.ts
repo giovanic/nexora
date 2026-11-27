@@ -607,6 +607,151 @@ export interface paths {
         patch: operations["correctFoodEntryItem"];
         trace?: never;
     };
+    "/api/v1/goal_types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The kinds of daily habit goal a person can create.
+         * @description A closed list of five habit types. There is no goal for calories, deficit, weight or compensating food
+         *     with exercise, and none can be created.
+         */
+        get: operations["listGoalTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The live goals (active and paused) with today and yesterday marked.
+         * @description today_local_date and yesterday_local_date are the person's local days, the only two the person can
+         *     mark. Active goals come first, then paused ones. done_today and done_yesterday say whether the day is
+         *     done, by hand or by a confirmed meal. There is no streak, total or percentage.
+         */
+        get: operations["listGoals"];
+        put?: never;
+        /**
+         * Creates a daily habit goal.
+         * @description Creating a type the person already has live (active or paused) answers 200 with the same goal. A type
+         *     outside the closed list answers 422 validation_failed with details code unsupported_goal_type, and no
+         *     goal is created. goal_type is a plain string in the request so the refusal comes from the domain.
+         */
+        post: operations["createGoal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Days the person completed a goal, newest first, by cursor.
+         * @description Only completed days are listed, ended goals included. goal_id narrows the list to one goal (another
+         *     person's or an unknown goal answers 404). limit goes from 1 to 100 (default 30); a limit outside that
+         *     range or a cursor that is not a next_cursor answers 422 validation_failed. No missed day is ever listed.
+         */
+        get: operations["listGoalHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reads one goal of the person, including an ended one.
+         * @description The only way to read an ended goal, which the list leaves out; it carries ends_on. Another person's or an
+         *     unknown goal answers 404.
+         */
+        get: operations["getGoal"];
+        put?: never;
+        post?: never;
+        /**
+         * Deletes a goal and its check-ins.
+         * @description Another person's or an unknown goal answers 404. It does not need the health_data consent: erasing a
+         *     goal stays possible after that consent is revoked.
+         */
+        delete: operations["deleteGoal"];
+        options?: never;
+        head?: never;
+        /**
+         * Pauses, resumes or ends a goal.
+         * @description status is active, paused or ended; any other value answers 422 validation_failed. An ended goal is
+         *     final: any change answers 409 goal_not_active. Another person's or an unknown goal answers 404.
+         */
+        patch: operations["changeGoalStatus"];
+        trace?: never;
+    };
+    "/api/v1/goals/{id}/check_ins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Marks a day of the goal as done by hand.
+         * @description local_date is today or yesterday in the person's time zone; another day answers 422 validation_failed
+         *     with details code outside_window (or invalid for a malformed date). Repeating it changes nothing. A goal
+         *     that is not active answers 409 goal_not_active. Another person's or an unknown goal answers 404.
+         */
+        post: operations["checkInGoal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/{id}/check_ins/{local_date}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Removes the manual check-in of a day.
+         * @description Same window and answers as checkInGoal. A check-in that came from a confirmed meal stays, so done can
+         *     remain true, with sources food_entry.
+         */
+        delete: operations["uncheckGoal"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -913,6 +1058,68 @@ export interface components {
         };
         /** @enum {string} */
         CheckResult: "ok" | "error";
+        /** @enum {string} */
+        GoalType: "log_meals" | "include_fruits_vegetables" | "drink_water" | "sleep_routine" | "planned_workout";
+        /** @enum {string} */
+        GoalStatus: "active" | "paused" | "ended";
+        /** @enum {string} */
+        GoalDaySource: "food_entry" | "manual";
+        GoalTypeList: {
+            goal_types: components["schemas"]["GoalType"][];
+        };
+        CreateGoalRequest: {
+            /** @description One of the GoalType values. Any other answers 422 unsupported_goal_type. */
+            goal_type: string;
+        };
+        ChangeGoalStatusRequest: {
+            /** @description One of the GoalStatus values. Any other answers 422. */
+            status: string;
+        };
+        CheckInRequest: {
+            /** @description YYYY-MM-DD, today or yesterday in the person's time zone. */
+            local_date: string;
+        };
+        Goal: {
+            /** Format: uuid */
+            id: string;
+            goal_type: components["schemas"]["GoalType"];
+            status: components["schemas"]["GoalStatus"];
+            /** Format: date */
+            starts_on: string;
+            /** Format: date */
+            ends_on: string | null;
+            done_today: boolean;
+            done_yesterday: boolean;
+        };
+        GoalList: {
+            /** Format: date */
+            today_local_date: string;
+            /** Format: date */
+            yesterday_local_date: string;
+            goals: components["schemas"]["Goal"][];
+        };
+        GoalDay: {
+            /** Format: uuid */
+            goal_id: string;
+            /** Format: date */
+            local_date: string;
+            done: boolean;
+            sources: components["schemas"]["GoalDaySource"][];
+        };
+        GoalHistoryDay: {
+            /** Format: uuid */
+            goal_id: string;
+            goal_type: components["schemas"]["GoalType"];
+            goal_status: components["schemas"]["GoalStatus"];
+            /** Format: date */
+            local_date: string;
+            sources: components["schemas"]["GoalDaySource"][];
+        };
+        GoalHistoryPage: {
+            items: components["schemas"]["GoalHistoryDay"][];
+            /** @description Opaque. Null on the last page. */
+            next_cursor: string | null;
+        };
         Error: {
             error: {
                 code: string;
@@ -1798,6 +2005,260 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FoodEntry"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    listGoalTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The goal types. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalTypeList"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    listGoals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The goals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalList"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    createGoal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGoalRequest"];
+            };
+        };
+        responses: {
+            /** @description The person already had this goal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Goal"];
+                };
+            };
+            /** @description The goal was created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Goal"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    listGoalHistory: {
+        parameters: {
+            query?: {
+                goal_id?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of completed days. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalHistoryPage"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    getGoal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The goal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Goal"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    deleteGoal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The goal is gone. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    changeGoalStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeGoalStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description The goal with its new status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Goal"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    checkInGoal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckInRequest"];
+            };
+        };
+        responses: {
+            /** @description The day of the goal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalDay"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            default: components["responses"]["Error"];
+        };
+    };
+    uncheckGoal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                local_date: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The day of the goal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalDay"];
                 };
             };
             401: components["responses"]["Error"];

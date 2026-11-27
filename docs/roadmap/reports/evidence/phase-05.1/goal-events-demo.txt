@@ -1,0 +1,8 @@
+goal.created | v1 | {"goal_id":"442d09d1-0051-4f16-a536-72fd3bf5e5b9","goal_type":"log_meals"} | publicado | 
+goal.created | v1 | {"goal_id":"15c5b697-64be-4ad1-bc4a-5cd077b99c97","goal_type":"drink_water"} | publicado | 
+goal.completed | v1 | {"goal_id":"15c5b697-64be-4ad1-bc4a-5cd077b99c97","goal_type":"drink_water","local_date":"2026-11-27","period_key":"2026-11-27","rule_version":"daily_any_v1"} | publicado | 
+goal.completed | v1 | {"goal_id":"15c5b697-64be-4ad1-bc4a-5cd077b99c97","goal_type":"drink_water","local_date":"2026-11-26","period_key":"2026-11-26","rule_version":"daily_any_v1"} | publicado | 
+goal.uncompleted | v1 | {"goal_id":"15c5b697-64be-4ad1-bc4a-5cd077b99c97","period_key":"2026-11-26"} | publicado | 
+goal.completed | v1 | {"goal_id":"442d09d1-0051-4f16-a536-72fd3bf5e5b9","goal_type":"log_meals","local_date":"2026-11-27","period_key":"2026-11-27","rule_version":"daily_any_v1"} | publicado | 
+goal.uncompleted | v1 | {"goal_id":"442d09d1-0051-4f16-a536-72fd3bf5e5b9","period_key":"2026-11-27"} | publicado | 
+goal.deleted | v1 | {"goal_id":"442d09d1-0051-4f16-a536-72fd3bf5e5b9"} | publicado | 

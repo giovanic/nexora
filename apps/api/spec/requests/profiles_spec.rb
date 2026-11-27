@@ -219,12 +219,12 @@ RSpec.describe "profile and sports", :identity, :real_consumers do
 
   describe "without health_data" do
     # Controller#action of every authenticated route that works without the
-    # health_data consent. Export, account deletion and the delete of a whole meal (right to erasure, LGPD art. 18) extend it.
+    # health_data consent. Export, account deletion and the delete of a whole meal or goal (right to erasure, LGPD art. 18) extend it.
     CONSENT_EXEMPT = %w[
       sessions#index sessions#create sessions#refresh sessions#destroy sessions#destroy_current
       consents#index consents#create consents#destroy consents#text
       accounts#export accounts#destroy
-      food_entries#destroy
+      food_entries#destroy goals#destroy
     ].freeze
     PUBLIC_CONTROLLERS = %w[api/v1/registrations api/v1/password_resets health].freeze
 
@@ -234,8 +234,16 @@ RSpec.describe "profile and sports", :identity, :real_consumers do
         next if route.verb.empty? || controller.nil? || !controller.start_with?("api/") && controller != "health"
         next if PUBLIC_CONTROLLERS.include?(controller)
 
-        [ route.verb, route.path.spec.to_s.delete_suffix("(.:format)").gsub(/:\w+/) { |name| name == ":purpose" ? "health_data" : SecureRandom.uuid },
+        [ route.verb, route.path.spec.to_s.delete_suffix("(.:format)").gsub(/:\w+/) { |name| path_value(name) },
           "#{controller.delete_prefix('api/v1/')}##{route.defaults[:action]}" ]
+      end
+    end
+
+    def path_value(name)
+      case name
+      when ":purpose" then "health_data"
+      when ":local_date" then Date.current.to_s
+      else SecureRandom.uuid
       end
     end
 

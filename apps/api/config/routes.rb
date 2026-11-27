@@ -38,6 +38,16 @@ Rails.application.routes.draw do
                                                      constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/, item_id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
       delete "food_entries/:id/items/:item_id", to: "food_entry_items#destroy",
                                                      constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/, item_id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
+      get "goal_types", to: "goal_types#index", format: false
+      get "goals", to: "goals#index", format: false
+      post "goals", to: "goals#create", format: false
+      get "goals/history", to: "goal_history#index", format: false
+      get "goals/:id", to: "goals#show", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
+      patch "goals/:id", to: "goals#update", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
+      delete "goals/:id", to: "goals#destroy", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
+      post "goals/:id/check_ins", to: "goal_check_ins#create", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
+      delete "goals/:id/check_ins/:local_date", to: "goal_check_ins#destroy",
+                                                constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/, local_date: /\d{4}-\d{2}-\d{2}/ }, format: false
     end
   end
 

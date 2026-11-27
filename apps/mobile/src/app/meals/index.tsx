@@ -18,6 +18,7 @@ export default function Camera() {
       onResult={(id) => router.push({ pathname: "/meals/[id]", params: { id } })}
       onManual={() => router.push("/meals/manual")}
       onHistory={() => router.push("/meals/history")}
+      onGoals={() => router.push("/goals")}
       onOpenSettings={() => router.push("/settings")}
       openDeviceSettings={() => void Linking.openSettings()}
     />

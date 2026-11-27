@@ -27,6 +27,14 @@ RSpec.describe Observability::FilteredPath do
     expect(described_class.call(request, "/api/v1/sessions/#{id}")).to eq("/api/v1/sessions/#{id}")
   end
 
+  it "hides the day of a check-in and keeps the goal id" do
+    id = SecureRandom.uuid
+    path = "/api/v1/goals/#{id}/check_ins/2026-11-17"
+    request = request_for(path, { controller: "api/v1/goal_check_ins", action: "destroy", id:, local_date: "2026-11-17" })
+
+    expect(described_class.call(request, path)).to eq("/api/v1/goals/#{id}/check_ins/[FILTERED]")
+  end
+
   it "keeps the path of a request that matched no route" do
     request = request_for("/nowhere", {})
 

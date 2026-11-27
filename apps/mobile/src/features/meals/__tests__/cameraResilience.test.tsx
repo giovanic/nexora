@@ -31,7 +31,7 @@ function setup(options: Options = {}) {
   files.seed("file:///cache/photo.jpg");
   const picker = fakePicker(options.pick ?? jpeg());
   const uploader = fakeUploader(options.uploads);
-  const handlers = { onResult: jest.fn(), onManual: jest.fn(), onHistory: jest.fn(), onOpenSettings: jest.fn(), openDeviceSettings: jest.fn() };
+  const handlers = { onResult: jest.fn(), onManual: jest.fn(), onHistory: jest.fn(), onGoals: jest.fn(), onOpenSettings: jest.fn(), openDeviceSettings: jest.fn() };
   const element = (
     <CameraScreen api={ctx.api} picker={picker} photos={createPendingPhotos(files.fs)} uploader={uploader} newId={options.newId ?? (() => "req-1")} {...handlers} />
   );

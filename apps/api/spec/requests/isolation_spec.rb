@@ -77,7 +77,9 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
       sports: UserProfile::SportProfile.where(user_id: a_id).order(:id).map(&:attributes),
       meals: Nutrition::FoodEntry.where(user_id: a_id).order(:id).map(&:attributes),
       meal_items: Nutrition::FoodItem.where(food_entry_id: Nutrition::FoodEntry.where(user_id: a_id).select(:id)).order(:id).map(&:attributes),
-      photos: FoodAi::FoodPhoto.where(user_id: a_id).count
+      photos: FoodAi::FoodPhoto.where(user_id: a_id).count,
+      goals: Goals::Goal.where(user_id: a_id).order(:id).map(&:attributes),
+      goal_check_ins: Goals::GoalCheckIn.where(user_id: a_id).order(:id).map(&:attributes)
     }
   end
 
@@ -223,6 +225,50 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
       expect(response).to have_http_status(:created)
       expect(Nutrition::FoodEntry.where(user_id: b_id).count).to eq(1)
     },
+    # B's goal types, list and history are B's: A's goal is in none of them.
+    "GET /api/v1/goal_types" => lambda {
+      get "/api/v1/goal_types", headers: b_headers
+      expect(response).to have_http_status(:ok)
+    },
+    "GET /api/v1/goals" => lambda {
+      get "/api/v1/goals", headers: b_headers
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["goals"]).to eq([])
+      expect(response.body).not_to include(a_goal.id)
+    },
+    "POST /api/v1/goals" => lambda {
+      post "/api/v1/goals", params: { goal_type: "drink_water" }, headers: b_headers, as: :json
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body["id"]).not_to eq(a_goal.id)
+      expect(Goals::Goal.where(user_id: b_id).count).to eq(1)
+    },
+    "GET /api/v1/goals/:id" => lambda {
+      get "/api/v1/goals/#{a_goal.id}", headers: b_headers
+      expect(response).to have_http_status(:not_found)
+    },
+    "PATCH /api/v1/goals/:id" => lambda {
+      patch "/api/v1/goals/#{a_goal.id}", params: { status: "paused" }, headers: b_headers, as: :json
+      expect(response).to have_http_status(:not_found)
+    },
+    "DELETE /api/v1/goals/:id" => lambda {
+      delete "/api/v1/goals/#{a_goal.id}", headers: b_headers
+      expect(response).to have_http_status(:not_found)
+    },
+    "POST /api/v1/goals/:id/check_ins" => lambda {
+      post "/api/v1/goals/#{a_goal.id}/check_ins", params: { local_date: Date.current.to_s }, headers: b_headers, as: :json
+      expect(response).to have_http_status(:not_found)
+    },
+    "DELETE /api/v1/goals/:id/check_ins/:local_date" => lambda {
+      delete "/api/v1/goals/#{a_goal.id}/check_ins/#{Date.current}", headers: b_headers
+      expect(response).to have_http_status(:not_found)
+    },
+    "GET /api/v1/goals/history" => lambda {
+      get "/api/v1/goals/history", headers: b_headers
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["items"]).to eq([])
+      get "/api/v1/goals/history", params: { goal_id: a_goal.id }, headers: b_headers
+      expect(response).to have_http_status(:not_found)
+    },
     "POST /api/v1/account/export" => lambda {
       post "/api/v1/account/export", params: { password: IdentityHelpers::PASSWORD }, headers: b_headers, as: :json
       expect(response).to have_http_status(:ok)
@@ -262,6 +308,15 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
 
   def a_item = a_analyzed.items.first
 
+  # A's goal with a manual check-in, made before the state is taken.
+  def a_goal
+    @a_goal ||= begin
+      id = Goals::Api.create_goal(user_id: a_id, goal_type: "drink_water").id
+      Goals::Api.check_in(user_id: a_id, goal_id: id, local_date: Time.use_zone("America/Sao_Paulo") { Time.zone.today })
+      Goals::Goal.find(id)
+    end
+  end
+
   # Cases that need A's analyzed meal made before the state is taken.
   ANALYZED_CASES = [
     "POST /api/v1/food_entries/:id/confirmation", "POST /api/v1/food_entries/:id/items", "PATCH /api/v1/food_entries/:id/items/:item_id",
@@ -275,6 +330,7 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
       elsif action.include?("food_entries/:id")
         a_meal
       end
+      a_goal if action.include?("goals")
       before = a_state
 
       instance_exec(&scenario)

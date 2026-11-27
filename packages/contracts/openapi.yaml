@@ -938,6 +938,295 @@ paths:
           $ref: "#/components/responses/Error"
         default:
           $ref: "#/components/responses/Error"
+  /api/v1/goal_types:
+    get:
+      operationId: listGoalTypes
+      summary: The kinds of daily habit goal a person can create.
+      description: |
+        A closed list of five habit types. There is no goal for calories, deficit, weight or compensating food
+        with exercise, and none can be created.
+      responses:
+        "200":
+          description: The goal types.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalTypeList"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/goals:
+    get:
+      operationId: listGoals
+      summary: The live goals (active and paused) with today and yesterday marked.
+      description: |
+        today_local_date and yesterday_local_date are the person's local days, the only two the person can
+        mark. Active goals come first, then paused ones. done_today and done_yesterday say whether the day is
+        done, by hand or by a confirmed meal. There is no streak, total or percentage.
+      responses:
+        "200":
+          description: The goals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalList"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createGoal
+      summary: Creates a daily habit goal.
+      description: |
+        Creating a type the person already has live (active or paused) answers 200 with the same goal. A type
+        outside the closed list answers 422 validation_failed with details code unsupported_goal_type, and no
+        goal is created. goal_type is a plain string in the request so the refusal comes from the domain.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGoalRequest"
+      responses:
+        "200":
+          description: The person already had this goal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+        "201":
+          description: The goal was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/goals/history:
+    get:
+      operationId: listGoalHistory
+      summary: Days the person completed a goal, newest first, by cursor.
+      description: |
+        Only completed days are listed, ended goals included. goal_id narrows the list to one goal (another
+        person's or an unknown goal answers 404). limit goes from 1 to 100 (default 30); a limit outside that
+        range or a cursor that is not a next_cursor answers 422 validation_failed. No missed day is ever listed.
+      parameters:
+        - name: goal_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 200
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+      responses:
+        "200":
+          description: A page of completed days.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalHistoryPage"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/goals/{id}:
+    get:
+      operationId: getGoal
+      summary: Reads one goal of the person, including an ended one.
+      description: |
+        The only way to read an ended goal, which the list leaves out; it carries ends_on. Another person's or an
+        unknown goal answers 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The goal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    patch:
+      operationId: changeGoalStatus
+      summary: Pauses, resumes or ends a goal.
+      description: |
+        status is active, paused or ended; any other value answers 422 validation_failed. An ended goal is
+        final: any change answers 409 goal_not_active. Another person's or an unknown goal answers 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeGoalStatusRequest"
+      responses:
+        "200":
+          description: The goal with its new status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: deleteGoal
+      summary: Deletes a goal and its check-ins.
+      description: |
+        Another person's or an unknown goal answers 404. It does not need the health_data consent: erasing a
+        goal stays possible after that consent is revoked.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: The goal is gone.
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/goals/{id}/check_ins:
+    post:
+      operationId: checkInGoal
+      summary: Marks a day of the goal as done by hand.
+      description: |
+        local_date is today or yesterday in the person's time zone; another day answers 422 validation_failed
+        with details code outside_window (or invalid for a malformed date). Repeating it changes nothing. A goal
+        that is not active answers 409 goal_not_active. Another person's or an unknown goal answers 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInRequest"
+      responses:
+        "200":
+          description: The day of the goal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalDay"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/goals/{id}/check_ins/{local_date}:
+    delete:
+      operationId: uncheckGoal
+      summary: Removes the manual check-in of a day.
+      description: |
+        Same window and answers as checkInGoal. A check-in that came from a confirmed meal stays, so done can
+        remain true, with sources food_entry.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: local_date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: The day of the goal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalDay"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     bearerSession:
@@ -1565,6 +1854,137 @@ components:
     CheckResult:
       type: string
       enum: [ok, error]
+    GoalType:
+      type: string
+      enum: [log_meals, include_fruits_vegetables, drink_water, sleep_routine, planned_workout]
+    GoalStatus:
+      type: string
+      enum: [active, paused, ended]
+    GoalDaySource:
+      type: string
+      enum: [food_entry, manual]
+    GoalTypeList:
+      type: object
+      additionalProperties: false
+      required: [goal_types]
+      properties:
+        goal_types:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoalType"
+    CreateGoalRequest:
+      type: object
+      additionalProperties: false
+      required: [goal_type]
+      properties:
+        goal_type:
+          type: string
+          maxLength: 64
+          description: One of the GoalType values. Any other answers 422 unsupported_goal_type.
+    ChangeGoalStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          maxLength: 32
+          description: One of the GoalStatus values. Any other answers 422.
+    CheckInRequest:
+      type: object
+      additionalProperties: false
+      required: [local_date]
+      properties:
+        local_date:
+          type: string
+          maxLength: 10
+          description: YYYY-MM-DD, today or yesterday in the person's time zone.
+    Goal:
+      type: object
+      additionalProperties: false
+      required: [id, goal_type, status, starts_on, ends_on, done_today, done_yesterday]
+      properties:
+        id:
+          type: string
+          format: uuid
+        goal_type:
+          $ref: "#/components/schemas/GoalType"
+        status:
+          $ref: "#/components/schemas/GoalStatus"
+        starts_on:
+          type: string
+          format: date
+        ends_on:
+          type: [string, "null"]
+          format: date
+        done_today:
+          type: boolean
+        done_yesterday:
+          type: boolean
+    GoalList:
+      type: object
+      additionalProperties: false
+      required: [today_local_date, yesterday_local_date, goals]
+      properties:
+        today_local_date:
+          type: string
+          format: date
+        yesterday_local_date:
+          type: string
+          format: date
+        goals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Goal"
+    GoalDay:
+      type: object
+      additionalProperties: false
+      required: [goal_id, local_date, done, sources]
+      properties:
+        goal_id:
+          type: string
+          format: uuid
+        local_date:
+          type: string
+          format: date
+        done:
+          type: boolean
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoalDaySource"
+    GoalHistoryDay:
+      type: object
+      additionalProperties: false
+      required: [goal_id, goal_type, goal_status, local_date, sources]
+      properties:
+        goal_id:
+          type: string
+          format: uuid
+        goal_type:
+          $ref: "#/components/schemas/GoalType"
+        goal_status:
+          $ref: "#/components/schemas/GoalStatus"
+        local_date:
+          type: string
+          format: date
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoalDaySource"
+    GoalHistoryPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/GoalHistoryDay"
+        next_cursor:
+          type: [string, "null"]
+          description: Opaque. Null on the last page.
     Error:
       type: object
       additionalProperties: false

@@ -34,6 +34,8 @@ Shared::Outbox::Event.where(id:).pick(:published_at, :attempts, :dead_at)  # pub
 
 Se morrer de novo, a causa não foi corrigida: volte a inspecionar.
 
+Reprocessar um `food_entry.confirmed` em dead letter há mais de 30 dias exige conferir antes que a refeição ainda existe: o marcador de refeição apagada de Goals já foi expurgado, e a confirmação gravaria um check-in de uma refeição que não existe mais.
+
 ## Resolver de outra forma
 
 Só quando a entrega não faz mais sentido e com a causa registrada, por exemplo um efeito que já foi aplicado à mão, depois de conferir o resultado no banco. Marque como publicado, sem apagar:

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_27_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -223,6 +223,53 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.check_constraint "status::text = ANY (ARRAY['awaiting_upload'::character varying, 'stored'::character varying, 'deleted'::character varying]::text[])", name: "food_photos_status_known"
   end
 
+  create_table "goal_check_ins", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "goal_id", null: false
+    t.uuid "user_id", null: false
+    t.date "local_date", null: false
+    t.string "source", null: false
+    t.uuid "source_ref"
+    t.datetime "checked_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["goal_id", "local_date"], name: "index_goal_check_ins_on_goal_and_local_date", order: { local_date: :desc }
+    t.index ["goal_id", "local_date"], name: "index_goal_check_ins_one_manual_per_day", unique: true, where: "((source)::text = 'manual'::text)"
+    t.index ["goal_id", "source", "source_ref"], name: "index_goal_check_ins_one_per_source_ref", unique: true, where: "(source_ref IS NOT NULL)"
+    t.index ["user_id", "local_date"], name: "index_goal_check_ins_on_user_and_local_date", order: { local_date: :desc }
+    t.check_constraint "(source::text = 'manual'::text) = (source_ref IS NULL)", name: "goal_check_ins_ref_matches_source"
+    t.check_constraint "source::text = ANY (ARRAY['manual'::character varying, 'food_entry'::character varying]::text[])", name: "goal_check_ins_source_known"
+  end
+
+  create_table "goal_removed_food_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.uuid "food_entry_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["created_at"], name: "index_goal_removed_food_entries_on_created_at"
+    t.index ["user_id", "food_entry_id"], name: "index_goal_removed_food_entries_on_user_and_meal", unique: true
+  end
+
+  create_table "goals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "goal_type", null: false
+    t.string "cadence", default: "daily", null: false
+    t.integer "target", default: 1, null: false
+    t.string "rule_version", null: false
+    t.string "status", default: "active", null: false
+    t.date "starts_on", null: false
+    t.date "ends_on"
+    t.datetime "paused_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["id", "user_id"], name: "index_goals_on_id_and_user_id", unique: true
+    t.index ["user_id", "goal_type"], name: "index_goals_one_live_per_type", unique: true, where: "((status)::text = ANY ((ARRAY['active'::character varying, 'paused'::character varying])::text[]))"
+    t.index ["user_id", "status"], name: "index_goals_on_user_id_and_status"
+    t.check_constraint "cadence::text = 'daily'::text", name: "goals_cadence_daily"
+    t.check_constraint "goal_type::text = ANY (ARRAY['log_meals'::character varying, 'include_fruits_vegetables'::character varying, 'drink_water'::character varying, 'sleep_routine'::character varying, 'planned_workout'::character varying]::text[])", name: "goals_goal_type_allowed"
+    t.check_constraint "status::text <> 'ended'::text OR ends_on IS NOT NULL", name: "goals_ended_has_end"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'paused'::character varying, 'ended'::character varying]::text[])", name: "goals_status_known"
+    t.check_constraint "target = 1", name: "goals_target_one"
+  end
+
   create_table "outbox_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
     t.integer "version", default: 1, null: false
@@ -320,6 +367,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
   add_foreign_key "food_entries", "users"
   add_foreign_key "food_items", "food_entries", on_delete: :cascade
   add_foreign_key "food_photos", "users"
+  add_foreign_key "goal_check_ins", "goals", column: ["goal_id", "user_id"], primary_key: ["id", "user_id"], name: "goal_check_ins_goal_owner", on_delete: :cascade
+  add_foreign_key "goal_check_ins", "users"
+  add_foreign_key "goal_removed_food_entries", "users", on_delete: :cascade
+  add_foreign_key "goals", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "sport_profiles", "users"
   add_foreign_key "user_profiles", "users"

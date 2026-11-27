@@ -147,10 +147,26 @@ Todas exigem `health_data` (`403 consent_required` sem ele). O contrato `package
 
 | Método e rota | Função |
 |---|---|
-| `GET /api/v1/goal_types` | Tipos permitidos |
-| `GET`/`POST`/`PATCH`/`DELETE /api/v1/goals` | Metas |
-| `POST /api/v1/goals/:id/check_ins` | Check-in manual |
-| `GET /api/v1/goals/history` | Histórico |
+Etapa 05.1 (metas diárias de hábito). Todas exigem `health_data` (`403 consent_required`), exceto `DELETE /api/v1/goals/{id}`, que é apagamento e continua possível depois de revogar o consentimento. Meta de outra pessoa ou id malformado responde `404`. O contrato `packages/contracts/openapi.yaml` é a fonte; esta tabela só resume.
+
+| Método e rota | Função | Respostas de erro |
+|---|---|---|
+| `GET /api/v1/goal_types` | Os cinco tipos permitidos: `{ goal_types }` | |
+| `GET /api/v1/goals` | Metas vivas (ativas e pausadas), com `today_local_date`, `yesterday_local_date`, `done_today` e `done_yesterday` | |
+| `GET /api/v1/goals/{id}` | Uma meta da pessoa, inclusive encerrada (com `ends_on`), que a lista não traz. É por ela que o app abre uma meta a partir do histórico | `404` |
+| `POST /api/v1/goals` `{ goal_type }` | Criar a meta. `201` se nova; `200` com a mesma meta se a pessoa já tinha uma viva do tipo | `422 validation_failed` com `details` (`unsupported_goal_type` para tipo fora da lista, sem criar nada) |
+| `PATCH /api/v1/goals/{id}` `{ status }` | Pausar, retomar ou encerrar (`active`, `paused`, `ended`) | `404`, `409 goal_not_active` (meta encerrada é final), `422 validation_failed` |
+| `DELETE /api/v1/goals/{id}` | Apagar a meta e os check-ins (`204`). Não exige `health_data` | `404` |
+| `POST /api/v1/goals/{id}/check_ins` `{ local_date }` | Check-in manual de hoje ou ontem; responde `GoalDay` (`goal_id`, `local_date`, `done`, `sources`). Repetir não muda nada | `404`, `409 goal_not_active`, `422 validation_failed` (`details`: `outside_window` para outro dia, `invalid` para data malformada) |
+| `DELETE /api/v1/goals/{id}/check_ins/{local_date}` | Remove o check-in manual do dia; um que veio de refeição fica. Responde `GoalDay` | `404`, `409 goal_not_active`, `422 validation_failed` (`outside_window`) |
+| `GET /api/v1/goals/history?goal_id=&cursor=&limit=` | Só dias cumpridos, do mais novo ao mais antigo, por cursor (`limit` de 1 a 100, padrão 30): `{ items, next_cursor }` | `404` (`goal_id` de outra pessoa), `422 validation_failed` (`limit` ou `cursor`) |
+
+Códigos novos: `goal_not_active` (`409`, "Esta meta não está ativa. Retome a meta para marcar o dia."), `unsupported_goal_type` (detalhe do `422` ao criar) e `outside_window` (detalhe do `422` de check-in fora de hoje e ontem). Na requisição, `goal_type` é texto livre, para que um tipo proibido chegue ao `422` do domínio e não ao `400` do validador do contrato.
+
+Etapa 05.2:
+
+| Método e rota | Função |
+|---|---|
 | `GET`/`PUT /api/v1/weekly_plans/:week_start` | Planejamento (etapa 05.2) |
 
 ### Activities e Strava (Fase 04)

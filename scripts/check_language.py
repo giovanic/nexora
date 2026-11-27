@@ -31,6 +31,7 @@ import unicodedata
 # Relativos à raiz do repositório. Pasta: varre os arquivos de texto abaixo dela.
 SCAN_PATHS = [
     "apps/mobile/src/features/meals",
+    "apps/mobile/src/features/goals",
     "apps/mobile/src/shared/messages.ts",
     "apps/api/config/consents",
     "apps/api/config/locales",

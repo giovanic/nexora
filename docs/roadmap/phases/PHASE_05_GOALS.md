@@ -60,6 +60,7 @@ apps/mobile/src/features/goals/
 - `AC-05.1-03` (FR-GOALS-003): reexecutar a avaliação sobre os mesmos check-ins dá o mesmo resultado. **Comprovado por:** teste de propriedade ou tabela de casos.
 - `AC-05.1-04` (FR-GOALS-004): o histórico é paginado e isolado por pessoa. **Comprovado por:** testes.
 - `AC-05.1-05` (FR-GOALS-005): tipos de calorias, déficit, peso ou compensação são rejeitados pela API, e uma inserção direta é recusada pelo banco. **Comprovado por:** testes de requisição e de constraint.
+- `AC-05.1-06` (FR-GOALS-002): uma refeição apagada nunca deixa check-in nem `goal.completed` sem par, em qualquer ordem de entrega de `food_entry.confirmed` e `food_entry.deleted`. **Comprovado por:** teste com conexões concorrentes. *Acrescentado em 2026-11-27 por decisão do responsável ("concordo", em resposta à proposta do relatório da etapa).*
 
 ### Etapa 05.2
 

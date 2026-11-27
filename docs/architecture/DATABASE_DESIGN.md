@@ -210,15 +210,33 @@ Registro bruto dos eventos recebidos e estado do processamento.
 
 ### `goals`
 
-- **Colunas:** `id`, `user_id` (FK), `goal_type`, `cadence` (`daily` ou `weekly`), `target`, `rule_version`, `status`, `starts_on`, `ends_on`.
-- **Constraints:** `goal_type` em lista fechada, que **não** contém calorias, déficit, peso ou compensação. `CHECK` garante isso no próprio banco.
-- **Índices:** `(user_id, status)`.
+Meta diária de hábito (etapa 05.1). `weekly` e `activity` entram na 05.2, com nova migração.
+
+- **Colunas:** `id`, `user_id` (FK para `users`), `goal_type`, `cadence` (padrão `daily`), `target` (inteiro, padrão 1), `rule_version` (`NOT NULL`, inicial `daily_any_v1`), `status` (`active`, `paused` ou `ended`; padrão `active`), `starts_on` (data local da criação), `ends_on` (nulo até encerrar), `paused_at` (nulo), `created_at`, `updated_at`.
+- **Constraints (`CHECK`, no próprio banco):**
+  - `goals_goal_type_allowed`: `goal_type` na lista fechada `log_meals`, `include_fruits_vegetables`, `drink_water`, `sleep_routine`, `planned_workout`, que **não** contém calorias, déficit, peso, jejum ou compensação;
+  - `goals_cadence_daily` (`cadence = 'daily'`) e `goals_target_one` (`target = 1`);
+  - `goals_status_known`;
+  - `goals_ended_has_end`: `status <> 'ended' OR ends_on IS NOT NULL`.
+- **Índices:** único parcial em `(user_id, goal_type)` com `status IN ('active','paused')` (uma meta viva por tipo; depois de encerrada, a pessoa pode criar de novo); `(user_id, status)` para listar as metas da pessoa; único em `(id, user_id)`, alvo da FK composta dos check-ins.
 
 ### `goal_check_ins`
 
-- **Colunas:** `id`, `goal_id` (FK), `user_id`, `local_date`, `source` (`manual`, `activity`, `food_entry`), `source_ref`, `checked_at`.
-- **Constraints:** único em `(goal_id, local_date, source, source_ref)`; check-in manual é único por `(goal_id, local_date)`.
-- **Índices:** `(user_id, local_date DESC)`.
+Um dia marcado numa meta. Sem tabela de "dias cumpridos": o estado do dia é calculado.
+
+- **Colunas:** `id`, `goal_id` e `user_id` (FK composta `goal_check_ins_goal_owner` para `goals(id, user_id)`, `ON DELETE CASCADE`: o banco recusa um check-in cujo dono não é o dono da meta), `user_id` também FK para `users`, `local_date`, `source` (`manual` ou `food_entry`), `source_ref` (UUID nulo; é o `food_entry_id` quando a fonte é `food_entry`, sem chave estrangeira, porque domínios não se ligam por tabela), `checked_at`, `created_at`, `updated_at`.
+- **Constraints:** `goal_check_ins_source_known`; `goal_check_ins_ref_matches_source`: `(source = 'manual') = (source_ref IS NULL)`.
+- **Índices:** único parcial em `(goal_id, local_date)` com `source = 'manual'` (um check-in manual por meta e dia); único parcial em `(goal_id, source, source_ref)` com `source_ref IS NOT NULL` (uma refeição gera no máximo um check-in por meta, mesmo em reprocessamento); `(user_id, local_date DESC)` e `(goal_id, local_date DESC)` para o histórico.
+- **Dados da pessoa:** `goals` e `goal_check_ins` entram na exportação e na exclusão de conta (contexto `goals` no `Shared::DataRegistry`). A exportação não traz `source_ref`, por ser referência interna a outro contexto. Apagar a meta apaga os check-ins em cascata.
+
+### `goal_removed_food_entries`
+
+Marcador de refeição apagada, para que um `food_entry.confirmed` entregue depois do `food_entry.deleted` não grave check-in (ver design da 05.1, 4.5).
+
+- **Colunas:** `id`, `user_id` (FK para `users`, `ON DELETE CASCADE`), `food_entry_id` (UUID, sem chave estrangeira: Goals não referencia Nutrition), `created_at`. Todas `NOT NULL`.
+- **Índices:** único em `(user_id, food_entry_id)`, que serve à consulta do consumidor de confirmação e à gravação idempotente; `(created_at)`, que serve à rotina de retenção.
+- **Retenção:** 30 dias após a criação, o mesmo prazo dos eventos publicados da outbox, por `Goals::RemovedFoodEntriesRetentionJob` (diário, em lote).
+- **Dados da pessoa:** entra na exclusão de conta (contexto `goals` no `Shared::DataRegistry`). Fica fora da exportação, como `source_ref`: guarda só o id de uma refeição de outro contexto.
 
 ### `weekly_plans`
 
@@ -354,6 +372,7 @@ Prazos iniciais, a confirmar com a revisão jurídica ([PRIVACY_AND_LGPD.md](../
 | Atividades | Enquanto a conta existir e, no caso do Strava, enquanto a integração durar | Apagadas |
 | Tokens | Até a desconexão | Apagados |
 | `activity_sync_events` | 30 dias | Apagados |
+| `goal_removed_food_entries` | 30 dias após a criação (`Goals::RemovedFoodEntriesRetentionJob`, diário) | Apagados |
 | `outbox_events` e `consumed_events` | 30 dias após a publicação; pendentes e mortos ficam até serem resolvidos | Removidos ou anonimizados |
 | XP, metas, missões e conquistas | Enquanto a conta existir | Apagados |
 | `consent_records` e `audit_events` | Proposta provisória de 5 anos, a confirmar na revisão jurídica. Em conta ativa, `consent_records` mantém o último registro de cada finalidade além dos 5 anos, porque prova o consentimento vigente; o de conta excluída segue o prazo | Mantidos sem conteúdo de saúde, ligados ao mesmo UUID |
