@@ -108,6 +108,19 @@ RSpec.describe "Goals: meal consumers", :real_consumers do
     expect(events("goal.uncompleted").map { |e| e.payload["period_key"] }).to eq([ "2026-11-17" ])
   end
 
+  it "a food_entry.deleted of another person with the same meal id keeps this person's check-in and publishes nothing" do
+    meal = confirm
+    other = new_user
+    Goals::Api.create_goal(user_id: other, goal_type: "log_meals")
+    confirm(meal, user: other)
+
+    delete_meal(meal, user: other)
+
+    expect(check_ins.pluck(:user_id, :source_ref)).to eq([ [ user_id, meal ] ])
+    expect(Goals::GoalCheckIn.where(user_id: other).count).to eq(0)
+    expect(events("goal.uncompleted").pluck(:user_id)).to eq([ other ])
+  end
+
   it "deleting one of two meals keeps the day done" do
     first = confirm
     confirm
