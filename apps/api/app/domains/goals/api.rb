@@ -1,7 +1,7 @@
 module Goals
   # The only entry point to Goals for other contexts and controllers. It returns Data objects, never models.
   module Api
-    USER_DATA_TABLES = %w[goals goal_check_ins].freeze
+    USER_DATA_TABLES = %w[goals goal_check_ins goal_removed_food_entries].freeze
 
     # created: only from create_goal, false when the person already had a live goal of the type.
     GoalInfo = Data.define(:id, :goal_type, :status, :starts_on, :ends_on, :done_today, :done_yesterday, :created) do

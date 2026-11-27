@@ -1,6 +1,7 @@
 module Goals
   # Goals' part of account export and deletion, through Shared::DataRegistry.
-  # source_ref stays out of the export: it points into another context's table.
+  # source_ref stays out of the export: it points into another context's table. The deleted-meal markers
+  # (goal_removed_food_entries) stay out too, for the same reason: they hold only the id of a meal of another context.
   module UserData
     def self.export(user_id)
       goals = Goal.where(user_id:).includes(:check_ins).order(:starts_on, :id)
@@ -15,9 +16,13 @@ module Goals
       }
     end
 
-    # Check-ins go with their goals (ON DELETE CASCADE). Safe to run again.
+    # Check-ins go with their goals (ON DELETE CASCADE); the markers are deleted by owner, with or without a goal.
+    # Safe to run again.
     def self.erase(user_id)
-      Goal.where(user_id:).delete_all
+      Goal.transaction do
+        RemovedFoodEntry.where(user_id:).delete_all
+        Goal.where(user_id:).delete_all
+      end
     end
   end
 end

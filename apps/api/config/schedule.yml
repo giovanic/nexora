@@ -59,3 +59,9 @@ food_stuck_entries:
   class: "Nutrition::StuckEntriesJob"
   queue: default
   description: "Resumes meals stuck in processing for more than 15 minutes, or marks them failed."
+
+goals_removed_food_entries_retention:
+  cron: "0 4 * * *"
+  class: "Goals::RemovedFoodEntriesRetentionJob"
+  queue: default
+  description: "Deletes the deleted-meal markers of Goals 30 days after they were created."

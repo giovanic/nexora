@@ -16,7 +16,7 @@ RSpec.describe Goals::Api do
   end
 
   it "declares its tables" do
-    expect(Goals::Api::USER_DATA_TABLES).to eq(%w[goals goal_check_ins])
+    expect(Goals::Api::USER_DATA_TABLES).to eq(%w[goals goal_check_ins goal_removed_food_entries])
   end
 
   it "export lists goals with their check-ins and no source_ref" do
@@ -48,5 +48,26 @@ RSpec.describe Goals::Api do
     expect(Goals::GoalCheckIn.where(user_id: ana)).to be_empty
     expect(Goals::Goal.where(user_id: bia).count).to eq(1)
     expect(Goals::GoalCheckIn.where(user_id: bia).count).to eq(1)
+  end
+
+  it "erase also removes the deleted-meal markers of that person only, even with no goal" do
+    mine = SecureRandom.uuid
+    Goals::RemovedFoodEntry.create!(user_id: ana, food_entry_id: mine, created_at: Time.current)
+    Goals::RemovedFoodEntry.create!(user_id: bia, food_entry_id: mine, created_at: Time.current)
+
+    2.times { described_class.erase_user_data(ana) }
+
+    expect(Goals::RemovedFoodEntry.where(user_id: ana)).to be_empty
+    expect(Goals::RemovedFoodEntry.where(user_id: bia).count).to eq(1)
+  end
+
+  it "export leaves the deleted-meal markers out, like source_ref: they are only ids of another context" do
+    make_goal(ana)
+    Goals::RemovedFoodEntry.create!(user_id: ana, food_entry_id: SecureRandom.uuid, created_at: Time.current)
+
+    data = described_class.export_user_data(ana)
+
+    expect(data.keys).to eq([ :goals ])
+    expect(data.to_s).not_to include("food_entry_id")
   end
 end

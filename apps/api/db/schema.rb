@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_26_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_27_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -240,6 +240,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_100000) do
     t.check_constraint "source::text = ANY (ARRAY['manual'::character varying, 'food_entry'::character varying]::text[])", name: "goal_check_ins_source_known"
   end
 
+  create_table "goal_removed_food_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.uuid "food_entry_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["created_at"], name: "index_goal_removed_food_entries_on_created_at"
+    t.index ["user_id", "food_entry_id"], name: "index_goal_removed_food_entries_on_user_and_meal", unique: true
+  end
+
   create_table "goals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "user_id", null: false
     t.string "goal_type", null: false
@@ -361,6 +369,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_100000) do
   add_foreign_key "food_photos", "users"
   add_foreign_key "goal_check_ins", "goals", column: ["goal_id", "user_id"], primary_key: ["id", "user_id"], name: "goal_check_ins_goal_owner", on_delete: :cascade
   add_foreign_key "goal_check_ins", "users"
+  add_foreign_key "goal_removed_food_entries", "users", on_delete: :cascade
   add_foreign_key "goals", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "sport_profiles", "users"

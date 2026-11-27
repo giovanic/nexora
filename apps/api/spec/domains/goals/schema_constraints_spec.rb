@@ -99,4 +99,14 @@ RSpec.describe "goals schema constraints" do
     expect { insert_check_in(goal_id, user_id: other_id) }.to raise_error(ActiveRecord::InvalidForeignKey, /goal_check_ins_goal_owner/)
     expect { insert_check_in(goal_id) }.not_to raise_error
   end
+
+  it "allows one removed-meal marker per person and meal" do
+    meal = SecureRandom.uuid
+    row = ->(overrides = {}) { { user_id:, food_entry_id: meal, created_at: Time.current }.merge(overrides) }
+    insert = ->(attrs) { Goals::RemovedFoodEntry.transaction(requires_new: true) { Goals::RemovedFoodEntry.insert_all!([ attrs ]) } }
+    insert.call(row.call)
+
+    expect { insert.call(row.call) }.to raise_error(ActiveRecord::RecordNotUnique)
+    expect { insert.call(row.call(food_entry_id: SecureRandom.uuid)) }.not_to raise_error
+  end
 end
