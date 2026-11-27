@@ -78,7 +78,9 @@ RSpec.describe "structured logging", type: :request do
     end
   end
 
-  describe "sensitive data" do
+  describe "sensitive data", :identity, :real_consumers do
+    include OutboxHelpers
+
     let(:sensitive_values) do
       [ "person@example.test", "tok-secret-value", "pw-secret-value", "photo-secret.jpg", "rice-secret-item", "987654" ]
     end
@@ -105,6 +107,29 @@ RSpec.describe "structured logging", type: :request do
       line = json_lines(text).find { |entry| entry["path"].to_s.start_with?("/api/v1/goals/#{id}/check_ins") }
       expect(line).to be_present
       expect(text).not_to include("2026-11-17")
+    end
+
+    it "keeps a history cursor out of the request log" do
+      token = mobile_token(email: "cursor-log@example.test")
+      run_publisher
+      post "/api/v1/consents", params: { purpose: "health_data", version: 1 }, headers: bearer(token), as: :json
+      day = Time.use_zone("America/Sao_Paulo") { Time.zone.today }
+      ids = %w[drink_water sleep_routine].map do |type|
+        post "/api/v1/goals", params: { goal_type: type }, headers: bearer(token), as: :json
+        response.parsed_body.fetch("id").tap { |id| Goals::Goal.where(id:).update_all(starts_on: Date.new(2026, 1, 1)) }
+      end
+      ids.each { |id| [ day, day - 1 ].each { |date| post "/api/v1/goals/#{id}/check_ins", params: { local_date: date.to_s }, headers: bearer(token), as: :json } }
+      get "/api/v1/goals/history", params: { limit: 1 }, headers: bearer(token)
+      cursor = response.parsed_body.fetch("next_cursor")
+      expect(cursor).to be_present
+
+      text = api_log_during { get "/api/v1/goals/history?cursor=#{cursor}", headers: bearer(token) }
+
+      line = json_lines(text).find { |entry| entry["path"].to_s.start_with?("/api/v1/goals/history") }
+      expect(line).to be_present
+      expect(text).not_to include(cursor)
+      expect(line["path"]).to eq("/api/v1/goals/history?cursor=[FILTERED]")
+      expect(Base64.urlsafe_decode64(cursor)).to include(day.iso8601) # the value that would have leaked
     end
 
     it "keeps a job exception message out of the worker log, recording its class" do
