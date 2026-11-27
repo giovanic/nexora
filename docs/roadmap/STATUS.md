@@ -14,7 +14,7 @@ A linha `05` é um resumo de `05.1` e `05.2`.
 | 03 | Concluída | 2026-11-25 | [Relatório, seção 9](reports/PHASE_03_REPORT.md) e mensagem do responsável de 2026-11-25: "Aprovo a reabertura da Fase 03 (Groq), aceitando os AC-03-07, 08 e 14 como parciais." Lacuna aceita: AC-03-07 (um provedor real, sem comparação), AC-03-08 (medição de 43 de 60 fotos, sem metas) e AC-03-14 (p95 só da Groq). Antes da reabertura: [Relatório](reports/PHASE_03_REPORT.md) e mensagem do responsável de 2026-11-17: "aprovo". Lacuna aceita: AC-03-02, 04, 06, 07, 08, 09, 10, 12, 13, 14, 15 e 16 sem prova real com provedor (chaves adiadas para a Fase 07), com a prova real antes do M1. ADRs 0007 e 0019 aceitas. Defeitos de CI do PR #20 corrigidos; [CI 44193601077](https://github.com/giovanic/nexora/actions/runs/44193601077) com 6 de 6 jobs verdes. Exceção do `npm audit` para GHSA-fc5q-39xc-vjpf até 2026-12-17 |
 | 04 | Não iniciada | 2026-11-05 | — |
 | 05 | Em desenvolvimento | 2026-11-17 | Resumo: etapa `05.1` iniciada em 2026-11-17 |
-| 05.1 | Em revisão | 2026-11-27 | [Relatório](reports/PHASE_05.1_REPORT.md): verificação completa em `4c3732a` com código 0 (rspec 1395/0, web 67, mobile 231); ordem dos eventos de refeição tratada pela opção (b); aguardando aprovação e duas confirmações (seção 6.2) |
+| 05.1 | Em revisão | 2026-11-27 | [Relatório](reports/PHASE_05.1_REPORT.md): verificação completa em `4c3732a` com código 0 (rspec 1395/0, web 67, mobile 231); ordem dos eventos de refeição tratada pela opção (b). Mensagem do responsável de 2026-11-27, "concordo": marcador fora da exportação e `AC-05.1-06` acrescentado. Aguardando a aprovação da etapa |
 | 05.2 | Não iniciada | 2026-11-05 | — |
 | 06 | Não iniciada | 2026-11-05 | — |
 | 07 | Não iniciada | 2026-11-05 | — |

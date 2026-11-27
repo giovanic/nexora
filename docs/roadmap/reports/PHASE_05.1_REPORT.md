@@ -1,7 +1,7 @@
 # Relatório da etapa 05.1 — Metas diárias
 
 - **Data:** 2026-11-27
-- **Estado:** `Em revisão`. Os cinco critérios estão comprovados. O achado importante da ordem dos eventos de refeição foi tratado pela opção (b), que você escolheu (seção 6.1). Nenhum achado crítico ou importante de revisão está em aberto. Há duas confirmações pedidas a você: a exportação do marcador e um critério de aceite para a ordem dos eventos (seção 6.2).
+- **Estado:** `Em revisão`. Os seis critérios estão comprovados, incluindo o `AC-05.1-06`, acrescentado por você em 2026-11-27. O achado importante da ordem dos eventos de refeição foi tratado pela opção (b), que você escolheu (seção 6.1). Nenhum achado crítico ou importante de revisão está em aberto. As duas escolhas da seção 6.2 foram confirmadas por você ("concordo", 2026-11-27).
 - **Branch:** `phase/05.1-daily-goals`, 26 commits sobre `main` `94f08c4`, mais o deste relatório, sem push.
 - **Plano:** [2026-11-17-daily-goals.md](../../superpowers/plans/2026-11-17-daily-goals.md). **Design:** [2026-11-17-daily-goals-design.md](../../superpowers/specs/2026-11-17-daily-goals-design.md).
 
@@ -51,6 +51,7 @@ Executado em 2026-11-27 sobre o código final (`4c3732a`; o commit deste relató
 | `AC-05.1-03` reavaliar dá o mesmo resultado | `spec/domains/goals/evaluate_day_spec.rb` (tabela de casos e 200 rodadas aleatórias com semente fixa), `check_in_spec.rb` "re-evaluating a person's recorded days gives the same results" | Comprovado |
 | `AC-05.1-04` histórico paginado e isolado | `list_and_history_spec.rb` (cursor sem lacunas nem repetições, contagem de consultas igual com 10 e 30 dias), `goal_history_spec.rb`, `isolation_spec.rb` (todas as rotas de metas) | Comprovado |
 | `AC-05.1-05` tipos proibidos recusados pela API e pelo banco | `goals_spec.rb` (422 sem linha criada e sem ecoar o tipo), `schema_constraints_spec.rb` (sete tipos proibidos com `CheckViolation`), `spec/contract/no_calorie_goal_spec.rb` | Comprovado |
+| `AC-05.1-06` refeição apagada não deixa check-in, em qualquer ordem de entrega | `food_entry_ordering_concurrency_spec.rb` (duas conexões reais: exclusão durante a confirmação, confirmação durante a exclusão, meta criada no meio; 20 de 20 verdes, e 5 de 5 falhas com as travas removidas), `food_entry_ordering_spec.rb`, `meal_event_lock_spec.rb` | Comprovado. Ressalva: os specs chamam os consumidores direto, sem o `PublishJob` (seção 5) |
 
 Na demonstração também foram conferidos:
 - **Eventos no banco:** os oito eventos `goal.*` saíram com o payload do design 4.6, todos publicados e nenhum em dead letter ([goal-events-demo.txt](evidence/phase-05.1/goal-events-demo.txt)).
@@ -123,8 +124,8 @@ Segunda rodada, depois da opção (b) (`9589caf` a `4c3732a`):
 
 ### 6.2 Decisões de produto pequenas
 
-- **Exportação do marcador.** Ele ficou fora da exportação (seção 6.1), e a escolha foi para a pendência jurídica 20 de `PRIVACY_AND_LGPD.md`. Se preferir, incluir é pequeno: um exportador a mais em `Goals::UserData`.
-- **Critério de aceite da ordem dos eventos.** Nenhum `AC-05.1-` cobre a regra, e os specs estão sob o `AC-05.1-02` na matriz. Mudar o documento da fase é decisão sua. Texto proposto, como `AC-05.1-06`: "Uma refeição apagada nunca deixa check-in nem `goal.completed` sem par, em qualquer ordem de entrega de `food_entry.confirmed` e `food_entry.deleted`, comprovado por teste com conexões concorrentes."
+- **Exportação do marcador.** Ficou fora da exportação (seção 6.1), confirmado por você em 2026-11-27 ("concordo"). Segue na pendência jurídica 20 de `PRIVACY_AND_LGPD.md`, porque a revisão jurídica ainda confirma se atende ao art. 18, II.
+- **Critério de aceite da ordem dos eventos.** Acrescentado como `AC-05.1-06` em `PHASE_05_GOALS.md` e na matriz (FR-GOALS-002), confirmado por você em 2026-11-27 ("concordo").
 - **Origem da refeição antes do toque.** A meta de refeições cumprida por refeição aparece "Feito", com o mesmo visual do check-in manual. O texto "Cumprida pela refeição registrada." só aparece depois de desmarcar, como o design 4.10 descreve. Mostrar antes exige as fontes do dia em `GET /goals`, uma mudança de contrato.
 - **Texto de `goal_not_active`.** Ficou como o plano manda. Para uma meta encerrada em outro aparelho, a mensagem fala em retomar, o que não é possível. Uma alternativa neutra seria "Esta meta não está ativa."
 - **"Feito" marcado** se distingue só pelo preenchimento do botão. O leitor de tela recebe o estado. Um marcador visível, como o "[x]" do seletor Hoje/Ontem, ajudaria.
@@ -172,7 +173,7 @@ Decisões do executor, para você conferir. Cada uma traz o custo se estiver err
 | A revisão final do branch veio antes de fechar a matriz e a verificação, que rodaram uma vez sobre o código final | Nenhum |
 | A ordem dos eventos de refeição não foi corrigida sem você, porque toda correção muda o design | Nenhum: você escolheu a opção (b) |
 | Na opção (b), a serialização passou à trava consultiva por pessoa, e a trava nas linhas de todas as metas `log_meals` saiu | Voltar a trava de linhas, se um caso novo aparecer |
-| O marcador ficou fora da exportação | Um exportador a mais (seção 6.2) |
+| O marcador ficou fora da exportação (confirmado por você em 2026-11-27) | Um exportador a mais, se a revisão jurídica pedir |
 | A exclusão de refeição de pessoa sem conta não faz nada, em vez de ir para a fila de mortos | Nenhum: não há meta a proteger |
 | Entraram na correção final, por serem baratos: isolamento de `food_entry.deleted`, sem "Tentar de novo" após `goal_not_active`, rótulo "Feito: <tipo>", FK composta e linhas do `DOMAIN_MODEL.md` | Pequenos ajustes |
 | Os textos de `goal_not_active` ficaram como o plano manda | Mensagem imprecisa para meta encerrada |
@@ -181,10 +182,6 @@ Decisões do executor, para você conferir. Cada uma traz o custo se estiver err
 
 ## 8. Próximo passo
 
-Se concordar com as duas escolhas da seção 6.2 (marcador fora da exportação e o `AC-05.1-06` proposto), a frase para fechar a etapa é:
-
-- "Aprovo a etapa 05.1, com o marcador fora da exportação e o AC-05.1-06."
-
-Para mudar uma delas, diga qual. Se quiser também o PR: "Pode fazer o push e abrir o PR."
+Para fechar a etapa: "Aprovo a etapa 05.1." Se quiser também o PR: "Pode fazer o push e abrir o PR."
 
 A próxima linha do roadmap é o **M1** (beta fechado), que depende de 01, 02, 03 e 05.1. Para começar: "Vamos iniciar o M1."
