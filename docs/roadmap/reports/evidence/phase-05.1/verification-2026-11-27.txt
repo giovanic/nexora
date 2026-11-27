@@ -56,3 +56,34 @@ web: Tests  67 passed (67)
 mobile: Tests: 231 passed, 231 total
 test-verify-harness: 93 testes, 0 falhas
 Gitleaks 8.30.1 (git --redact): no leaks found, antes e depois das correções de encerramento (HEAD 9255347)
+
+## Rodada depois da opção (b), da trava consultiva e das revisões de encerramento (código em 4c3732a)
+Cada linha: passo=código de saída
+schema_load=0
+rspec=0
+rubocop=0
+brakeman=0
+bundle_audit=0
+contracts=0
+npm_audit=0
+test_npm_audit=0
+web_typecheck=0
+web_lint=0
+web_test=0
+web_build=0
+mobile_typecheck=0
+mobile_lint=0
+mobile_test=0
+check_language=0
+test_check_language=0
+harness=0
+test_harness=0
+gitleaks=0
+gitleaks_version=8.30.1
+rspec: 1395 examples, 0 failures
+web:       Tests  67 passed (67)
+mobile: Tests:       231 passed, 231 total
+test-verify-harness: ok   run_from_other_cwd_ok 93 testes, 0 falhas 
+gitleaks: 3:37PM INF no leaks found
+Rodada anterior, no mesmo dia, sobre f52364d: os mesmos 21 passos com código 0, rspec 1392 exemplos, 0 falhas
+food_entry_ordering_concurrency_spec.rb: 20 de 20 rodadas verdes em f52364d e de novo no código de 4c3732a; sobre f52364d, com todas as travas dos dois consumidores removidas de propósito, os 3 exemplos falharam em 5 de 5 rodadas

@@ -1,8 +1,8 @@
 # Relatório da etapa 05.1 — Metas diárias
 
 - **Data:** 2026-11-27
-- **Estado:** `Em desenvolvimento`. Tudo foi executado e os cinco critérios estão comprovados, mas há um achado importante de revisão sem tratamento: a ordem dos eventos de refeição (seção 6.1). A correção muda o design aprovado, então depende da sua decisão. Com ela, a etapa vai a `Em revisão`.
-- **Branch:** `phase/05.1-daily-goals`, 21 commits sobre `main` `94f08c4`, sem push.
+- **Estado:** `Em revisão`. Os cinco critérios estão comprovados. O achado importante da ordem dos eventos de refeição foi tratado pela opção (b), que você escolheu (seção 6.1). Nenhum achado crítico ou importante de revisão está em aberto. Há duas confirmações pedidas a você: a exportação do marcador e um critério de aceite para a ordem dos eventos (seção 6.2).
+- **Branch:** `phase/05.1-daily-goals`, 26 commits sobre `main` `94f08c4`, mais o deste relatório, sem push.
 - **Plano:** [2026-11-17-daily-goals.md](../../superpowers/plans/2026-11-17-daily-goals.md). **Design:** [2026-11-17-daily-goals-design.md](../../superpowers/specs/2026-11-17-daily-goals-design.md).
 
 ## 1. Resumo
@@ -15,7 +15,7 @@ A pessoa cria metas diárias de hábito de uma lista fechada, marca hoje ou onte
   - O estado do dia não é gravado. Ele sai dos check-ins mais a regra versionada (`daily_any_v1`).
   - A janela de hoje e ontem usa o fuso da pessoa, e UTC enquanto o perfil está pendente. Datas antes do início da meta são recusadas.
   - Travas por meta, check-in idempotente e eventos `goal.created`, `goal.completed`, `goal.uncompleted` e `goal.deleted` pela outbox, na mesma transação.
-  - Consumidores de `food_entry.confirmed` e `food_entry.deleted`.
+  - Consumidores de `food_entry.confirmed` e `food_entry.deleted`, que aceitam os dois eventos de uma refeição em qualquer ordem: a exclusão deixa um marcador (`goal_removed_food_entries`, 30 dias) e os dois tomam a mesma trava por pessoa (`Goals::MealEventLock`).
   - Histórico só com dias cumpridos, por cursor, com o mesmo número de consultas para qualquer volume.
   - Exportação e exclusão de conta alcançam as tabelas novas.
 - **API e contrato:** nove rotas (`goal_types`, lista, criar, ler uma, mudar estado, apagar, marcar, desmarcar e histórico), todas com `health_data`, exceto apagar a meta. Meta de outra pessoa responde 404.
@@ -23,12 +23,12 @@ A pessoa cria metas diárias de hábito de uma lista fechada, marca hoje ou onte
 
 ## 2. Validação
 
-Executado nesta sessão sobre o código final (`44a17b9`; `9255347` e os commits seguintes só mudam documentos). O resumo está em [verification-2026-11-27.txt](evidence/phase-05.1/verification-2026-11-27.txt).
+Executado em 2026-11-27 sobre o código final (`4c3732a`; o commit deste relatório só muda documentos). O resumo de cada rodada está em [verification-2026-11-27.txt](evidence/phase-05.1/verification-2026-11-27.txt), seção "Rodada depois da opção (b)".
 
 | Comando | Código | Resultado |
 |---|---|---|
 | `RAILS_ENV=test bin/rails db:schema:load` | 0 | Banco de teste recarregado do `schema.rb` |
-| `bundle exec rspec` | 0 | 1375 exemplos, 0 falhas |
+| `bundle exec rspec` | 0 | 1395 exemplos, 0 falhas |
 | `bundle exec rubocop` | 0 | Sem ofensas |
 | `bundle exec brakeman -q --no-pager -w2` | 0 | Sem avisos |
 | `bundle exec bundle-audit check --update` | 0 | Sem vulnerabilidades |
@@ -40,6 +40,7 @@ Executado nesta sessão sobre o código final (`44a17b9`; `9255347` e os commits
 | `python3 scripts/check_language.py` e `bash scripts/test-check-language.sh` | 0 | `features/goals` incluída na verificação |
 | `bash scripts/verify-harness.sh` e `bash scripts/test-verify-harness.sh` | 0 | Harness aprovado; 93 testes, 0 falhas |
 | Gitleaks 8.30.1, `git --redact` (binário do CI, checksum conferido) | 0 | Sem vazamentos |
+| `food_entry_ordering_concurrency_spec.rb`, 20 vezes | 0 | 20 de 20 verdes. Com todas as travas dos consumidores removidas de propósito, os 3 exemplos falharam em 5 de 5 rodadas |
 
 ## 3. Critérios
 
@@ -68,6 +69,15 @@ Cada tarefa teve revisão de especificação e qualidade. Antes do encerramento 
 | `frontend-mobile-reviewer` (tom e estados) | Nenhum crítico ou importante. Cinco menores: origem da refeição só aparece depois de um toque, "Feito" marcado distinguido só pelo preenchimento, recarga silenciosa sem aviso, aviso que persiste ao trocar de dia, estados do detalhe sem título | Pendências (seções 6.2 e 6.3) |
 | `qa-reviewer` | Cinco critérios comprovados. Menores: F3 provado em teste com o roteador simulado, e a navegação real só na demonstração; verificação feita antes da limpeza do `schema.rb` | Registrado aqui e na seção 5. A verificação foi repetida no código final |
 
+Segunda rodada, depois da opção (b) (`9589caf` a `4c3732a`):
+
+| Revisão | Achados | Tratamento |
+|---|---|---|
+| `backend-reviewer` (trava consultiva) | Nenhum crítico. **Importante:** os specs de ordem usavam `sleep 0.5` e podiam passar sem a trava em máquina lenta. Menores: spec que podia travar sem timeout, `user_id` vazio virando chave global, ordem de travas sem registro, caminho do `PublishJob` fora do spec concorrente, limpeza sem `lock_timeout`, resíduo de marcador | O spec agora só libera a primeira transação quando a segunda está de fato esperando uma trava no banco, com timeouts e `join` garantido; provado com as travas removidas (5 de 5 falhas). `user_id` vazio recusado, com teste visto falhar antes. Ordem de travas no design e no `DOMAIN_MODEL.md`. O caminho do `PublishJob` vai para a seção 5 |
+| `software-architect` | Nenhum crítico ou importante; o achado original está tratado e não precisa de ADR. Menores: texto da ordem de travas invertido, trava de linhas que sobrou da solução anterior, tabela ausente do design 4.2 e 4.9, relatório desatualizado | Texto corrigido e regra levada ao `DOMAIN_MODEL.md`. A trava que sobrou saiu (cada meta continua travada antes de mudar o dia), com os specs de metas e 20 rodadas de concorrência verdes. Design 4.2 e 4.9 atualizados. Este relatório |
+| `security-reviewer` | Nenhum crítico. **Importante:** o marcador fora da exportação não estava nas pendências jurídicas; relatório desatualizado. Menores: marcador ausente do inventário, coleta para quem não tem meta, texto do resíduo após exclusão de conta mais cauteloso que o código, id da refeição no log do PostgreSQL quando a FK falha | Pendência jurídica 20 ampliada e linha própria no inventário de `PRIVACY_AND_LGPD.md`. Coleta ampla justificada no design 4.5 e levada à revisão jurídica. Texto do resíduo corrigido (a entrega descarta o evento). O log do PostgreSQL fica na seção 6.3 |
+| `qa-reviewer` | Nenhum crítico. **Importante:** relatório e evidência anteriores ao código; matriz sem os caminhos novos; nenhum `AC-` cobre a ordem dos eventos. Menores: conta apagada sem conferir a ausência do marcador, retenção sem teste na borda dos 30 dias, spec da trava fraco, dois comentários desatualizados | Verificação refeita em `4c3732a`, matriz completada, AC proposto a você (seção 6.2). Specs novos: borda de 30 dias com relógio congelado, trava entre pessoas e fora de transação, ausência do marcador; cada um falhou com o defeito plantado. Comentários corrigidos |
+
 ## 5. Verificado e apenas criado
 
 **Verificado:**
@@ -82,7 +92,14 @@ Cada tarefa teve revisão de especificação e qualidade. Antes do encerramento 
   - voltar depois de criar, sem tela duplicada.
 - Eventos no banco e o log da API do período, por busca nos arquivos.
 
+- A ordem dos eventos de refeição, em testes com duas conexões reais: exclusão durante a confirmação, confirmação durante a exclusão, e meta criada no meio.
+
 **Apenas criado ou com ressalva:**
+- Não verificado: a ordem de travas completa da entrega real (`PublishJob` com `users FOR SHARE`) em concorrência. Os specs concorrentes chamam os consumidores direto, e a ordem é afirmada por leitura do código.
+- Não verificado: o marcador remanescente depois da exclusão de conta. A regra de descarte da outbox deve impedir, por leitura do código, sem teste.
+- Não verificado: a confirmação morta reprocessada depois de 30 dias, quando o marcador já saiu. O caso está descrito no `RUNBOOK_OUTBOX.md`.
+- O spec de concorrência grava fora de transação e limpa com `TRUNCATE`, então exige banco de teste exclusivo, como já acontece no CI.
+- A ordem dos eventos não tem demonstração no app. Só os testes a exercitam.
 - A navegação real de "voltar e recarregar" está provada pela demonstração. O teste automatizado simula o roteador.
 - A demonstração de "Ontem" recuou o início das duas metas da conta fictícia em um dia, no banco local. Uma meta criada hoje não aceita ontem, e a captura `mobile-06` mostra isso.
 - O Expo Go é ambiente de testes. O build de distribuição fica para o M1.
@@ -90,21 +107,24 @@ Cada tarefa teve revisão de especificação e qualidade. Antes do encerramento 
 
 ## 6. Pendências
 
-### 6.1 Decisão necessária: ordem dos eventos de refeição (achado importante)
+### 6.1 Ordem dos eventos de refeição: tratada pela opção (b)
 
-**O problema.** Uma refeição confirmada e apagada em seguida gera `food_entry.confirmed` e `food_entry.deleted`. A outbox não garante a ordem de entrega. Isso acontece quando há dois workers ao mesmo tempo, ou quando a confirmação é reprocessada depois de uma falha. Se a exclusão for processada antes de a confirmação gravar o check-in, o check-in fica. O dia aparece "Feito" por uma refeição que não existe mais, e a pessoa não consegue desfazer, porque desmarcar só remove o check-in manual. O `goal.completed` emitido fica sem o `goal.uncompleted` correspondente, e na Fase 06 isso daria XP indevido.
+**A decisão.** Mensagem do responsável de 2026-11-27: "Implemente a opção (b) para a ordem dos eventos de refeição na 05.1."
 
-**As opções:**
+**O problema.** Uma refeição confirmada e apagada em seguida gera `food_entry.confirmed` e `food_entry.deleted`, e a outbox não garante a ordem. Se a exclusão chegasse primeiro, o check-in da refeição ficava, e o dia aparecia "Feito" por uma refeição que não existe mais.
 
-| Opção | O que muda | Recomendação |
-|---|---|---|
-| (a) Goals consulta `Nutrition::Api` antes de gravar | Goals passa a depender de Nutrition, contra o design 4.5. Exige ADR. Ainda deixa uma janela entre a consulta e a gravação | Não recomendada |
-| (b) Marcador de refeição apagada dentro de Goals | Tabela pequena só com ids, com exportação, exclusão e retenção. A exclusão trava as metas da pessoa, grava o marcador e remove o check-in; a confirmação trava a meta e consulta o marcador. Muda o design 4.5 e 4.6, sem ADR | **Recomendada** pela revisão de arquitetura |
-| (c) Entrega em ordem por pessoa na outbox | Mexe no publicador de todos os domínios | Não recomendada |
-| Aceitar o risco | Nada muda agora. Corrigir antes de a Fase 06 consumir `goal.completed` | Possível, com o risco registrado |
+**O que entrou:**
+- A exclusão grava um marcador `(user_id, food_entry_id)` em `goal_removed_food_entries` antes de remover o check-in. A confirmação que encontra o marcador não grava nada e não emite evento.
+- Os dois consumidores tomam primeiro a mesma trava consultiva por pessoa (`Goals::MealEventLock`), e só ela os serializa. A opção descrevia uma trava nas linhas de `goals`, mas a revisão mostrou que ela não cobre a pessoa que cria a meta enquanto o evento está em trânsito.
+- A exclusão para pessoa sem conta não faz nada. Antes ela mandava o evento para a fila de mortos.
+- Os marcadores saem em 30 dias, o prazo dos eventos publicados da outbox, por um job diário, e saem também na exclusão de conta.
+
+**Diferença do que a opção dizia.** A tabela da opção (b) falava em "com exportação". O marcador ficou **fora** da exportação, como o `source_ref` dos check-ins, por guardar só ids de uma refeição de outro contexto. Essa escolha foi do executor e precisa da sua confirmação (seção 6.2).
 
 ### 6.2 Decisões de produto pequenas
 
+- **Exportação do marcador.** Ele ficou fora da exportação (seção 6.1), e a escolha foi para a pendência jurídica 20 de `PRIVACY_AND_LGPD.md`. Se preferir, incluir é pequeno: um exportador a mais em `Goals::UserData`.
+- **Critério de aceite da ordem dos eventos.** Nenhum `AC-05.1-` cobre a regra, e os specs estão sob o `AC-05.1-02` na matriz. Mudar o documento da fase é decisão sua. Texto proposto, como `AC-05.1-06`: "Uma refeição apagada nunca deixa check-in nem `goal.completed` sem par, em qualquer ordem de entrega de `food_entry.confirmed` e `food_entry.deleted`, comprovado por teste com conexões concorrentes."
 - **Origem da refeição antes do toque.** A meta de refeições cumprida por refeição aparece "Feito", com o mesmo visual do check-in manual. O texto "Cumprida pela refeição registrada." só aparece depois de desmarcar, como o design 4.10 descreve. Mostrar antes exige as fontes do dia em `GET /goals`, uma mudança de contrato.
 - **Texto de `goal_not_active`.** Ficou como o plano manda. Para uma meta encerrada em outro aparelho, a mensagem fala em retomar, o que não é possível. Uma alternativa neutra seria "Esta meta não está ativa."
 - **"Feito" marcado** se distingue só pelo preenchimento do botão. O leitor de tela recebe o estado. Um marcador visível, como o "[x]" do seletor Hoje/Ontem, ajudaria.
@@ -123,7 +143,9 @@ Cada tarefa teve revisão de especificação e qualidade. Antes do encerramento 
   - o aviso persiste ao trocar Hoje/Ontem;
   - os estados de carregamento e erro do detalhe não têm título;
   - `dayText` é importado da feature de refeições.
-- **Segurança:** o id da meta (UUID) aparece em claro no caminho do log. Isso é aceitável se você tratar UUID como identificador não sensível.
+- **Segurança:**
+  - o id da meta (UUID) aparece em claro no caminho do log. Isso é aceitável se você tratar UUID como identificador não sensível;
+  - quando a exclusão de refeição chega para uma pessoa sem conta, o INSERT do marcador falha pela FK, e o PostgreSQL pode registrar no log do servidor o `user_id` e o id da refeição. O caminho é quase inalcançável, porque `users` só tem exclusão lógica. A configuração de log da hospedagem fica para o M1.
 
 ### 6.4 Pendências que já existiam
 
@@ -148,7 +170,10 @@ Decisões do executor, para você conferir. Cada uma traz o custo se estiver err
 | "Cumprida pela refeição registrada." aparece a partir das fontes da resposta do toque e do histórico | Acrescentar fontes ao contrato (seção 6.2) |
 | Tela de histórico geral e detalhe de meta encerrada, porque o design promete que o histórico continua disponível | Uma tela a mais |
 | A revisão final do branch veio antes de fechar a matriz e a verificação, que rodaram uma vez sobre o código final | Nenhum |
-| A ordem dos eventos de refeição não foi corrigida sem você, porque toda correção muda o design | O risco da seção 6.1 até a decisão |
+| A ordem dos eventos de refeição não foi corrigida sem você, porque toda correção muda o design | Nenhum: você escolheu a opção (b) |
+| Na opção (b), a serialização passou à trava consultiva por pessoa, e a trava nas linhas de todas as metas `log_meals` saiu | Voltar a trava de linhas, se um caso novo aparecer |
+| O marcador ficou fora da exportação | Um exportador a mais (seção 6.2) |
+| A exclusão de refeição de pessoa sem conta não faz nada, em vez de ir para a fila de mortos | Nenhum: não há meta a proteger |
 | Entraram na correção final, por serem baratos: isolamento de `food_entry.deleted`, sem "Tentar de novo" após `goal_not_active`, rótulo "Feito: <tipo>", FK composta e linhas do `DOMAIN_MODEL.md` | Pequenos ajustes |
 | Os textos de `goal_not_active` ficaram como o plano manda | Mensagem imprecisa para meta encerrada |
 | A reformatação alheia do `schema.rb`, gerada pelo dump do banco local, foi revertida; o banco de teste foi recarregado dele e a suíte passou | Nenhum, provado pela verificação |
@@ -156,11 +181,10 @@ Decisões do executor, para você conferir. Cada uma traz o custo se estiver err
 
 ## 8. Próximo passo
 
-Escolha uma das duas frases sobre a ordem dos eventos:
+Se concordar com as duas escolhas da seção 6.2 (marcador fora da exportação e o `AC-05.1-06` proposto), a frase para fechar a etapa é:
 
-- "Implemente a opção (b) para a ordem dos eventos de refeição na 05.1." Atualizo o design, implemento com TDD e teste de concorrência, reviso e trago o relatório de novo.
-- "Aceito o risco da ordem dos eventos de refeição, com correção antes da Fase 06." Registro a aceitação e passo a etapa a `Em revisão`.
+- "Aprovo a etapa 05.1, com o marcador fora da exportação e o AC-05.1-06."
 
-Depois, para fechar a etapa: "Aprovo a etapa 05.1." Se quiser também o PR: "Pode fazer o push e abrir o PR."
+Para mudar uma delas, diga qual. Se quiser também o PR: "Pode fazer o push e abrir o PR."
 
 A próxima linha do roadmap é o **M1** (beta fechado), que depende de 01, 02, 03 e 05.1. Para começar: "Vamos iniciar o M1."
