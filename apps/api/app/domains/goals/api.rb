@@ -61,6 +61,12 @@ module Goals
         ListGoals.call(user_id:)
       end
 
+      # GoalInfo of one goal of the person, an ended one included (it carries ends_on), or :not_found (also another
+      # person's goal or a malformed id).
+      def goal(user_id:, goal_id:)
+        ReadGoal.call(user_id:, goal_id:)
+      end
+
       # Only completed days, newest first, ended goals included. limit 1..100 (default 30). HistoryPage, :not_found (another
       # person's or malformed goal_id) or Errors validation_failed (limit: out_of_range, cursor: invalid).
       def history(user_id:, goal_id: nil, cursor: nil, limit: nil)

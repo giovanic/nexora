@@ -242,6 +242,10 @@ RSpec.describe "isolation between people", :identity, :real_consumers do
       expect(response.parsed_body["id"]).not_to eq(a_goal.id)
       expect(Goals::Goal.where(user_id: b_id).count).to eq(1)
     },
+    "GET /api/v1/goals/:id" => lambda {
+      get "/api/v1/goals/#{a_goal.id}", headers: b_headers
+      expect(response).to have_http_status(:not_found)
+    },
     "PATCH /api/v1/goals/:id" => lambda {
       patch "/api/v1/goals/#{a_goal.id}", params: { status: "paused" }, headers: b_headers, as: :json
       expect(response).to have_http_status(:not_found)

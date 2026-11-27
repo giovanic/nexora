@@ -1060,6 +1060,34 @@ paths:
         default:
           $ref: "#/components/responses/Error"
   /api/v1/goals/{id}:
+    get:
+      operationId: getGoal
+      summary: Reads one goal of the person, including an ended one.
+      description: |
+        The only way to read an ended goal, which the list leaves out; it carries ends_on. Another person's or an
+        unknown goal answers 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The goal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
     patch:
       operationId: changeGoalStatus
       summary: Pauses, resumes or ends a goal.

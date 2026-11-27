@@ -134,7 +134,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 
 - **Responsabilidade:** metas de hábito, check-ins, regras de conclusão, planejamento semanal e recuperação.
 - **Modelos:** `Goal`, `GoalCheckIn`, `WeeklyPlan` (`WeeklyPlan` na Fase 05.2).
-- **Serviços:** `CreateGoal`, `ChangeStatus`, `DeleteGoal`, `CheckIn`, `Uncheck`, `RecordDay`, `EvaluateDay` e `PlanWeek` (`PlanWeek` na Fase 05.2).
+- **Serviços:** `CreateGoal`, `ChangeStatus`, `DeleteGoal`, `ReadGoal`, `ListGoals`, `History`, `CheckIn`, `Uncheck`, `CheckInFromFoodEntry`, `RemoveFoodEntryCheckIn`, `RecordDay`, `EvaluateDay` e `PlanWeek` (`PlanWeek` na Fase 05.2).
 - **Publica:** `goal.created`, `goal.progressed`, `goal.completed`, `goal.uncompleted`, `goal.deleted`, `recovery_day.planned`, `recovery_day.logged`.
 - **Consome:** `food_entry.confirmed`, `food_entry.deleted`, `activity.imported`, `activity.deleted`, `sport_profile.changed`.
 - **Permitido:** API pública de User Profile para sugestão de metas.

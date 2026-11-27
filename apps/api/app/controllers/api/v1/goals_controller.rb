@@ -1,6 +1,6 @@
 module Api
   module V1
-    # The person's daily habit goals: list, create, pause/resume/end and delete. Another person's goal is a 404.
+    # The person's daily habit goals: list, read one, create, pause/resume/end and delete. Another person's goal is a 404.
     class GoalsController < ApplicationController
       include GoalResponses
 
@@ -11,6 +11,10 @@ module Api
         list = Goals::Api.list_goals(user_id: current_user_id)
         render json: { today_local_date: list.today_local_date, yesterday_local_date: list.yesterday_local_date,
                        goals: list.goals.map { |goal| goal.to_h.except(:created) } }
+      end
+
+      def show
+        render_goal(Goals::Api.goal(user_id: current_user_id, goal_id: params[:id]))
       end
 
       def create

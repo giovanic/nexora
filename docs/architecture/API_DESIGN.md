@@ -153,6 +153,7 @@ Etapa 05.1 (metas diárias de hábito). Todas exigem `health_data` (`403 consent
 |---|---|---|
 | `GET /api/v1/goal_types` | Os cinco tipos permitidos: `{ goal_types }` | |
 | `GET /api/v1/goals` | Metas vivas (ativas e pausadas), com `today_local_date`, `yesterday_local_date`, `done_today` e `done_yesterday` | |
+| `GET /api/v1/goals/{id}` | Uma meta da pessoa, inclusive encerrada (com `ends_on`), que a lista não traz. É por ela que o app abre uma meta a partir do histórico | `404` |
 | `POST /api/v1/goals` `{ goal_type }` | Criar a meta. `201` se nova; `200` com a mesma meta se a pessoa já tinha uma viva do tipo | `422 validation_failed` com `details` (`unsupported_goal_type` para tipo fora da lista, sem criar nada) |
 | `PATCH /api/v1/goals/{id}` `{ status }` | Pausar, retomar ou encerrar (`active`, `paused`, `ended`) | `404`, `409 goal_not_active` (meta encerrada é final), `422 validation_failed` |
 | `DELETE /api/v1/goals/{id}` | Apagar a meta e os check-ins (`204`). Não exige `health_data` | `404` |

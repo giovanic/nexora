@@ -42,6 +42,7 @@ Rails.application.routes.draw do
       get "goals", to: "goals#index", format: false
       post "goals", to: "goals#create", format: false
       get "goals/history", to: "goal_history#index", format: false
+      get "goals/:id", to: "goals#show", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
       patch "goals/:id", to: "goals#update", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
       delete "goals/:id", to: "goals#destroy", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false
       post "goals/:id/check_ins", to: "goal_check_ins#create", constraints: { id: /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/ }, format: false

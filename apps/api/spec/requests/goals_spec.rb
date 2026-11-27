@@ -163,4 +163,60 @@ RSpec.describe "/api/v1/goals", :identity, :real_consumers do
     expect_response_to_match_contract
     expect(Goals::Goal.where(user_id:).count).to eq(1)
   end
+
+  describe "GET /api/v1/goals/{id}" do
+    it "reads the person's own goal" do
+      create_goal
+      goal = response.parsed_body
+
+      get "/api/v1/goals/#{goal['id']}", headers: bearer(token)
+
+      expect(response).to have_http_status(:ok)
+      expect_response_to_match_contract
+      expect(response.parsed_body).to eq(goal)
+    end
+
+    it "reads an ended goal, with ends_on" do
+      create_goal
+      id = response.parsed_body.fetch("id")
+      patch "/api/v1/goals/#{id}", params: { status: "ended" }, headers: bearer(token), as: :json
+
+      get "/api/v1/goals/#{id}", headers: bearer(token)
+
+      expect(response).to have_http_status(:ok)
+      expect_response_to_match_contract
+      expect(response.parsed_body).to include("id" => id, "status" => "ended")
+      expect(response.parsed_body["ends_on"]).to be_present
+    end
+
+    it "another person's goal is 404" do
+      create_goal
+      id = response.parsed_body.fetch("id")
+      other = mobile_token(email: "bia@example.test")
+      post "/api/v1/consents", params: { purpose: "health_data", version: 1 }, headers: bearer(other), as: :json
+
+      get "/api/v1/goals/#{id}", headers: bearer(other)
+
+      expect(response).to have_http_status(:not_found)
+      expect_response_to_match_contract
+    end
+
+    it "an unknown or malformed id is 404" do
+      [ SecureRandom.uuid, "not-a-uuid" ].each do |id|
+        get "/api/v1/goals/#{id}", headers: bearer(token)
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    it "needs health_data" do
+      other = mobile_token(email: "bia@example.test")
+
+      get "/api/v1/goals/#{SecureRandom.uuid}", headers: bearer(other)
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body.dig("error", "code")).to eq("consent_required")
+      expect_response_to_match_contract
+    end
+  end
 end
