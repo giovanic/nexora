@@ -218,13 +218,13 @@ Meta diária de hábito (etapa 05.1). `weekly` e `activity` entram na 05.2, com 
   - `goals_cadence_daily` (`cadence = 'daily'`) e `goals_target_one` (`target = 1`);
   - `goals_status_known`;
   - `goals_ended_has_end`: `status <> 'ended' OR ends_on IS NOT NULL`.
-- **Índices:** único parcial em `(user_id, goal_type)` com `status IN ('active','paused')` (uma meta viva por tipo; depois de encerrada, a pessoa pode criar de novo); `(user_id, status)` para listar as metas da pessoa.
+- **Índices:** único parcial em `(user_id, goal_type)` com `status IN ('active','paused')` (uma meta viva por tipo; depois de encerrada, a pessoa pode criar de novo); `(user_id, status)` para listar as metas da pessoa; único em `(id, user_id)`, alvo da FK composta dos check-ins.
 
 ### `goal_check_ins`
 
 Um dia marcado numa meta. Sem tabela de "dias cumpridos": o estado do dia é calculado.
 
-- **Colunas:** `id`, `goal_id` (FK, `ON DELETE CASCADE`), `user_id` (FK para `users`), `local_date`, `source` (`manual` ou `food_entry`), `source_ref` (UUID nulo; é o `food_entry_id` quando a fonte é `food_entry`, sem chave estrangeira, porque domínios não se ligam por tabela), `checked_at`, `created_at`, `updated_at`.
+- **Colunas:** `id`, `goal_id` e `user_id` (FK composta `goal_check_ins_goal_owner` para `goals(id, user_id)`, `ON DELETE CASCADE`: o banco recusa um check-in cujo dono não é o dono da meta), `user_id` também FK para `users`, `local_date`, `source` (`manual` ou `food_entry`), `source_ref` (UUID nulo; é o `food_entry_id` quando a fonte é `food_entry`, sem chave estrangeira, porque domínios não se ligam por tabela), `checked_at`, `created_at`, `updated_at`.
 - **Constraints:** `goal_check_ins_source_known`; `goal_check_ins_ref_matches_source`: `(source = 'manual') = (source_ref IS NULL)`.
 - **Índices:** único parcial em `(goal_id, local_date)` com `source = 'manual'` (um check-in manual por meta e dia); único parcial em `(goal_id, source, source_ref)` com `source_ref IS NOT NULL` (uma refeição gera no máximo um check-in por meta, mesmo em reprocessamento); `(user_id, local_date DESC)` e `(goal_id, local_date DESC)` para o histórico.
 - **Dados da pessoa:** `goals` e `goal_check_ins` entram na exportação e na exclusão de conta (contexto `goals` no `Shared::DataRegistry`). A exportação não traz `source_ref`, por ser referência interna a outro contexto. Apagar a meta apaga os check-ins em cascata.

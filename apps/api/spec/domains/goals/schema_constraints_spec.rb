@@ -91,4 +91,12 @@ RSpec.describe "goals schema constraints" do
 
     expect(Goals::GoalCheckIn.where(goal_id:).count).to eq(0)
   end
+
+  it "refuses a check-in whose owner is not the owner of the goal" do
+    goal_id = insert_goal
+    other_id = Identity::User.create!(email: "g-#{SecureRandom.hex(4)}@example.test", password: "correct horse battery", adult_confirmed_at: Time.current).id
+
+    expect { insert_check_in(goal_id, user_id: other_id) }.to raise_error(ActiveRecord::InvalidForeignKey, /goal_check_ins_goal_owner/)
+    expect { insert_check_in(goal_id) }.not_to raise_error
+  end
 end
