@@ -18,6 +18,7 @@ type Props = {
   onResult: (entryId: string) => void;
   onManual: () => void;
   onHistory: () => void;
+  onGoals: () => void;
   onOpenSettings: () => void;
   openDeviceSettings: () => void;
 };
@@ -36,7 +37,7 @@ const PICKER_FAILED = "Não foi possível abrir a câmera ou a galeria. Tente de
 const PHOTO_UNAVAILABLE =
   "A análise por foto ainda não está disponível. Sua foto continua guardada no aparelho. Você pode registrar a refeição sem foto.";
 
-export function CameraScreen({ api, picker, photos, uploader, newId, onResult, onManual, onHistory, onOpenSettings, openDeviceSettings }: Props) {
+export function CameraScreen({ api, picker, photos, uploader, newId, onResult, onManual, onHistory, onGoals, onOpenSettings, openDeviceSettings }: Props) {
   const flow = useMemo(() => createUploadFlow({ api, photos, uploader, newId }), [api, photos, uploader, newId]);
   const loadConsents = useCallback(() => api.listConsents(), [api]);
   const consents = useResource(loadConsents);
@@ -184,6 +185,7 @@ export function CameraScreen({ api, picker, photos, uploader, newId, onResult, o
         </>
       )}
       <LinkButton label="Ver histórico" onPress={onHistory} />
+      <LinkButton label="Metas" onPress={onGoals} />
       <LinkButton label="Configurações" onPress={onOpenSettings} />
     </Screen>
   );

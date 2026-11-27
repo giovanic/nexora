@@ -16,12 +16,20 @@ export type FoodEntryPage = Schemas["FoodEntryPage"];
 export type FoodEntryUpload = Schemas["FoodEntryUpload"];
 export type FoodItemInput = Schemas["FoodItemInput"];
 export type FoodSearchPage = Schemas["FoodSearchPage"];
+export type Goal = Schemas["Goal"];
+export type GoalDay = Schemas["GoalDay"];
+export type GoalHistoryDay = Schemas["GoalHistoryDay"];
+export type GoalHistoryPage = Schemas["GoalHistoryPage"];
+export type GoalList = Schemas["GoalList"];
+export type GoalStatus = Schemas["GoalStatus"];
+export type GoalType = Schemas["GoalType"];
 export type Sport = Schemas["Sport"];
 export type SportLevel = Schemas["SportLevel"];
 export type SportProfile = Schemas["SportProfile"];
 
-// field: the first field named in the error details (for example byte_size), when there is one.
-export type Failure = { ok: false; status: number; code: string; retryAfter?: number; field?: string };
+// field and detail: the first field and detail code named in the error details (for example
+// local_date and outside_window), when there is one.
+export type Failure = { ok: false; status: number; code: string; retryAfter?: number; field?: string; detail?: string };
 export type Result<T> = { ok: true; status: number; data: T } | Failure;
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
@@ -135,8 +143,9 @@ export function createApi(options: ApiOptions) {
     const error = (payload as { error?: { code?: unknown; details?: unknown } } | undefined)?.error;
     const code = error?.code;
     const result: Failure = failure(response.status, typeof code === "string" ? code : "request_error");
-    const detail = Array.isArray(error?.details) ? (error.details[0] as { field?: unknown } | undefined) : undefined;
+    const detail = Array.isArray(error?.details) ? (error.details[0] as { field?: unknown; code?: unknown } | undefined) : undefined;
     if (typeof detail?.field === "string") result.field = detail.field;
+    if (typeof detail?.code === "string") result.detail = detail.code;
     const retryAfter = Number(response.headers?.get?.("Retry-After"));
     if (Number.isFinite(retryAfter) && retryAfter > 0) result.retryAfter = retryAfter;
 
@@ -212,6 +221,23 @@ export function createApi(options: ApiOptions) {
     removeFoodEntryItem: (id: string, itemId: string) =>
       request<FoodEntry>("DELETE", `/api/v1/food_entries/${encodeURIComponent(id)}/items/${encodeURIComponent(itemId)}`),
     searchFoods: (term: string, page = 1) => request<FoodSearchPage>("POST", "/api/v1/foods/search", { body: { term, page } }),
+    listGoalTypes: () => request<Schemas["GoalTypeList"]>("GET", "/api/v1/goal_types"),
+    listGoals: () => request<GoalList>("GET", "/api/v1/goals"),
+    createGoal: (goalType: string) => request<Goal>("POST", "/api/v1/goals", { body: { goal_type: goalType } }),
+    updateGoalStatus: (id: string, status: GoalStatus) =>
+      request<Goal>("PATCH", `/api/v1/goals/${encodeURIComponent(id)}`, { body: { status } }),
+    deleteGoal: (id: string) => request<undefined>("DELETE", `/api/v1/goals/${encodeURIComponent(id)}`),
+    checkInGoal: (id: string, localDate: string) =>
+      request<GoalDay>("POST", `/api/v1/goals/${encodeURIComponent(id)}/check_ins`, { body: { local_date: localDate } }),
+    uncheckGoal: (id: string, localDate: string) =>
+      request<GoalDay>("DELETE", `/api/v1/goals/${encodeURIComponent(id)}/check_ins/${encodeURIComponent(localDate)}`),
+    goalHistory: ({ goalId, cursor }: { goalId?: string; cursor?: string } = {}) => {
+      const query = new URLSearchParams();
+      if (goalId) query.set("goal_id", goalId);
+      if (cursor) query.set("cursor", cursor);
+      const text = query.toString();
+      return request<GoalHistoryPage>("GET", `/api/v1/goals/history${text ? `?${text}` : ""}`);
+    },
     getProfile: () => whilePending(() => request<Profile>("GET", "/api/v1/profile")),
     updateProfile: (changes: Schemas["ProfileUpdate"]) =>
       whilePending(() => request<Profile>("PATCH", "/api/v1/profile", { body: changes })),

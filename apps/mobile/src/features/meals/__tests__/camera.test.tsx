@@ -19,7 +19,7 @@ function setup(options: { pick?: PickResult; routes?: Record<string, unknown>; c
   files.seed("file:///cache/photo.jpg");
   const picker = fakePicker(options.pick ?? jpeg());
   const uploader = fakeUploader(options.uploads);
-  const handlers = { onResult: jest.fn(), onManual: jest.fn(), onHistory: jest.fn(), onOpenSettings: jest.fn(), openDeviceSettings: jest.fn() };
+  const handlers = { onResult: jest.fn(), onManual: jest.fn(), onHistory: jest.fn(), onGoals: jest.fn(), onOpenSettings: jest.fn(), openDeviceSettings: jest.fn() };
   const element = <CameraScreen api={ctx.api} picker={picker} photos={createPendingPhotos(files.fs)} uploader={uploader} newId={() => "req-1"} {...handlers} />;
   const startBodies = () => ctx.calls.filter((call) => call.key === "POST /api/v1/food_entries/uploads").map((call) => JSON.parse(call.init.body as string));
   return { ...ctx, ...handlers, files, picker, uploader, element, startBodies };
