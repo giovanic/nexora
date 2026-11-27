@@ -1,7 +1,7 @@
 # Relatório da etapa 05.1 — Metas diárias
 
 - **Data:** 2026-11-27
-- **Estado:** `Em revisão`. Os seis critérios estão comprovados, incluindo o `AC-05.1-06`, acrescentado por você em 2026-11-27. O achado importante da ordem dos eventos de refeição foi tratado pela opção (b), que você escolheu (seção 6.1). Nenhum achado crítico ou importante de revisão está em aberto. As duas escolhas da seção 6.2 foram confirmadas por você ("concordo", 2026-11-27).
+- **Estado:** `Concluída` em 2026-11-27, aprovada pelo responsável ("Aprovo e abra o PR"). Os seis critérios estão comprovados, incluindo o `AC-05.1-06`, acrescentado por você em 2026-11-27. O achado importante da ordem dos eventos de refeição foi tratado pela opção (b), que você escolheu (seção 6.1). Nenhum achado crítico ou importante de revisão está em aberto. As duas escolhas da seção 6.2 foram confirmadas por você ("concordo", 2026-11-27).
 - **Branch:** `phase/05.1-daily-goals`, 26 commits sobre `main` `94f08c4`, mais o deste relatório, sem push.
 - **Plano:** [2026-11-17-daily-goals.md](../../superpowers/plans/2026-11-17-daily-goals.md). **Design:** [2026-11-17-daily-goals-design.md](../../superpowers/specs/2026-11-17-daily-goals-design.md).
 
