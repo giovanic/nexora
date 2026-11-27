@@ -223,6 +223,7 @@ export function createApi(options: ApiOptions) {
     searchFoods: (term: string, page = 1) => request<FoodSearchPage>("POST", "/api/v1/foods/search", { body: { term, page } }),
     listGoalTypes: () => request<Schemas["GoalTypeList"]>("GET", "/api/v1/goal_types"),
     listGoals: () => request<GoalList>("GET", "/api/v1/goals"),
+    getGoal: (id: string) => request<Goal>("GET", `/api/v1/goals/${encodeURIComponent(id)}`),
     createGoal: (goalType: string) => request<Goal>("POST", "/api/v1/goals", { body: { goal_type: goalType } }),
     updateGoalStatus: (id: string, status: GoalStatus) =>
       request<Goal>("PATCH", `/api/v1/goals/${encodeURIComponent(id)}`, { body: { status } }),

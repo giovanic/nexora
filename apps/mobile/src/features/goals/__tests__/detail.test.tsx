@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { errorResponse, jsonResponse, makeApi } from "../../../shared/testing/fakes";
-import { MEALS_ID, TODAY, YESTERDAY, goal, goalList } from "../../../shared/testing/goalFakes";
+import { MEALS_ID, TODAY, YESTERDAY, goal } from "../../../shared/testing/goalFakes";
 import { GoalDetailScreen } from "../GoalDetailScreen";
 
-const LIST = "GET /api/v1/goals";
+const GET = `GET /api/v1/goals/${MEALS_ID}`;
 const PATCH = `PATCH /api/v1/goals/${MEALS_ID}`;
 const DELETE = `DELETE /api/v1/goals/${MEALS_ID}`;
 const HISTORY = `GET /api/v1/goals/history?goal_id=${MEALS_ID}`;
@@ -14,7 +14,7 @@ const props = () => ({ goalId: MEALS_ID, onDeleted: jest.fn() });
 describe("GoalDetailScreen", () => {
   it("pauses and resumes", async () => {
     const ctx = makeApi({
-      [LIST]: jsonResponse(200, goalList([goal()])),
+      [GET]: jsonResponse(200, goal()),
       [HISTORY]: page([]),
       [PATCH]: (init: RequestInit) => jsonResponse(200, goal({ status: JSON.parse(init.body as string).status })),
     });
@@ -29,7 +29,7 @@ describe("GoalDetailScreen", () => {
   });
 
   it("ending asks for confirmation", async () => {
-    const ctx = makeApi({ [LIST]: jsonResponse(200, goalList([goal()])), [HISTORY]: page([]), [PATCH]: jsonResponse(200, goal({ status: "ended", ends_on: TODAY })) });
+    const ctx = makeApi({ [GET]: jsonResponse(200, goal()), [HISTORY]: page([]), [PATCH]: jsonResponse(200, goal({ status: "ended", ends_on: TODAY })) });
     await render(<GoalDetailScreen api={ctx.api} {...props()} />);
 
     await fireEvent.press(await screen.findByRole("button", { name: "Encerrar" }));
@@ -49,7 +49,7 @@ describe("GoalDetailScreen", () => {
   });
 
   it("deleting asks for confirmation and leaves the screen", async () => {
-    const ctx = makeApi({ [LIST]: jsonResponse(200, goalList([goal()])), [HISTORY]: page([]), [DELETE]: jsonResponse(204) });
+    const ctx = makeApi({ [GET]: jsonResponse(200, goal()), [HISTORY]: page([]), [DELETE]: jsonResponse(204) });
     const handlers = props();
     await render(<GoalDetailScreen api={ctx.api} {...handlers} />);
 
@@ -66,7 +66,7 @@ describe("GoalDetailScreen", () => {
 
   it("history loads more pages", async () => {
     const ctx = makeApi({
-      [LIST]: jsonResponse(200, goalList([goal()])),
+      [GET]: jsonResponse(200, goal()),
       [HISTORY]: page([day(TODAY), day(YESTERDAY, ["food_entry"])], "c1"),
       [`${HISTORY}&cursor=c1`]: page([day("2026-11-20")]),
     });
@@ -81,14 +81,14 @@ describe("GoalDetailScreen", () => {
   });
 
   it("history empty state", async () => {
-    const ctx = makeApi({ [LIST]: jsonResponse(200, goalList([goal()])), [HISTORY]: page([]) });
+    const ctx = makeApi({ [GET]: jsonResponse(200, goal()), [HISTORY]: page([]) });
     await render(<GoalDetailScreen api={ctx.api} {...props()} />);
 
     expect(await screen.findByText("Os dias marcados aparecem aqui.")).toBeOnTheScreen();
   });
 
   it("shows an error with retry when the history does not load", async () => {
-    const ctx = makeApi({ [LIST]: jsonResponse(200, goalList([goal()])), [HISTORY]: errorResponse(500, "internal_error"), [PATCH]: errorResponse(409, "goal_not_active") });
+    const ctx = makeApi({ [GET]: jsonResponse(200, goal()), [HISTORY]: errorResponse(500, "internal_error"), [PATCH]: errorResponse(409, "goal_not_active") });
     await render(<GoalDetailScreen api={ctx.api} {...props()} />);
 
     expect(await screen.findByRole("button", { name: "Tentar de novo" })).toBeOnTheScreen();
@@ -96,7 +96,7 @@ describe("GoalDetailScreen", () => {
 
   it("after ending, the history stays visible with only delete", async () => {
     const ctx = makeApi({
-      [LIST]: jsonResponse(200, goalList([goal()])),
+      [GET]: jsonResponse(200, goal()),
       [HISTORY]: page([day(TODAY)]),
       [PATCH]: jsonResponse(200, goal({ status: "ended", ends_on: TODAY })),
     });
@@ -110,5 +110,35 @@ describe("GoalDetailScreen", () => {
     expect(screen.queryByText(/Não encontramos esta meta/)).toBeNull();
     for (const name of ["Pausar", "Retomar", "Encerrar"]) expect(screen.queryByRole("button", { name })).toBeNull();
     expect(screen.getByRole("button", { name: "Apagar" })).toBeOnTheScreen();
+  });
+
+  it("an ended goal opened from the history can be deleted", async () => {
+    const ctx = makeApi({ [GET]: jsonResponse(200, goal({ status: "ended", ends_on: TODAY })), [HISTORY]: page([day(TODAY)]), [DELETE]: jsonResponse(204) });
+    const handlers = props();
+    await render(<GoalDetailScreen api={ctx.api} {...handlers} />);
+
+    expect(await screen.findByText("Meta encerrada.")).toBeOnTheScreen();
+    expect(screen.getByText("26/11/2026")).toBeOnTheScreen();
+    for (const name of ["Pausar", "Retomar", "Encerrar"]) expect(screen.queryByRole("button", { name })).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Apagar" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Sim, apagar" }));
+
+    await waitFor(() => expect(handlers.onDeleted).toHaveBeenCalledTimes(1));
+    expect(ctx.calls.filter((item) => item.key === DELETE)).toHaveLength(1);
+  });
+
+  it("a goal that is not found shows the not-found text and no history", async () => {
+    const ctx = makeApi({ [GET]: errorResponse(404, "not_found"), [HISTORY]: page([]) });
+    await render(<GoalDetailScreen api={ctx.api} {...props()} />);
+
+    expect(await screen.findByText(/Não encontramos esta meta/)).toBeOnTheScreen();
+    expect(screen.queryByText("Dias marcados")).toBeNull();
+  });
+
+  it("a goal that does not load shows one error block with one retry", async () => {
+    const ctx = makeApi({ [GET]: errorResponse(500, "internal_error"), [HISTORY]: errorResponse(500, "internal_error") });
+    await render(<GoalDetailScreen api={ctx.api} {...props()} />);
+
+    expect(await screen.findAllByRole("button", { name: "Tentar de novo" })).toHaveLength(1);
   });
 });

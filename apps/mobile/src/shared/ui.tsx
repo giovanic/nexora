@@ -94,15 +94,17 @@ type ButtonProps = {
   disabled?: boolean;
   // For a button that toggles something (a day marked done): announced as its selected state.
   selected?: boolean;
+  // When the visible label alone does not say what the button acts on (several rows with the same "Feito").
+  accessibilityLabel?: string;
   variant?: "primary" | "secondary" | "danger";
 };
 
-export function Button({ label, onPress, busy = false, disabled = false, selected, variant = "primary" }: ButtonProps) {
+export function Button({ label, onPress, busy = false, disabled = false, selected, accessibilityLabel, variant = "primary" }: ButtonProps) {
   const inactive = busy || disabled;
   return (
     <Pressable
       role="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: inactive, busy, ...(selected === undefined ? {} : { selected }) }}
       disabled={inactive}
       onPress={onPress}

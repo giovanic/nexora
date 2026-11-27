@@ -21,11 +21,10 @@ export function GoalDetailScreen({ api, goalId, onDeleted }: Props) {
 
   useEffect(() => {
     let live = true;
-    api.listGoals().then((result) => {
+    api.getGoal(goalId).then((result) => {
       if (!live) return;
-      if (!result.ok) return setState({ status: "error", error: result });
-      const goal = result.data.goals.find((item) => item.id === goalId);
-      setState(goal && isGoalType(goal.goal_type) ? { status: "ready", goal } : { status: "missing" });
+      if (result.ok) return setState(isGoalType(result.data.goal_type) ? { status: "ready", goal: result.data } : { status: "missing" });
+      setState(result.status === 404 ? { status: "missing" } : { status: "error", error: result });
     });
     api.goalHistory({ goalId }).then((result) => {
       if (!live) return;
@@ -110,7 +109,7 @@ export function GoalDetailScreen({ api, goalId, onDeleted }: Props) {
           <ErrorText>{message}</ErrorText>
         </>
       )}
-      {state.status !== "missing" && (
+      {state.status === "ready" && (
         <>
           <Subtitle>Dias marcados</Subtitle>
           {history.status === "loading" && <LoadingView />}

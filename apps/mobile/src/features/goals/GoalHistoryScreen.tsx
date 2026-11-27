@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Api, Failure, GoalHistoryDay } from "../../shared/api";
-import { Body, Button, EmptyView, ErrorText, ErrorView, LoadingView, Screen, Title } from "../../shared/ui";
+import { Button, EmptyView, ErrorText, ErrorView, LinkButton, LoadingView, Screen, Title } from "../../shared/ui";
 import { dayText } from "../meals/formatRange";
 import { GOAL_TYPE_LABELS, goalErrorMessage, goalTexts, isGoalType } from "./goalMessages";
 
-type Props = { api: Api };
+// refreshKey: a new value reloads the list without the loading state (the screen regained focus).
+type Props = { api: Api; onOpen: (goalId: string) => void; refreshKey?: number };
 
 type State = { status: "loading" } | { status: "error"; error: Failure } | { status: "ready"; items: GoalHistoryDay[]; cursor: string | null };
 
 // Completed days of every goal, ended ones included, newest first. Missed days are never listed.
-export function GoalHistoryScreen({ api }: Props) {
+export function GoalHistoryScreen({ api, onOpen, refreshKey = 0 }: Props) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [more, setMore] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
   const [tick, setTick] = useState(0);
@@ -18,12 +19,19 @@ export function GoalHistoryScreen({ api }: Props) {
     let live = true;
     api.goalHistory().then((result) => {
       if (!live) return;
-      setState(result.ok ? { status: "ready", items: result.data.items, cursor: result.data.next_cursor } : { status: "error", error: result });
+      // A silent reload that fails keeps what is already on screen.
+      setState((current) =>
+        result.ok
+          ? { status: "ready", items: result.data.items, cursor: result.data.next_cursor }
+          : current.status === "ready"
+            ? current
+            : { status: "error", error: result },
+      );
     });
     return () => {
       live = false;
     };
-  }, [api, tick]);
+  }, [api, tick, refreshKey]);
 
   const reload = useCallback(() => {
     setState({ status: "loading" });
@@ -47,7 +55,7 @@ export function GoalHistoryScreen({ api }: Props) {
       {state.status === "error" && <ErrorView error={state.error} onRetry={reload} />}
       {state.status === "ready" && shown.length === 0 && !state.cursor && <EmptyView>{goalTexts.historyEmpty}</EmptyView>}
       {shown.map((item) => (
-        <Body key={`${item.goal_id}:${item.local_date}`}>{line(item)}</Body>
+        <LinkButton key={`${item.goal_id}:${item.local_date}`} label={line(item)} onPress={() => onOpen(item.goal_id)} />
       ))}
       {state.status === "ready" && state.cursor ? (
         <>

@@ -4,7 +4,8 @@ import type { Api, Failure, Goal, GoalList } from "../../shared/api";
 import { Body, Button, Choice, EmptyView, ErrorView, InfoText, LinkButton, LoadingView, Screen, Title } from "../../shared/ui";
 import { GOAL_TYPE_LABELS, goalErrorMessage, goalTexts, isGoalType } from "./goalMessages";
 
-type Props = { api: Api; onNew: () => void; onOpen: (goalId: string) => void; onHistory: () => void };
+// refreshKey: a new value reloads the list without the loading state (the screen regained focus).
+type Props = { api: Api; refreshKey?: number; onNew: () => void; onOpen: (goalId: string) => void; onHistory: () => void };
 
 type State = { status: "loading" } | { status: "error"; error: Failure } | { status: "ready"; list: GoalList };
 type Day = "today" | "yesterday";
@@ -12,7 +13,7 @@ type Notice = { text: string; retry: (() => void) | null };
 
 // Everything shown comes from the API: the two dates, what is done and where it came from.
 // A tap changes nothing on screen until the answer arrives.
-export function GoalsTodayScreen({ api, onNew, onOpen, onHistory }: Props) {
+export function GoalsTodayScreen({ api, refreshKey = 0, onNew, onOpen, onHistory }: Props) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [day, setDay] = useState<Day>("today");
   const [busy, setBusy] = useState<string | null>(null);
@@ -37,12 +38,18 @@ export function GoalsTodayScreen({ api, onNew, onOpen, onHistory }: Props) {
     let live = true;
     api.listGoals().then((result) => {
       if (!live) return;
-      setState(result.ok ? { status: "ready", list: result.data } : { status: "error", error: result });
+      if (result.ok) {
+        setSources({});
+        setState({ status: "ready", list: result.data });
+      } else {
+        // A silent reload that fails keeps what is already on screen.
+        setState((current) => (current.status === "ready" ? current : { status: "error", error: result }));
+      }
     });
     return () => {
       live = false;
     };
-  }, [api]);
+  }, [api, refreshKey]);
 
   async function toggle(goal: Goal, list: GoalList, chosen: Day, done: boolean) {
     const localDate = chosen === "today" ? list.today_local_date : list.yesterday_local_date;
@@ -52,7 +59,7 @@ export function GoalsTodayScreen({ api, onNew, onOpen, onHistory }: Props) {
     setBusy(null);
 
     if (!result.ok) {
-      setNotice({ text: goalErrorMessage(result), retry: result.detail === "outside_window" ? null : () => void toggle(goal, list, chosen, done) });
+      setNotice({ text: goalErrorMessage(result), retry: result.detail === "outside_window" || result.code === "goal_not_active" ? null : () => void toggle(goal, list, chosen, done) });
       // The day moved on while the screen was open: the new dates come from the API.
       if (result.detail === "outside_window" || result.code === "goal_not_active") void load(true);
       return;
@@ -147,7 +154,7 @@ function GoalRow({ goal, list, day, busy, disabled, sources, onToggle, onOpen }:
       ) : (
         !beforeStart && (
           <>
-            <Button label={goalTexts.done} variant={done ? "primary" : "secondary"} busy={busy} disabled={disabled} selected={done} onPress={() => onToggle(done)} />
+            <Button label={goalTexts.done} accessibilityLabel={`${goalTexts.done}: ${label}`} variant={done ? "primary" : "secondary"} busy={busy} disabled={disabled} selected={done} onPress={() => onToggle(done)} />
             {done && sources?.includes("food_entry") && <InfoText>{goalTexts.completedByMeal}</InfoText>}
           </>
         )

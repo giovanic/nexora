@@ -14,9 +14,9 @@ describe("GoalsTodayScreen", () => {
     await render(<GoalsTodayScreen api={ctx.api} {...handlers()} />);
 
     expect(await screen.findByText("Registrar as refeições do dia")).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole("button", { name: "Feito" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia" }));
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Feito", selected: true })).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia", selected: true })).toBeOnTheScreen());
     const call = ctx.calls.find((item) => item.key === CHECK);
     expect(JSON.parse(call?.init.body as string)).toEqual({ local_date: TODAY });
   });
@@ -29,14 +29,14 @@ describe("GoalsTodayScreen", () => {
     await render(<GoalsTodayScreen api={ctx.api} {...handlers()} />);
 
     await screen.findByText("Registrar as refeições do dia");
-    expect(screen.getByRole("button", { name: "Feito", selected: false })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia", selected: false })).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("radio", { name: "Ontem" }));
-    expect(screen.getByRole("button", { name: "Feito", selected: true })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia", selected: true })).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("radio", { name: "Hoje" }));
-    expect(screen.getByRole("button", { name: "Feito", selected: false })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia", selected: false })).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByRole("radio", { name: "Ontem" }));
-    await fireEvent.press(screen.getByRole("button", { name: "Feito" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia" }));
     await waitFor(() => expect(ctx.calls.some((item) => item.key === UNCHECK(YESTERDAY))).toBe(true));
   });
 
@@ -48,11 +48,11 @@ describe("GoalsTodayScreen", () => {
     });
     await render(<GoalsTodayScreen api={ctx.api} {...handlers()} />);
 
-    await fireEvent.press(await screen.findByRole("button", { name: "Feito" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Feito", selected: true })).toBeOnTheScreen());
-    await fireEvent.press(screen.getByRole("button", { name: "Feito" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Feito: Registrar as refeições do dia" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia", selected: true })).toBeOnTheScreen());
+    await fireEvent.press(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia" }));
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Feito", selected: false })).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia", selected: false })).toBeOnTheScreen());
     expect(ctx.calls.filter((item) => item.key === UNCHECK(TODAY))).toHaveLength(1);
   });
 
@@ -63,10 +63,10 @@ describe("GoalsTodayScreen", () => {
     });
     await render(<GoalsTodayScreen api={ctx.api} {...handlers()} />);
 
-    await fireEvent.press(await screen.findByRole("button", { name: "Feito" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Feito: Registrar as refeições do dia" }));
 
     expect(await screen.findByText("Cumprida pela refeição registrada.")).toBeOnTheScreen();
-    expect(screen.getByRole("button", { name: "Feito", selected: true })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia", selected: true })).toBeOnTheScreen();
   });
 
   it("keeps the previous state and offers retry when the request fails", async () => {
@@ -77,13 +77,13 @@ describe("GoalsTodayScreen", () => {
     });
     await render(<GoalsTodayScreen api={ctx.api} {...handlers()} />);
 
-    await fireEvent.press(await screen.findByRole("button", { name: "Feito" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Feito: Registrar as refeições do dia" }));
 
     expect(await screen.findByText("Algo deu errado do nosso lado. Tente de novo em instantes.")).toBeOnTheScreen();
-    expect(screen.getByRole("button", { name: "Feito", selected: false })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia", selected: false })).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Tentar de novo" }));
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Feito", selected: true })).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia", selected: true })).toBeOnTheScreen());
     expect(screen.queryByRole("button", { name: "Tentar de novo" })).toBeNull();
   });
 
@@ -95,10 +95,10 @@ describe("GoalsTodayScreen", () => {
     });
     await render(<GoalsTodayScreen api={ctx.api} {...handlers()} />);
 
-    await fireEvent.press(await screen.findByRole("button", { name: "Feito" }));
-    expect(screen.getByRole("button", { name: "Feito", busy: true, selected: false })).toBeOnTheScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Feito: Registrar as refeições do dia" }));
+    expect(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia", busy: true, selected: false })).toBeOnTheScreen();
     release(jsonResponse(200, goalDay()));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Feito", selected: true, busy: false })).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia", selected: true, busy: false })).toBeOnTheScreen());
   });
 
   it("after midnight an outside_window answer shows the message and reloads", async () => {
@@ -115,12 +115,56 @@ describe("GoalsTodayScreen", () => {
 
     await screen.findByText("Registrar as refeições do dia");
     await fireEvent.press(screen.getByRole("radio", { name: "Ontem" }));
-    await fireEvent.press(screen.getByRole("button", { name: "Feito" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia" }));
 
     expect(await screen.findByText("Só dá para marcar hoje ou ontem.")).toBeOnTheScreen();
     await waitFor(() => expect(loads).toBe(2));
     // The reloaded list says what is done now; nothing was marked by the refused request.
-    expect(screen.getByRole("button", { name: "Feito", selected: true })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Feito: Registrar as refeições do dia", selected: true })).toBeOnTheScreen();
+  });
+
+  it("a paused goal answer offers no retry and reloads the list", async () => {
+    let loads = 0;
+    const ctx = makeApi({
+      [LIST]: () => {
+        loads += 1;
+        return jsonResponse(200, goalList([goal({ status: loads === 1 ? "active" : "paused" })]));
+      },
+      [CHECK]: errorResponse(409, "goal_not_active"),
+    });
+    await render(<GoalsTodayScreen api={ctx.api} {...handlers()} />);
+
+    await fireEvent.press(await screen.findByRole("button", { name: "Feito: Registrar as refeições do dia" }));
+
+    expect(await screen.findByText("Esta meta está pausada. Retome para marcar.")).toBeOnTheScreen();
+    await waitFor(() => expect(loads).toBe(2));
+    expect(screen.queryByRole("button", { name: "Tentar de novo" })).toBeNull();
+  });
+
+  it("the done button names its goal for screen readers", async () => {
+    const ctx = makeApi({ [LIST]: jsonResponse(200, goalList([goal(), goal({ id: WATER_ID, goal_type: "drink_water" })])) });
+    await render(<GoalsTodayScreen api={ctx.api} {...handlers()} />);
+
+    expect(await screen.findByRole("button", { name: "Feito: Beber água ao longo do dia" })).toBeOnTheScreen();
+  });
+
+  it("reloads in silence when refreshKey changes", async () => {
+    let loads = 0;
+    const ctx = makeApi({
+      [LIST]: () => {
+        loads += 1;
+        return jsonResponse(200, goalList([goal({ status: loads === 1 ? "active" : "paused" })]));
+      },
+    });
+    const props = handlers();
+    const view = await render(<GoalsTodayScreen api={ctx.api} refreshKey={0} {...props} />);
+    await screen.findByRole("button", { name: "Feito: Registrar as refeições do dia" });
+
+    await view.rerender(<GoalsTodayScreen api={ctx.api} refreshKey={1} {...props} />);
+
+    expect(await screen.findByText("Pausada. Retome quando quiser.")).toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: /^Feito: / })).toBeNull();
+    expect(loads).toBe(2);
   });
 
   it("a goal created today offers no done button for yesterday", async () => {
@@ -128,10 +172,10 @@ describe("GoalsTodayScreen", () => {
     await render(<GoalsTodayScreen api={ctx.api} {...handlers()} />);
 
     await screen.findByText("Registrar as refeições do dia");
-    expect(screen.getAllByRole("button", { name: "Feito" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /^Feito: / })).toHaveLength(2);
     await fireEvent.press(screen.getByRole("radio", { name: "Ontem" }));
 
-    expect(screen.getAllByRole("button", { name: "Feito" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /^Feito: / })).toHaveLength(1);
     expect(screen.getByText("Beber água ao longo do dia")).toBeOnTheScreen();
   });
 
@@ -146,7 +190,7 @@ describe("GoalsTodayScreen", () => {
     const order = screen.getAllByTestId("goal-row").map((row) => labels.find((label) => within(row).queryByText(label)));
     expect(order).toEqual(["Beber água ao longo do dia", "Dormir no horário que escolhi", "Registrar as refeições do dia"]);
     expect(screen.getByText("Pausada. Retome quando quiser.")).toBeOnTheScreen();
-    expect(screen.getAllByRole("button", { name: "Feito" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /^Feito: / })).toHaveLength(2);
   });
 
   it("empty state", async () => {
