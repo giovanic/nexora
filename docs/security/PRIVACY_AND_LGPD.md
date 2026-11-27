@@ -96,6 +96,7 @@ Prazos provisórios, a confirmar na revisão jurídica ([DATABASE_DESIGN.md](../
 | `ai_usage_records` | Aos 90 dias perdem `user_id` e `analysis_id` e ficam só como custo (provedor, modelo, tokens, valor). Ao apagar a refeição ou a conta, o vínculo sai na hora | `FoodAi::AnalysisRetentionJob` (04:30) |
 | Refeição travada em processamento | Há mais de 15 minutos: retomada, ou marcada como falha (não é retenção; cabe aqui por mexer na foto) | `Nutrition::StuckEntriesJob` (a cada 10 minutos) |
 | `account_deletions` concluídas | Já guardam só o UUID e as datas, como registro para reaplicar exclusões após restaurar backup; nenhuma rotina as apaga | n/a |
+| `goals` e `goal_check_ins` | Retidos até a pessoa apagar a meta ou a conta. Sem rotina de expurgo; o prazo fica a confirmar na pendência jurídica de retenção | n/a |
 
 ## Exclusão de conta
 

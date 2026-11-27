@@ -136,7 +136,7 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 - **Modelos:** `Goal`, `GoalCheckIn`, `WeeklyPlan` (`WeeklyPlan` na Fase 05.2).
 - **Serviços:** `CreateGoal`, `ChangeStatus`, `DeleteGoal`, `ReadGoal`, `ListGoals`, `History`, `CheckIn`, `Uncheck`, `CheckInFromFoodEntry`, `RemoveFoodEntryCheckIn`, `RecordDay`, `EvaluateDay` e `PlanWeek` (`PlanWeek` na Fase 05.2).
 - **Publica:** `goal.created`, `goal.progressed`, `goal.completed`, `goal.uncompleted`, `goal.deleted`, `recovery_day.planned`, `recovery_day.logged`.
-- **Consome:** `food_entry.confirmed`, `food_entry.deleted`, `activity.imported`, `activity.deleted`, `sport_profile.changed`.
+- **Consome:** `food_entry.confirmed`, `food_entry.deleted`; `activity.imported`, `activity.deleted` e `sport_profile.changed` a partir da Fase 05.2 (a 05.1 não os consome).
 - **Permitido:** API pública de User Profile para sugestão de metas.
 - **Proibido:** tipos de meta baseados em calorias, déficit, peso ou compensação.
 
@@ -195,8 +195,8 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 | `food_entry.confirmed` | Nutrition | `food_entry_id`, data local. Publicado na Fase 03; Goals passa a consumir na Fase 05.1 | Goals, Missions, Gamification, Progress & Analytics (Fases 05, 06 e 08) |
 | `food_entry.corrected` | Nutrition | `food_entry_id` | Progress & Analytics. **Não publicado na Fase 03**, começa na Fase 08 |
 | `food_entry.deleted` | Nutrition | `food_entry_id`, `photo_id`. Publicado na Fase 03 | Food AI (consumidor registrado), Goals (consumidor na Fase 05.1), Gamification, Progress & Analytics |
-| `activity.imported` / `activity.updated` | Activities | `activity_id`, tipo, data local, origem, `backfill` | Goals, Missions, Gamification, Progress & Analytics |
-| `activity.deleted` | Activities | `activity_id` | Goals, Gamification, Progress & Analytics |
+| `activity.imported` / `activity.updated` | Activities | `activity_id`, tipo, data local, origem, `backfill` | Goals (a partir da 05.2), Missions, Gamification, Progress & Analytics |
+| `activity.deleted` | Activities | `activity_id` | Goals (a partir da 05.2), Gamification, Progress & Analytics |
 | `integration.connected` / `integration.disconnected` | Strava Integration | provedor | Progress & Analytics |
 | `goal.created` | Goals | `goal_id`, `goal_type`. Publicado ao criar a meta, na mesma transação | Progress & Analytics |
 | `goal.progressed` | Goals | `goal_id`, tipo. Ainda não publicado | Progress & Analytics |
@@ -210,6 +210,8 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 | `xp.awarded` / `xp.reversed` | Gamification | valor, regra, origem | Progress & Analytics |
 | `level.unlocked` / `achievement.unlocked` | Gamification | nível ou conquista | Notifications, Progress & Analytics |
 | `report.generated` | Progress & Analytics | `report_id` | Notifications |
+
+Os payloads `goal.*` só ganham campos. Remover um campo ou mudar o sentido de um existente exige nova versão do evento.
 
 **Nenhum evento carrega** calorias, macronutrientes, peso, duração ou distância. Quem precisa de detalhes e tem permissão consulta a API pública do contexto. `food_entry.confirmed` informa que houve confirmação, não o que foi comido.
 
