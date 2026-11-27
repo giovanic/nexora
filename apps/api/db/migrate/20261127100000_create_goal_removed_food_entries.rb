@@ -1,6 +1,6 @@
 # Marker of a deleted meal (Goals), so a food_entry.confirmed delivered after its food_entry.deleted adds no check-in.
-# food_entry_id is a plain uuid, not a foreign key: Goals never references Nutrition's tables. user_id cascades like
-# the other Goals tables. The unique index serves the confirmation consumer's lookup and the idempotent write.
+# food_entry_id is a plain uuid, not a foreign key: Goals never references Nutrition's tables. user_id cascades only
+# on a physical delete of users; account erasure (users is soft-deleted) removes the markers in Goals::UserData. The unique index serves the confirmation consumer's lookup and the idempotent write.
 # The index on created_at serves the daily retention job, which deletes markers older than 30 days in batches.
 class CreateGoalRemovedFoodEntries < ActiveRecord::Migration[8.1]
   def change

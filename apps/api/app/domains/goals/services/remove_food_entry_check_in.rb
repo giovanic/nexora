@@ -4,9 +4,9 @@ module Goals
   # stay. A goal or account already gone, or a meal that never counted, is a quiet no-op.
   #
   # Order of events: food_entry.confirmed and food_entry.deleted of one meal can arrive in any order. Both consumers
-  # first take the same per-person advisory lock (MealEventLock), so they never overlap. This one then locks the
-  # person's log_meals goals (by id; it also serializes with manual check-ins), leaves a marker for the meal and
-  # removes the check-ins. If the confirmation commits first, this one waits and sees the check-in. If this one commits
+  # first take the same per-person advisory lock (MealEventLock), so they never overlap. This one then leaves a
+  # marker for the meal and removes its check-ins, each goal under its own lock, which also serializes with manual
+  # check-ins; a goal deleted meanwhile is skipped. If the confirmation commits first, this one waits and sees the check-in. If this one commits
   # first, the confirmation sees the marker and records nothing. That holds even if the person creates a log_meals goal
   # meanwhile. A person with no users row (account gone) is a quiet no-op: the marker is not written.
   module RemoveFoodEntryCheckIn
@@ -16,7 +16,6 @@ module Goals
 
       Goal.transaction do
         MealEventLock.acquire(event.user_id)
-        Goal.lock.where(user_id: event.user_id, goal_type: "log_meals").order(:id).load
         next unless mark_removed(event.user_id, meal_id)
 
         GoalCheckIn.where(user_id: event.user_id, source: "food_entry", source_ref: meal_id).pluck(:goal_id, :local_date).each do |goal_id, date|

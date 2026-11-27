@@ -1,8 +1,9 @@
 require "rails_helper"
 require "support/outbox_helpers"
 
-# food_entry.confirmed and food_entry.deleted of one meal can arrive in any order. Both consumers lock the same
-# goals row, and the deletion leaves a marker the confirmation checks, so the meal never counts after it is gone.
+# food_entry.confirmed and food_entry.deleted of one meal can arrive in any order. Both consumers take the same
+# per-person lock (Goals::MealEventLock), and the deletion leaves a marker the confirmation checks, so the meal never
+# counts after it is gone. The overlapping cases are in food_entry_ordering_concurrency_spec.rb.
 RSpec.describe "Goals: meal event ordering" do
   include OutboxHelpers
 

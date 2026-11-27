@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe Goals::RemovedFoodEntriesRetentionJob do
+  include ActiveSupport::Testing::TimeHelpers
+
   let(:user_id) { Identity::User.create!(email: "r-#{SecureRandom.hex(4)}@example.test", password: "correct horse battery", adult_confirmed_at: Time.current).id }
 
   def marker(age) = Goals::RemovedFoodEntry.create!(user_id:, food_entry_id: SecureRandom.uuid, created_at: age.ago)
@@ -18,6 +20,17 @@ RSpec.describe Goals::RemovedFoodEntriesRetentionJob do
     expect(result).to eq({ removed_food_entries: 1 })
     expect(Goals::RemovedFoodEntry.pluck(:id)).to eq([ recent.id ])
     expect(Goals::RemovedFoodEntry.exists?(old.id)).to be(false)
+  end
+
+  it "keeps a marker until it is strictly older than 30 days" do
+    freeze_time do
+      before_edge = marker(30.days - 1.second)
+      at_edge = marker(30.days)
+      marker(30.days + 1.second)
+
+      expect(described_class.new.perform).to eq({ removed_food_entries: 1 })
+      expect(Goals::RemovedFoodEntry.pluck(:id)).to contain_exactly(before_edge.id, at_edge.id)
+    end
   end
 
   it "deletes in batches and finds nothing on a second run" do

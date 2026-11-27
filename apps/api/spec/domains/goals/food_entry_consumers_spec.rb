@@ -156,6 +156,7 @@ RSpec.describe "Goals: meal consumers", :real_consumers do
     expect(Shared::Outbox::Event.where(user_id: ghost, published_at: nil).count).to eq(0)
     expect(Shared::Outbox::Event.where(user_id: ghost).where.not(dead_at: nil).count).to eq(0)
     expect(Goals::GoalCheckIn.count).to eq(0)
+    expect(Goals::RemovedFoodEntry.where(user_id: ghost)).to be_empty
   end
 
   it "other goal types are not touched by meals" do
