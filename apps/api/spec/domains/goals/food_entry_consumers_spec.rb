@@ -153,6 +153,8 @@ RSpec.describe "Goals: meal consumers", :real_consumers do
     publish(name: "food_entry.deleted", user_id: ghost, payload: { food_entry_id: meal, photo_id: nil })
     expect { run_publisher }.not_to raise_error
     expect(Shared::Outbox::Event.where(user_id: ghost).count).to eq(2)
+    expect(Shared::Outbox::Event.where(user_id: ghost, published_at: nil).count).to eq(0)
+    expect(Shared::Outbox::Event.where(user_id: ghost).where.not(dead_at: nil).count).to eq(0)
     expect(Goals::GoalCheckIn.count).to eq(0)
   end
 

@@ -17,7 +17,8 @@ module Goals
     end
 
     # Check-ins go with their goals (ON DELETE CASCADE); the markers are deleted by owner, with or without a goal.
-    # Safe to run again.
+    # Safe to run again. A food_entry.deleted that commits after this (the users row is only soft-deleted, so no
+    # cascade) can leave one marker: it holds only ids and the 30-day retention job removes it.
     def self.erase(user_id)
       Goal.transaction do
         RemovedFoodEntry.where(user_id:).delete_all
