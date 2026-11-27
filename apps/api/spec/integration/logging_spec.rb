@@ -98,6 +98,15 @@ RSpec.describe "structured logging", type: :request do
       sensitive_values.each { |value| expect(text).not_to include(value) }
     end
 
+    it "keeps the day of a check-in out of the request path in the log" do
+      id = SecureRandom.uuid
+      text = api_log_during { delete "/api/v1/goals/#{id}/check_ins/2026-11-17" }
+
+      line = json_lines(text).find { |entry| entry["path"].to_s.start_with?("/api/v1/goals/#{id}/check_ins") }
+      expect(line).to be_present
+      expect(text).not_to include("2026-11-17")
+    end
+
     it "keeps a job exception message out of the worker log, recording its class" do
       SidekiqProcess.with do |log|
         jid = SmokeErrorJob.perform_async

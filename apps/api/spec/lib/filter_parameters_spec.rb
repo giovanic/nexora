@@ -7,7 +7,7 @@ RSpec.describe "filtered parameters" do
     password email access_token client_secret photo_url signed_url food_items meal_name nutrition_data calories activity_name
     code state authorization cookie session key url
     name display_name phone birth_date ip device_label
-    term portion kcal carbs protein fat fiber sodium weight sport sleep water goal
+    term portion kcal carbs protein fat fiber sodium weight sport sleep water goal local_date
     strava athlete image image_url raw_response prompt
   ].each do |name|
     it "filters #{name}" do
