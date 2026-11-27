@@ -133,8 +133,8 @@ Setas contínuas mostram as principais chamadas síncronas permitidas; a lista c
 ### 8. Goals
 
 - **Responsabilidade:** metas de hábito, check-ins, regras de conclusão, planejamento semanal e recuperação.
-- **Modelos:** `Goal`, `GoalCheckIn`, `WeeklyPlan` (`WeeklyPlan` na Fase 05.2).
-- **Serviços:** `CreateGoal`, `ChangeStatus`, `DeleteGoal`, `ReadGoal`, `ListGoals`, `History`, `CheckIn`, `Uncheck`, `CheckInFromFoodEntry`, `RemoveFoodEntryCheckIn`, `RecordDay`, `EvaluateDay` e `PlanWeek` (`PlanWeek` na Fase 05.2).
+- **Modelos:** `Goal`, `GoalCheckIn`, `RemovedFoodEntry` (marcador de refeição apagada, para a ordem dos eventos de refeição), `WeeklyPlan` (`WeeklyPlan` na Fase 05.2).
+- **Serviços:** `CreateGoal`, `ChangeStatus`, `DeleteGoal`, `ReadGoal`, `ListGoals`, `History`, `CheckIn`, `Uncheck`, `CheckInFromFoodEntry`, `RemoveFoodEntryCheckIn`, `RecordDay`, `EvaluateDay` e `PlanWeek` (`PlanWeek` na Fase 05.2). Jobs: `RemovedFoodEntriesRetentionJob`.
 - **Publica:** `goal.created`, `goal.progressed`, `goal.completed`, `goal.uncompleted`, `goal.deleted`, `recovery_day.planned`, `recovery_day.logged`.
 - **Consome:** `food_entry.confirmed`, `food_entry.deleted`; `activity.imported`, `activity.deleted` e `sport_profile.changed` a partir da Fase 05.2 (a 05.1 não os consome).
 - **Permitido:** API pública de User Profile para sugestão de metas.

@@ -229,6 +229,15 @@ Um dia marcado numa meta. Sem tabela de "dias cumpridos": o estado do dia é cal
 - **Índices:** único parcial em `(goal_id, local_date)` com `source = 'manual'` (um check-in manual por meta e dia); único parcial em `(goal_id, source, source_ref)` com `source_ref IS NOT NULL` (uma refeição gera no máximo um check-in por meta, mesmo em reprocessamento); `(user_id, local_date DESC)` e `(goal_id, local_date DESC)` para o histórico.
 - **Dados da pessoa:** `goals` e `goal_check_ins` entram na exportação e na exclusão de conta (contexto `goals` no `Shared::DataRegistry`). A exportação não traz `source_ref`, por ser referência interna a outro contexto. Apagar a meta apaga os check-ins em cascata.
 
+### `goal_removed_food_entries`
+
+Marcador de refeição apagada, para que um `food_entry.confirmed` entregue depois do `food_entry.deleted` não grave check-in (ver design da 05.1, 4.5).
+
+- **Colunas:** `id`, `user_id` (FK para `users`, `ON DELETE CASCADE`), `food_entry_id` (UUID, sem chave estrangeira: Goals não referencia Nutrition), `created_at`. Todas `NOT NULL`.
+- **Índices:** único em `(user_id, food_entry_id)`, que serve à consulta do consumidor de confirmação e à gravação idempotente; `(created_at)`, que serve à rotina de retenção.
+- **Retenção:** 30 dias após a criação, o mesmo prazo dos eventos publicados da outbox, por `Goals::RemovedFoodEntriesRetentionJob` (diário, em lote).
+- **Dados da pessoa:** entra na exclusão de conta (contexto `goals` no `Shared::DataRegistry`). Fica fora da exportação, como `source_ref`: guarda só o id de uma refeição de outro contexto.
+
 ### `weekly_plans`
 
 Criada na etapa 05.2.
@@ -363,6 +372,7 @@ Prazos iniciais, a confirmar com a revisão jurídica ([PRIVACY_AND_LGPD.md](../
 | Atividades | Enquanto a conta existir e, no caso do Strava, enquanto a integração durar | Apagadas |
 | Tokens | Até a desconexão | Apagados |
 | `activity_sync_events` | 30 dias | Apagados |
+| `goal_removed_food_entries` | 30 dias após a criação (`Goals::RemovedFoodEntriesRetentionJob`, diário) | Apagados |
 | `outbox_events` e `consumed_events` | 30 dias após a publicação; pendentes e mortos ficam até serem resolvidos | Removidos ou anonimizados |
 | XP, metas, missões e conquistas | Enquanto a conta existir | Apagados |
 | `consent_records` e `audit_events` | Proposta provisória de 5 anos, a confirmar na revisão jurídica. Em conta ativa, `consent_records` mantém o último registro de cada finalidade além dos 5 anos, porque prova o consentimento vigente; o de conta excluída segue o prazo | Mantidos sem conteúdo de saúde, ligados ao mesmo UUID |
